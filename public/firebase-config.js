@@ -317,16 +317,6 @@ export async function saveClientSyncState(userId, payload) {
   } catch (error) { console.warn('client sync write unavailable:', error); return false; }
 }
 
-function enrichConcept(answer) {
-  if (!answer || answer.conceptKey) return answer;
-  try {
-    const content = window.ManjingoContent;
-    const q = content && Array.isArray(content.questions) ? content.questions.find((x) => String(x.id) === String(answer.questionId) && String(x.kpId) === String(answer.kpId)) : null;
-    const concept = q && q.misconceptionKey ? { key: q.misconceptionKey, label: q.misconceptionLabel } : content && typeof content.misconceptionConcept === 'function' ? content.misconceptionConcept(q || answer) : null;
-    return concept ? { ...answer, conceptKey: String(concept.key), conceptLabel: String(concept.label || concept.key) } : answer;
-  } catch (_) { return answer; }
-}
-
 function recordDifficultyOutcome(answer, result) {
   if (!result || !result.success || result.duplicate || typeof window === 'undefined') return null;
   const calibration = window.ManjingoDifficultyCalibration;
@@ -336,7 +326,7 @@ function recordDifficultyOutcome(answer, result) {
 }
 
 export async function submitAnswer(answer) {
-  const payload = enrichConcept(answer),box=outbox(),queued=box?box.enqueue(payload,currentUserId):false;
+  const payload = answer,box=outbox(),queued=box?box.enqueue(payload,currentUserId):false;
   try {
     const uid=currentUserId||await ensureLogin();if(box&&uid)box.bindUnowned(uid);
     const result = await sendAnswerOnce(payload);

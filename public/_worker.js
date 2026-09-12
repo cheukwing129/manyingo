@@ -240,18 +240,26 @@ function calculateLevel(totalXp) {
   return level;
 }
 function optionalText(value, max) { if (value == null || value === '') return null; const text = String(value); if (text.length > max) throw Object.assign(new Error('Input too long'), { status: 400 }); return text; }
+function reviewedConcept(questionData) {
+  const rawKey=questionData&&(questionData.misconceptionKey??questionData.conceptKey);
+  if(rawKey==null||rawKey==='')return{conceptKey:null,conceptLabel:null};
+  const conceptKey=String(rawKey),rawLabel=questionData.misconceptionLabel??questionData.conceptLabel??conceptKey,conceptLabel=String(rawLabel);
+  if(!/^[A-Za-z0-9:._-]+$/.test(conceptKey)||conceptKey.length>128||conceptLabel.length>160)throw new Error('Invalid reviewed question concept metadata');
+  return{conceptKey,conceptLabel};
+}
 function validateAnswer(raw) {
   if (!raw || !raw.kpId || !raw.questionId || raw.selectedAnswer == null) throw Object.assign(new Error('Invalid answer payload'), { status: 400 });
   const attemptCount = Number(raw.attemptCount ?? 1);
   const responseTimeMs = raw.responseTimeMs == null ? null : Number(raw.responseTimeMs);
   const localDate = raw.localDate ? String(raw.localDate) : new Date().toISOString().slice(0, 10);
   const answerId = raw.answerId ? String(raw.answerId) : crypto.randomUUID().replace(/-/g, '');
-  const conceptKey = optionalText(raw.conceptKey, 128);
+  const clientClaimedConceptKey = optionalText(raw.conceptKey, 128);
+  const clientClaimedConceptLabel = optionalText(raw.conceptLabel, 160);
   const targetSkillId = optionalText(raw.targetSkillId, 128);
-  if (!Number.isInteger(attemptCount) || attemptCount < 1 || attemptCount > 10 || (responseTimeMs != null && (!Number.isFinite(responseTimeMs) || responseTimeMs < 0 || responseTimeMs > 600000)) || !/^\d{4}-\d{2}-\d{2}$/.test(localDate) || !/^[A-Za-z0-9_-]{8,128}$/.test(answerId) || (conceptKey && !/^[A-Za-z0-9:_-]+$/.test(conceptKey)) || (targetSkillId && !/^[A-Za-z0-9._-]{2,128}$/.test(targetSkillId))) throw Object.assign(new Error('Invalid answer payload'), { status: 400 });
+  if (!Number.isInteger(attemptCount) || attemptCount < 1 || attemptCount > 10 || (responseTimeMs != null && (!Number.isFinite(responseTimeMs) || responseTimeMs < 0 || responseTimeMs > 600000)) || !/^\d{4}-\d{2}-\d{2}$/.test(localDate) || !/^[A-Za-z0-9_-]{8,128}$/.test(answerId) || (clientClaimedConceptKey && !/^[A-Za-z0-9:._-]+$/.test(clientClaimedConceptKey)) || (targetSkillId && !/^[A-Za-z0-9._-]{2,128}$/.test(targetSkillId))) throw Object.assign(new Error('Invalid answer payload'), { status: 400 });
   return {
     answerId, kpId: String(raw.kpId), questionId: raw.questionId ? String(raw.questionId) : null, textId: raw.textId ? String(raw.textId) : null,
-    conceptKey, conceptLabel: optionalText(raw.conceptLabel, 160), selectedAnswer: optionalText(raw.selectedAnswer, 500), correctAnswer: null, targetSkillId,
+    conceptKey:null, conceptLabel:null, clientClaimedConceptKey, clientClaimedConceptLabel, selectedAnswer: optionalText(raw.selectedAnswer, 500), correctAnswer: null, targetSkillId,
     isCorrect: false, clientClaimedCorrect:typeof raw.isCorrect==='boolean'?raw.isCorrect:null, usedHint: Boolean(raw.usedHint), attemptCount, responseTimeMs, localDate
   };
 }
@@ -268,7 +276,7 @@ async function submitAnswer(request, env, uid, trace) {
   try { raw = await request.json(); } catch (_) { throw Object.assign(new Error('JSON body required'), { status: 400 }); }
   const answer = validateAnswer(raw);
   const token = await timed(trace,'oauth',()=>getServiceAccessToken(env));
-  let baseXp = 8, conceptKey = answer.conceptKey, conceptLabel = answer.conceptLabel, skillId = null, questionData = null;
+  let baseXp = 8, conceptKey = null, conceptLabel = null, skillId = null, questionData = null;
   if (answer.questionId) {
     const question = await timed(trace,'question_read',()=>getQuestionMetadata(env, token, answer.questionId));
     if (question) {
@@ -277,8 +285,7 @@ async function submitAnswer(request, env, uid, trace) {
       if (questionKpId && questionKpId !== answer.kpId) throw Object.assign(new Error('questionId does not belong to kpId'), { status: 400 });
       const xp = Number(question.data.baseXp ?? question.data.xp);
       if (Number.isFinite(xp)) baseXp = clamp(xp, 1, 50);
-      if (!conceptKey && question.data.misconceptionKey) conceptKey = String(question.data.misconceptionKey);
-      if (!conceptLabel && question.data.misconceptionLabel) conceptLabel = String(question.data.misconceptionLabel);
+      ({conceptKey,conceptLabel}=reviewedConcept(question.data));
       skillId = coreSkillId(question.data, answer.kpId, answer.targetSkillId);
       const verified=ANSWER_VERIFICATION.verify(questionData,answer.selectedAnswer);
       answer.isCorrect=verified.isCorrect;
@@ -349,7 +356,7 @@ async function submitAnswer(request, env, uid, trace) {
     const kpUpdate = { ...prev, ...update, nextReviewAt: update.nextReviewAt, lastAnsweredAt: update.lastAnsweredAt, updatedAt: now };
     const gameUpdate = { ...game, totalXp, todayXp, todayXpDate: answer.localDate, dailyGoalXp, streak, streakFreezes, lastActiveDate: todayXp >= dailyGoalXp ? answer.localDate : previousActiveDate, level, updatedAt: now };
     const log = {
-      answerId: answer.answerId, questionId: answer.questionId, kpIds: [answer.kpId], requestedSkillId:answer.targetSkillId, skillId, skillMastery, textId: answer.textId, conceptKey, conceptLabel,
+      answerId: answer.answerId, questionId: answer.questionId, kpIds: [answer.kpId], requestedSkillId:answer.targetSkillId, skillId, skillMastery, textId: answer.textId, conceptKey, conceptLabel, clientClaimedConceptKey:answer.clientClaimedConceptKey, clientClaimedConceptLabel:answer.clientClaimedConceptLabel, conceptAttributionMismatch:answer.clientClaimedConceptKey!=null&&answer.clientClaimedConceptKey!==conceptKey,
       selectedAnswer: answer.selectedAnswer, correctAnswer: answer.correctAnswer, conceptMastery: conceptResult, isCorrect: answer.isCorrect, verificationVersion:ANSWER_VERIFICATION.VERSION, clientClaimedCorrect:answer.clientClaimedCorrect, correctnessMismatch:answer.clientClaimedCorrect!=null&&answer.clientClaimedCorrect!==answer.isCorrect,
       usedHint: answer.usedHint, attemptCount: answer.attemptCount, responseTimeMs: answer.responseTimeMs, localDate: answer.localDate,
       quality: update.quality, xpEarned: update.xpEarned, mastery: update.mastery, status: update.status, nextReviewAt: update.nextReviewAt,

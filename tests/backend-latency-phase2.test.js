@@ -31,7 +31,7 @@ test('latency optimization preserves authoritative question validation and OAuth
   assert.match(worker,/const questionKpId = question\.data\.kpId/);
   assert.match(worker,/questionKpId && questionKpId !== answer\.kpId/);
   assert.match(worker,/getQuestionMetadata\(env, token, answer\.questionId\)/);
-  assert.match(worker,/if \(!conceptKey && question\.data\.misconceptionKey\)/);
+  assert.match(worker,/\(\{conceptKey,conceptLabel\}=reviewedConcept\(question\.data\)\)/);
 });
 
 test('daily plan reads live skill state while reusing only the global knowledge-point universe cache',()=>{

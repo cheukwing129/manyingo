@@ -30,8 +30,7 @@ test('firebase client downloads concept state and sends learning writes to same-
  const firebase=read('public/firebase-config.js');
  assert.match(firebase,/fetchUserConceptState/);
  assert.match(firebase,/collection\(db, "users", userId, "concepts"\)/);
- assert.match(firebase,/function enrichConcept\(answer\)/);
- assert.match(firebase,/conceptKey: String\(concept\.key\)/);
+ assert.doesNotMatch(firebase,/function enrichConcept\(answer\)/);
  assert.match(firebase,/function authorizedApi\(path, options = \{\}\)/);
  assert.match(firebase,/auth\.currentUser\.getIdToken\(\)/);
  assert.match(firebase,/authorizedApi\('\/api\/submit-answer'/);
@@ -45,7 +44,10 @@ test('homepage syncs cloud concepts before selection and avoids double local con
  assert.match(html,/syncRemoteConceptState\(remoteConcepts\)/);
  assert.match(html,/selectedAnswer:value/);
  assert.match(html,/correctAnswer:q\.a/);
- assert.match(html,/conceptKey:q\.misconceptionKey\|\|q\.conceptKey\|\|null/);
+ const cloud=html.match(/function cloudSubmit\([\s\S]*?\nfunction createAnswerId/);
+ assert.ok(cloud);
+ assert.doesNotMatch(cloud[0],/conceptKey:/);
+ assert.doesNotMatch(cloud[0],/conceptLabel:/);
  assert.match(html,/resolveQuestionMisconceptions\(q\.kpId,q\.id,\{skipConcept:true\}\)/);
 });
 
