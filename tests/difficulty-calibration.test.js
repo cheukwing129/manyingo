@@ -86,7 +86,7 @@ test('runtime loads telemetry before difficulty selection and records cloud tele
  assert.ok(calibrationPos>=0&&difficultyPos>calibrationPos,'calibration must load before difficulty selector');
  assert.match(firebase,/function recordDifficultyOutcome\(answer, result\)/);
  assert.match(firebase,/result\.duplicate/);
- assert.match(firebase,/calibration\.recordAnswer\(answer\)/);
+ assert.match(firebase,/calibration\.recordAnswer\(\{ \.\.\.answer, isCorrect:result\.isCorrect===true \}\)/);
  const submitStart=firebase.indexOf('export async function submitAnswer');
  const queued=firebase.indexOf('box.enqueue(payload,currentUserId)',submitStart);
  const delivered=firebase.indexOf('const result = await sendAnswerOnce(payload)',submitStart);

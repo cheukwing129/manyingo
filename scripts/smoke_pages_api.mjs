@@ -204,8 +204,8 @@ const validPayload = {
   conceptKey,
   conceptLabel: 'Production smoke concept',
   selectedAnswer: '貶官',
-  correctAnswer: '貶官',
-  isCorrect: true,
+  correctAnswer: '提拔',
+  isCorrect: false,
   usedHint: false,
   attemptCount: 1,
   responseTimeMs: 250,
@@ -214,6 +214,7 @@ const validPayload = {
 const submitResponse = await api('/api/submit-answer', idToken, { method: 'POST', body: JSON.stringify(validPayload) });
 const submit = await readJson(submitResponse, 'valid answer submit');
 check(submitResponse.ok && submit.success === true, `valid answer submit failed (${submitResponse.status}): ${submit.error || 'unknown error'}`);
+check(submit.isCorrect === true && submit.verificationVersion === 'server-answer-verification-v1', 'server trusted the false client correctness claim');
 check(Number(submit.xpEarned) === 8, `expected 8 XP from first correct answer, got ${submit.xpEarned}`);
 check(Number(submit.mastery) > 0, 'valid answer did not increase mastery');
 check(Number(submit.totalXp) === 8, `expected total XP 8 for temporary user, got ${submit.totalXp}`);
@@ -230,7 +231,7 @@ check(knowledge && Number(knowledge.mastery) === Number(submit.mastery), 'knowle
 check(Number(knowledge.attempts) === 1 && knowledge.lastCorrect === true, 'knowledge attempt state was not persisted');
 check(game && Number(game.totalXp) === 8 && Number(game.todayXp) === 8, 'gamification XP was not persisted');
 check(concept && Number(concept.attempts) === 1 && Number(concept.mastery) > 0, 'concept mastery was not persisted');
-check(answerLog && answerLog.questionId === 'q001' && answerLog.isCorrect === true && Number(answerLog.xpEarned) === 8, 'answer log was not persisted');
+check(answerLog && answerLog.questionId === 'q001' && answerLog.isCorrect === true && answerLog.correctAnswer === '貶官' && answerLog.clientClaimedCorrect === false && answerLog.correctnessMismatch === true && Number(answerLog.xpEarned) === 8, 'answer log did not preserve authoritative correctness and mismatch audit');
 console.log('✓ Firestore verified knowledge, XP, concept mastery, and answerLog writes');
 
 const invalidSubmitResponse = await api('/api/submit-answer', idToken, { method: 'POST', body: '{}' });

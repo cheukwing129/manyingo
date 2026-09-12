@@ -93,7 +93,10 @@ test('Pages smoke performs one real reviewed answer and verifies all learning wr
   assert.match(source,/\/api\/submit-answer/);
   assert.match(source,/questionId:\s*'q001'/);
   assert.match(source,/kpId:\s*'kp_yueyang_001'/);
-  assert.match(source,/isCorrect:\s*true/);
+  assert.match(source,/isCorrect:\s*false/);
+  assert.match(source,/server trusted the false client correctness claim/);
+  assert.match(source,/answerLog\.correctAnswer === '貶官'/);
+  assert.match(source,/answerLog\.correctnessMismatch === true/);
   assert.match(source,/expected 8 XP/);
   assert.match(source,/knowledge\/\$\{validPayload\.kpId\}/);
   assert.match(source,/gamification\/state/);
