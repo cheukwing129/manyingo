@@ -1,6 +1,7 @@
 import './learning-policy.js';
 import './curriculum-v1.js';
 import './question-skill-contract.js';
+import './skill-evidence-v1.js';
 import './server-skill-plan.js';
 import './practice-effectiveness.js';
 import './server-practice-state.js';
@@ -8,6 +9,7 @@ import './server-practice-state.js';
 const POLICY=globalThis.ManjingoLearningPolicy;
 const CURRICULUM=globalThis.ManjingoCurriculumV1;
 const QUESTION_SKILL_CONTRACT=globalThis.ManjingoQuestionSkillContract;
+const SKILL_EVIDENCE=globalThis.ManjingoSkillEvidenceV1;
 const SERVER_SKILL_PLAN=globalThis.ManjingoServerSkillPlan;
 const SERVER_PRACTICE=globalThis.ManjingoServerPracticeState;
 const PROJECT_FALLBACK = 'manjingo-95d9a';
@@ -229,7 +231,7 @@ function masteryStatus(mastery) { return POLICY.masteryStatus(mastery); }
 function calculateLearningUpdate(prev, answer, baseXp, now) { return POLICY.calculateLearningUpdate({ prev, isCorrect: answer.isCorrect, usedHint: answer.usedHint, attemptCount: answer.attemptCount, baseXp, now }); }
 function calculateConceptUpdate(prev, answer, conceptKey, conceptLabel, now) { return POLICY.calculateConceptMasteryUpdate({ prev, conceptKey, conceptLabel, kpId: answer.kpId, questionId: answer.questionId, selectedAnswer: answer.selectedAnswer, correctAnswer: answer.correctAnswer, isCorrect: answer.isCorrect, usedHint: answer.usedHint, attemptCount: answer.attemptCount, now }); }
 function coreSkillId(questionData,kpId,targetSkillId){return QUESTION_SKILL_CONTRACT.resolveCoreSkill(questionData,kpId,targetSkillId,CURRICULUM)}
-function skillResult(skillId,record){if(!skillId||!record)return null;return{skillId,mastery:Number(record.mastery||0),status:record.status||masteryStatus(record.mastery),nextReviewAt:record.nextReviewAt instanceof Date?record.nextReviewAt.toISOString():record.nextReviewAt||null,interval:Number(record.interval||0),easeFactor:Number(record.easeFactor||2.5),repetition:Number(record.repetition||0),attempts:Number(record.attempts||0),correctCount:Number(record.correctCount||0),wrongCount:Number(record.wrongCount||0),hintCount:Number(record.hintCount||0),lastCorrect:record.lastCorrect??null,lastAnsweredAt:record.lastAnsweredAt instanceof Date?record.lastAnsweredAt.toISOString():record.lastAnsweredAt||null,kpIds:Array.isArray(record.kpIds)?record.kpIds.map(String):[],source:String(record.source||'server-native-v1')};}
+function skillResult(skillId,record){if(!skillId||!record)return null;const verification=SKILL_EVIDENCE.assess(record);return{skillId,mastery:Number(record.mastery||0),status:record.status||masteryStatus(record.mastery),nextReviewAt:record.nextReviewAt instanceof Date?record.nextReviewAt.toISOString():record.nextReviewAt||null,interval:Number(record.interval||0),easeFactor:Number(record.easeFactor||2.5),repetition:Number(record.repetition||0),attempts:Number(record.attempts||0),correctCount:Number(record.correctCount||0),wrongCount:Number(record.wrongCount||0),hintCount:Number(record.hintCount||0),lastCorrect:record.lastCorrect??null,lastAnsweredAt:record.lastAnsweredAt instanceof Date?record.lastAnsweredAt.toISOString():record.lastAnsweredAt||null,kpIds:Array.isArray(record.kpIds)?record.kpIds.map(String):[],source:String(record.source||'server-native-v1'),evidence:verification.evidence,verificationVersion:verification.version,masteryVerified:verification.verified};}
 function calculateLevel(totalXp) {
   let level = 1, cumulative = 0;
   while (level < 99) { const needed = level === 1 ? 50 : 50 + (level - 1) * 30; if (cumulative + needed > totalXp) break; cumulative += needed; level += 1; }
@@ -264,10 +266,11 @@ async function submitAnswer(request, env, uid, trace) {
   try { raw = await request.json(); } catch (_) { throw Object.assign(new Error('JSON body required'), { status: 400 }); }
   const answer = validateAnswer(raw);
   const token = await timed(trace,'oauth',()=>getServiceAccessToken(env));
-  let baseXp = 8, conceptKey = answer.conceptKey, conceptLabel = answer.conceptLabel, skillId = null;
+  let baseXp = 8, conceptKey = answer.conceptKey, conceptLabel = answer.conceptLabel, skillId = null, questionData = null;
   if (answer.questionId) {
     const question = await timed(trace,'question_read',()=>getQuestionMetadata(env, token, answer.questionId));
     if (question) {
+      questionData={id:answer.questionId,...question.data};
       const questionKpId = question.data.kpId ? String(question.data.kpId) : null;
       if (questionKpId && questionKpId !== answer.kpId) throw Object.assign(new Error('questionId does not belong to kpId'), { status: 400 });
       const xp = Number(question.data.baseXp ?? question.data.xp);
@@ -308,7 +311,11 @@ async function submitAnswer(request, env, uid, trace) {
     if(skillPath){
       const skillPrev=skillDoc?skillDoc.data:{};
       const skillLearning=calculateLearningUpdate(skillPrev,answer,baseXp,now);
-      nativeSkill={...skillPrev,...skillLearning,skillId,kpIds:Array.from(new Set([...(Array.isArray(skillPrev.kpIds)?skillPrev.kpIds:[]),answer.kpId].map(String))),source:'server-native-v1',nextReviewAt:skillLearning.nextReviewAt,lastAnsweredAt:skillLearning.lastAnsweredAt,updatedAt:now};
+      const evidence=SKILL_EVIDENCE.update(skillPrev.evidence,answer,questionData,skillId,now);
+      nativeSkill={...skillPrev,...skillLearning,skillId,kpIds:Array.from(new Set([...(Array.isArray(skillPrev.kpIds)?skillPrev.kpIds:[]),answer.kpId].map(String))),source:'server-native-v1',evidence,nextReviewAt:skillLearning.nextReviewAt,lastAnsweredAt:skillLearning.lastAnsweredAt,updatedAt:now};
+      const verification=SKILL_EVIDENCE.assess(nativeSkill);
+      nativeSkill.verificationVersion=verification.version;
+      nativeSkill.masteryVerified=verification.verified;
       skillMastery=skillResult(skillId,nativeSkill);
     }
     const totalXp = Number(game.totalXp || 0) + update.xpEarned;
