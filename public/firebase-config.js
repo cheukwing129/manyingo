@@ -331,7 +331,7 @@ function recordDifficultyOutcome(answer, result) {
   if (!result || !result.success || result.duplicate || typeof window === 'undefined') return null;
   const calibration = window.ManjingoDifficultyCalibration;
   if (!calibration || typeof calibration.recordAnswer !== 'function') return null;
-  try { return calibration.recordAnswer(answer); }
+  try { return calibration.recordAnswer({ ...answer, isCorrect:result.isCorrect===true }); }
   catch (error) { console.warn('difficulty calibration record unavailable:', error); return null; }
 }
 

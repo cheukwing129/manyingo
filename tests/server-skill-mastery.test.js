@@ -21,7 +21,7 @@ test('answer transaction accepts only a target skill validated against the revie
  const worker=read('public/_worker.js'),client=read('public/index.html');
  assert.match(client,/targetSkillId:q\.skillId\|\|null/);
  assert.match(worker,/coreSkillId\(question\.data, answer\.kpId, answer\.targetSkillId\)/);
- assert.match(worker,/targetSkillId requires a known questionId/);
+ assert.match(worker,/Verified question metadata required/);
  assert.match(worker,/requestedSkillId:answer\.targetSkillId/);
 });
 

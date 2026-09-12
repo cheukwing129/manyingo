@@ -2,6 +2,7 @@ import './learning-policy.js';
 import './curriculum-v1.js';
 import './question-skill-contract.js';
 import './skill-evidence-v1.js';
+import './answer-verification-v1.js';
 import './server-skill-plan.js';
 import './practice-effectiveness.js';
 import './server-practice-state.js';
@@ -10,6 +11,7 @@ const POLICY=globalThis.ManjingoLearningPolicy;
 const CURRICULUM=globalThis.ManjingoCurriculumV1;
 const QUESTION_SKILL_CONTRACT=globalThis.ManjingoQuestionSkillContract;
 const SKILL_EVIDENCE=globalThis.ManjingoSkillEvidenceV1;
+const ANSWER_VERIFICATION=globalThis.ManjingoAnswerVerificationV1;
 const SERVER_SKILL_PLAN=globalThis.ManjingoServerSkillPlan;
 const SERVER_PRACTICE=globalThis.ManjingoServerPracticeState;
 const PROJECT_FALLBACK = 'manjingo-95d9a';
@@ -239,7 +241,7 @@ function calculateLevel(totalXp) {
 }
 function optionalText(value, max) { if (value == null || value === '') return null; const text = String(value); if (text.length > max) throw Object.assign(new Error('Input too long'), { status: 400 }); return text; }
 function validateAnswer(raw) {
-  if (!raw || !raw.kpId || typeof raw.isCorrect !== 'boolean') throw Object.assign(new Error('Invalid answer payload'), { status: 400 });
+  if (!raw || !raw.kpId || !raw.questionId || raw.selectedAnswer == null) throw Object.assign(new Error('Invalid answer payload'), { status: 400 });
   const attemptCount = Number(raw.attemptCount ?? 1);
   const responseTimeMs = raw.responseTimeMs == null ? null : Number(raw.responseTimeMs);
   const localDate = raw.localDate ? String(raw.localDate) : new Date().toISOString().slice(0, 10);
@@ -249,8 +251,8 @@ function validateAnswer(raw) {
   if (!Number.isInteger(attemptCount) || attemptCount < 1 || attemptCount > 10 || (responseTimeMs != null && (!Number.isFinite(responseTimeMs) || responseTimeMs < 0 || responseTimeMs > 600000)) || !/^\d{4}-\d{2}-\d{2}$/.test(localDate) || !/^[A-Za-z0-9_-]{8,128}$/.test(answerId) || (conceptKey && !/^[A-Za-z0-9:_-]+$/.test(conceptKey)) || (targetSkillId && !/^[A-Za-z0-9._-]{2,128}$/.test(targetSkillId))) throw Object.assign(new Error('Invalid answer payload'), { status: 400 });
   return {
     answerId, kpId: String(raw.kpId), questionId: raw.questionId ? String(raw.questionId) : null, textId: raw.textId ? String(raw.textId) : null,
-    conceptKey, conceptLabel: optionalText(raw.conceptLabel, 160), selectedAnswer: optionalText(raw.selectedAnswer, 500), correctAnswer: optionalText(raw.correctAnswer, 500), targetSkillId,
-    isCorrect: raw.isCorrect, usedHint: Boolean(raw.usedHint), attemptCount, responseTimeMs, localDate
+    conceptKey, conceptLabel: optionalText(raw.conceptLabel, 160), selectedAnswer: optionalText(raw.selectedAnswer, 500), correctAnswer: null, targetSkillId,
+    isCorrect: false, clientClaimedCorrect:typeof raw.isCorrect==='boolean'?raw.isCorrect:null, usedHint: Boolean(raw.usedHint), attemptCount, responseTimeMs, localDate
   };
 }
 function validatePracticeSession(raw){
@@ -278,8 +280,11 @@ async function submitAnswer(request, env, uid, trace) {
       if (!conceptKey && question.data.misconceptionKey) conceptKey = String(question.data.misconceptionKey);
       if (!conceptLabel && question.data.misconceptionLabel) conceptLabel = String(question.data.misconceptionLabel);
       skillId = coreSkillId(question.data, answer.kpId, answer.targetSkillId);
+      const verified=ANSWER_VERIFICATION.verify(questionData,answer.selectedAnswer);
+      answer.isCorrect=verified.isCorrect;
+      answer.correctAnswer=verified.correctAnswer;
     }
-    else if(answer.targetSkillId)throw Object.assign(new Error('targetSkillId requires a known questionId'),{status:400});
+    else throw Object.assign(new Error('Verified question metadata required'),{status:400});
   }
   const tx = await timed(trace,'tx_begin',()=>beginTransaction(env, token));
   try {
@@ -300,7 +305,7 @@ async function submitAnswer(request, env, uid, trace) {
     if (logDoc) {
       await timed(trace,'tx_rollback',()=>rollback(env, token, tx));
       const existing = logDoc.data;
-      return json({ success: true, quality: existing.quality, xpEarned: Number(existing.xpEarned || 0), mastery: Number(existing.mastery || 0), status: existing.status || null, nextReviewAt: existing.nextReviewAt || null, attempts: Number(existing.attempts || 0), correctCount: Number(existing.correctCount || 0), wrongCount: Number(existing.wrongCount || 0), hintCount: Number(existing.hintCount || 0), lastCorrect: existing.lastCorrect ?? null, lastAnsweredAt: existing.lastAnsweredAt || existing.answeredAt || null, totalXp: Number(existing.totalXp ?? gameExisting.totalXp ?? 0), todayXp: Number(existing.todayXp ?? gameExisting.todayXp ?? 0), streak: Number(existing.streak ?? gameExisting.streak ?? 0), streakFreezes: Number(existing.streakFreezes ?? gameExisting.streakFreezes ?? 0), streakIncreased: Boolean(existing.streakIncreased), level: Number(existing.level ?? gameExisting.level ?? 1), skillId: existing.skillId || skillId || null, skillMastery: existing.skillMastery || null, conceptMastery: existing.conceptMastery || null, duplicate: true });
+      return json({ success: true, isCorrect:existing.isCorrect===true, quality: existing.quality, xpEarned: Number(existing.xpEarned || 0), mastery: Number(existing.mastery || 0), status: existing.status || null, nextReviewAt: existing.nextReviewAt || null, attempts: Number(existing.attempts || 0), correctCount: Number(existing.correctCount || 0), wrongCount: Number(existing.wrongCount || 0), hintCount: Number(existing.hintCount || 0), lastCorrect: existing.lastCorrect ?? null, lastAnsweredAt: existing.lastAnsweredAt || existing.answeredAt || null, totalXp: Number(existing.totalXp ?? gameExisting.totalXp ?? 0), todayXp: Number(existing.todayXp ?? gameExisting.todayXp ?? 0), streak: Number(existing.streak ?? gameExisting.streak ?? 0), streakFreezes: Number(existing.streakFreezes ?? gameExisting.streakFreezes ?? 0), streakIncreased: Boolean(existing.streakIncreased), level: Number(existing.level ?? gameExisting.level ?? 1), skillId: existing.skillId || skillId || null, skillMastery: existing.skillMastery || null, conceptMastery: existing.conceptMastery || null, duplicate: true });
     }
     const now = new Date();
     const prev = kpDoc ? kpDoc.data : {};
@@ -345,7 +350,7 @@ async function submitAnswer(request, env, uid, trace) {
     const gameUpdate = { ...game, totalXp, todayXp, todayXpDate: answer.localDate, dailyGoalXp, streak, streakFreezes, lastActiveDate: todayXp >= dailyGoalXp ? answer.localDate : previousActiveDate, level, updatedAt: now };
     const log = {
       answerId: answer.answerId, questionId: answer.questionId, kpIds: [answer.kpId], requestedSkillId:answer.targetSkillId, skillId, skillMastery, textId: answer.textId, conceptKey, conceptLabel,
-      selectedAnswer: answer.selectedAnswer, correctAnswer: answer.correctAnswer, conceptMastery: conceptResult, isCorrect: answer.isCorrect,
+      selectedAnswer: answer.selectedAnswer, correctAnswer: answer.correctAnswer, conceptMastery: conceptResult, isCorrect: answer.isCorrect, verificationVersion:ANSWER_VERIFICATION.VERSION, clientClaimedCorrect:answer.clientClaimedCorrect, correctnessMismatch:answer.clientClaimedCorrect!=null&&answer.clientClaimedCorrect!==answer.isCorrect,
       usedHint: answer.usedHint, attemptCount: answer.attemptCount, responseTimeMs: answer.responseTimeMs, localDate: answer.localDate,
       quality: update.quality, xpEarned: update.xpEarned, mastery: update.mastery, status: update.status, nextReviewAt: update.nextReviewAt,
       interval: update.interval, easeFactor: update.easeFactor, repetition: update.repetition, attempts: update.attempts, correctCount: update.correctCount, wrongCount: update.wrongCount, hintCount: update.hintCount, lastCorrect: update.lastCorrect, lastAnsweredAt: update.lastAnsweredAt,
@@ -357,7 +362,7 @@ async function submitAnswer(request, env, uid, trace) {
     if (conceptPath && conceptUpdate) writes.push(updateWrite(env, conceptPath, { ...conceptUpdate, lastAnsweredAt: conceptUpdate.lastAnsweredAt, updatedAt: now }));
     writes.push(updateWrite(env, logPath, log));
     await timed(trace,'commit',()=>commit(env, token, tx, writes));
-    return json({ success: true, quality: update.quality, xpEarned: update.xpEarned, mastery: update.mastery, status: update.status, nextReviewAt: update.nextReviewAt.toISOString(), interval: update.interval, easeFactor: update.easeFactor, repetition: update.repetition, attempts: update.attempts, correctCount: update.correctCount, wrongCount: update.wrongCount, hintCount: update.hintCount, lastCorrect: update.lastCorrect, lastAnsweredAt: update.lastAnsweredAt.toISOString(), totalXp, todayXp, streak, streakFreezes, streakIncreased, level, skillId, skillMastery, conceptMastery: conceptResult, duplicate: false });
+    return json({ success: true, isCorrect:answer.isCorrect, verificationVersion:ANSWER_VERIFICATION.VERSION, quality: update.quality, xpEarned: update.xpEarned, mastery: update.mastery, status: update.status, nextReviewAt: update.nextReviewAt.toISOString(), interval: update.interval, easeFactor: update.easeFactor, repetition: update.repetition, attempts: update.attempts, correctCount: update.correctCount, wrongCount: update.wrongCount, hintCount: update.hintCount, lastCorrect: update.lastCorrect, lastAnsweredAt: update.lastAnsweredAt.toISOString(), totalXp, todayXp, streak, streakFreezes, streakIncreased, level, skillId, skillMastery, conceptMastery: conceptResult, duplicate: false });
   } catch (error) {
     await timed(trace,'tx_rollback',()=>rollback(env, token, tx));
     throw error;
