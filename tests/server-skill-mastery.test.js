@@ -35,6 +35,14 @@ test('server commits skill mastery atomically with KP gamification and answer lo
  assert.match(worker,/skillId, skillMastery/);
 });
 
+test('server records versioned evidence before granting verified mastery',()=>{
+ const worker=read('public/_worker.js'),client=read('public/question-rotation.js');
+ assert.match(worker,/import '\.\/skill-evidence-v1\.js'/);
+ assert.match(worker,/SKILL_EVIDENCE\.update\(skillPrev\.evidence,answer,questionData,skillId,now\)/);
+ assert.match(worker,/nativeSkill\.masteryVerified=verification\.verified/);
+ assert.match(client,/skill-evidence-v1\.js[\s\S]*skill-mastery-v1\.js[\s\S]*skill-results-v1\.js/);
+});
+
 test('answer idempotency returns the originally committed skill result',()=>{
  const worker=read('public/_worker.js');
  assert.match(worker,/if \(logDoc\)/);

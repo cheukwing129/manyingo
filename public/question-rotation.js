@@ -8,7 +8,7 @@ api.balanceCatalogChoices();
 const doc=root.document||(root.window&&root.window.document);
 const catalog=root.ManjingoContent||(root.window&&root.window.ManjingoContent);
 if(doc&&doc.readyState==='loading'&&catalog){
- doc.write('<script src="./skill-mastery-v1.js"><\/script><script src="./skill-results-v1.js"><\/script><script src="./skill-first-plan.js"><\/script><script src="./question-pack-adaptive-01.js"><\/script><script src="./question-pack-adaptive-02.js"><\/script><script src="./question-pack-adaptive-03.js"><\/script><script src="./difficulty-calibration.js"><\/script><script src="./question-difficulty.js"><\/script><script src="./difficulty-observability.js"><\/script><script src="./remote-sync-guard.js"><\/script>');
+ doc.write('<script src="./skill-evidence-v1.js"><\/script><script src="./skill-mastery-v1.js"><\/script><script src="./skill-results-v1.js"><\/script><script src="./skill-first-plan.js"><\/script><script src="./question-pack-adaptive-01.js"><\/script><script src="./question-pack-adaptive-02.js"><\/script><script src="./question-pack-adaptive-03.js"><\/script><script src="./difficulty-calibration.js"><\/script><script src="./question-difficulty.js"><\/script><script src="./difficulty-observability.js"><\/script><script src="./remote-sync-guard.js"><\/script>');
 }
 })(typeof globalThis!=='undefined'?globalThis:this,function(root){
 'use strict';
