@@ -42,3 +42,11 @@ test('difficulty telemetry consumes server-confirmed correctness',()=>{
  const firebase=read('public/firebase-config.js');
  assert.match(firebase,/calibration\.recordAnswer\(\{ \.\.\.answer, isCorrect:result\.isCorrect===true \}\)/);
 });
+
+test('server derives concept attribution from reviewed question metadata',()=>{
+ const worker=read('public/_worker.js');
+ assert.match(worker,/function reviewedConcept\(questionData\)/);
+ assert.match(worker,/\(\{conceptKey,conceptLabel\}=reviewedConcept\(question\.data\)\)/);
+ assert.match(worker,/conceptAttributionMismatch:answer\.clientClaimedConceptKey!=null&&answer\.clientClaimedConceptKey!==conceptKey/);
+ assert.doesNotMatch(worker,/let baseXp = 8, conceptKey = answer\.conceptKey/);
+});

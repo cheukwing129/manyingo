@@ -194,17 +194,18 @@ reportTiming(dueResponse, 'due-knowledge-points', ['auth','oauth','knowledge_lis
 console.log(`✓ authenticated Firestore due lookup: ${due.dueKpIds.length} due`);
 
 const answerId = `smokee2e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
-const conceptKey = 'smoke_e2e_concept';
+const clientClaimedConceptKey = 'smoke_e2e_concept';
+const authoritativeConceptKey = 'zhi_verb_vs_particle';
 const localDate = new Date().toISOString().slice(0, 10);
 const validPayload = {
   answerId,
-  kpId: 'kp_yueyang_001',
-  questionId: 'q001',
-  textId: 'yueyanglou',
-  conceptKey,
+  kpId: 'kp_virtual_zhi',
+  questionId: 'q004',
+  textId: 'chenshe-shijia',
+  conceptKey: clientClaimedConceptKey,
   conceptLabel: 'Production smoke concept',
-  selectedAnswer: '貶官',
-  correctAnswer: '提拔',
+  selectedAnswer: '動詞（到／往）',
+  correctAnswer: '代詞',
   isCorrect: false,
   usedHint: false,
   attemptCount: 1,
@@ -221,17 +222,19 @@ check(Number(submit.totalXp) === 8, `expected total XP 8 for temporary user, got
 reportTiming(submitResponse, 'submit-answer', ['auth','oauth','question_read','tx_begin','tx_reads','commit','total']);
 console.log(`✓ real reviewed answer committed: +${submit.xpEarned} XP, mastery ${submit.mastery}%`);
 
-const [knowledge, game, concept, answerLog] = await Promise.all([
+const [knowledge, game, concept, forgedConcept, answerLog] = await Promise.all([
   firestoreDocument(health.firestoreProject, `users/${uid}/knowledge/${validPayload.kpId}`, idToken),
   firestoreDocument(health.firestoreProject, `users/${uid}/gamification/state`, idToken),
-  firestoreDocument(health.firestoreProject, `users/${uid}/concepts/${conceptKey}`, idToken),
+  firestoreDocument(health.firestoreProject, `users/${uid}/concepts/${authoritativeConceptKey}`, idToken),
+  firestoreDocument(health.firestoreProject, `users/${uid}/concepts/${clientClaimedConceptKey}`, idToken),
   firestoreDocument(health.firestoreProject, `users/${uid}/answerLogs/${answerId}`, idToken)
 ]);
 check(knowledge && Number(knowledge.mastery) === Number(submit.mastery), 'knowledge mastery was not persisted exactly');
 check(Number(knowledge.attempts) === 1 && knowledge.lastCorrect === true, 'knowledge attempt state was not persisted');
 check(game && Number(game.totalXp) === 8 && Number(game.todayXp) === 8, 'gamification XP was not persisted');
 check(concept && Number(concept.attempts) === 1 && Number(concept.mastery) > 0, 'concept mastery was not persisted');
-check(answerLog && answerLog.questionId === 'q001' && answerLog.isCorrect === true && answerLog.correctAnswer === '貶官' && answerLog.clientClaimedCorrect === false && answerLog.correctnessMismatch === true && Number(answerLog.xpEarned) === 8, 'answer log did not preserve authoritative correctness and mismatch audit');
+check(forgedConcept == null, 'server wrote the client-claimed concept instead of reviewed question metadata');
+check(answerLog && answerLog.questionId === 'q004' && answerLog.isCorrect === true && answerLog.correctAnswer === '動詞（到／往）' && answerLog.clientClaimedCorrect === false && answerLog.correctnessMismatch === true && answerLog.conceptKey === authoritativeConceptKey && answerLog.clientClaimedConceptKey === clientClaimedConceptKey && answerLog.conceptAttributionMismatch === true && Number(answerLog.xpEarned) === 8, 'answer log did not preserve authoritative answer and concept attribution');
 console.log('✓ Firestore verified knowledge, XP, concept mastery, and answerLog writes');
 
 const invalidSubmitResponse = await api('/api/submit-answer', idToken, { method: 'POST', body: '{}' });
