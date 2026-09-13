@@ -331,6 +331,44 @@ check(afterCalibrationResponse.ok, 'could not read intervention state after Stag
 check(JSON.stringify(afterCalibration.interventionState || {}) === JSON.stringify(beforeCalibration.interventionState || {}), 'Stage 3 calibration mutated intervention state');
 console.log(`✓ server-verified Stage 3 calibration persisted idempotently for ${calibrationFixture.skillId} without changing intervention state`);
 
+const reorderAnswerId = `smokereorder${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+const reorderPayload = {
+  answerId: reorderAnswerId,
+  kpId: 'kp_translation_001',
+  questionId: 'rq007',
+  textId: 'CROSS',
+  targetSkillId: 'trans.reorder',
+  selectedAnswer: 'a|b|c|d',
+  isCorrect: false,
+  usedHint: false,
+  attemptCount: 1,
+  responseTimeMs: 400,
+  localDate
+};
+let reorderResponse,reorderSubmit;
+for(let attempt=0;attempt<12;attempt+=1){
+  reorderResponse=await api('/api/submit-answer',idToken,{method:'POST',body:JSON.stringify(reorderPayload)});
+  reorderSubmit=await readJson(reorderResponse,'reorder answer submit');
+  if(reorderResponse.ok)break;
+  if(!/Verified question metadata required/i.test(String(reorderSubmit.error||''))||attempt===11)break;
+  await new Promise(resolve=>setTimeout(resolve,5000));
+}
+check(reorderResponse.ok&&reorderSubmit.success===true,`reorder answer submit failed (${reorderResponse.status}): ${reorderSubmit.error||'unknown error'}`);
+check(reorderSubmit.isCorrect===true&&reorderSubmit.skillId==='trans.reorder','server did not authoritatively score and attribute the reorder answer');
+const [reorderLog,reorderSkill]=await Promise.all([
+  firestoreDocument(health.firestoreProject,`users/${uid}/answerLogs/${reorderAnswerId}`,idToken),
+  firestoreDocument(health.firestoreProject,`users/${uid}/skills/trans.reorder`,idToken)
+]);
+check(reorderLog&&reorderLog.correctAnswer==='宋國有甚麼罪呢？'&&reorderLog.isCorrect===true,'reorder answer log did not preserve the readable authoritative answer');
+check(reorderSkill&&Array.isArray(reorderSkill.evidence?.productionQuestionIds)&&reorderSkill.evidence.productionQuestionIds.includes('rq007'),'reorder production evidence was not persisted to the skill record');
+console.log('✓ reorder answer is server-scored and stored as translation production evidence');
+
+const malformedReorderId = `smokebadreorder${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+const malformedReorderResponse=await api('/api/submit-answer',idToken,{method:'POST',body:JSON.stringify({...reorderPayload,answerId:malformedReorderId,selectedAnswer:'a|b'})});
+const malformedReorder=await readJson(malformedReorderResponse,'malformed reorder submit');
+check(malformedReorderResponse.status===400&&/every question fragment exactly once/i.test(String(malformedReorder.error||'')),'server accepted a partial reorder answer');
+console.log('✓ reorder route rejects missing or duplicated fragments');
+
 const invalidSubmitResponse = await api('/api/submit-answer', idToken, { method: 'POST', body: '{}' });
 const invalidSubmit = await readJson(invalidSubmitResponse, 'submit validation');
 check(invalidSubmitResponse.status === 400, `submit validation expected HTTP 400, got ${invalidSubmitResponse.status}`);

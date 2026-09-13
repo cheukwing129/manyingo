@@ -43,7 +43,7 @@ test('homepage syncs cloud concepts before selection and avoids double local con
  assert.match(html,/fetchUserConceptState\(uid\)/);
  assert.match(html,/syncRemoteConceptState\(remoteConcepts\)/);
  assert.match(html,/selectedAnswer:value/);
- assert.match(html,/correctAnswer:q\.a/);
+ assert.match(html,/correctAnswer:displayAnswer\(q\)/);
  const cloud=html.match(/function cloudSubmit\([\s\S]*?\nfunction createAnswerId/);
  assert.ok(cloud);
  assert.doesNotMatch(cloud[0],/conceptKey:/);
