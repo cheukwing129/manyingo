@@ -2,6 +2,8 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
+const vm=require('node:vm');
+const {spawnSync}=require('node:child_process');
 
 const root=path.join(__dirname,'..');
 const curriculum=require('../public/curriculum-v1.js');
@@ -152,4 +154,30 @@ test('browser verification sends normal server-authoritative answers and queues 
   const handler=worker.slice(worker.indexOf('async function submitStage3Calibration'),worker.indexOf('async function submitPracticeSession'));
   assert.doesNotMatch(handler,/interventions|knowledge\/|skills\/|gamification/,'calibration route must not mutate teaching state');
   assert.match(handler,/answerLogs\/\$\{item\.answerId\}/);
+});
+
+test('production calibration smoke has a real reviewed two-question fixture and parses cleanly',()=>{
+  const context={window:{}};
+  vm.createContext(context);
+  for(const filename of ['question-pack-settext-language-01.js','question-pack-settext-language-02.js'])vm.runInContext(fs.readFileSync(path.join(root,'public',filename),'utf8'),context,{filename});
+  const questions=Object.values(context.window).flatMap(pack=>Array.isArray(pack&&pack.questions)?pack.questions:[]);
+  const diagnostics=freshServer()&&global.ManjingoStage3Diagnostics;
+  const evidenceBySkill=new Map();
+  for(const [questionId,choices] of Object.entries(diagnostics.CHOICE_DIAGNOSTIC_MAP))for(const [choiceIndex,skills] of Object.entries(choices))for(const skillId of skills){const list=evidenceBySkill.get(skillId)||[];if(!list.some(item=>item.questionId===questionId))list.push({questionId,choiceIndex:Number(choiceIndex)});evidenceBySkill.set(skillId,list);}
+  const bySkill=new Map();
+  for(const question of questions)for(const skillId of question.skillIds||[]){const list=bySkill.get(skillId)||[];if(!list.some(item=>item.id===question.id))list.push(question);bySkill.set(skillId,list);}
+  assert.ok([...bySkill].some(([skillId,list])=>list.length>=2&&(evidenceBySkill.get(skillId)||[]).length>=2),'smoke needs two reviewed core questions and two Stage 3 contexts for one skill');
+  const syntax=spawnSync(process.execPath,['--check',path.join(root,'scripts','smoke_pages_api.mjs')],{encoding:'utf8'});
+  assert.equal(syntax.status,0,syntax.stderr||syntax.stdout);
+});
+
+test('production wait and API smoke require the deployed calibration asset and isolated idempotent route',()=>{
+  const workflow=fs.readFileSync(path.join(root,'.github/workflows/pages-production-smoke.yml'),'utf8');
+  const smoke=fs.readFileSync(path.join(root,'scripts/smoke_pages_api.mjs'),'utf8');
+  assert.match(workflow,/stage3-calibration\.js/);
+  assert.match(workflow,/stage3-choice-diagnostics-v1/);
+  assert.match(smoke,/stage3CalibrationPolicy === 'stage3-calibration-v1'/);
+  assert.match(smoke,/server-verified Stage 3 calibration persisted idempotently/);
+  assert.match(smoke,/JSON\.stringify\(afterCalibration\.interventionState \|\| \{\}\) === JSON\.stringify\(beforeCalibration\.interventionState \|\| \{\}\)/);
+  assert.match(smoke,/stage3-calibration-duplicate/);
 });
