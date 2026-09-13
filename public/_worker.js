@@ -6,6 +6,8 @@ import './answer-verification-v1.js';
 import './server-skill-plan.js';
 import './practice-effectiveness.js';
 import './server-practice-state.js';
+import './stage3-diagnostics.js';
+import './stage3-calibration-server.js';
 
 const POLICY=globalThis.ManjingoLearningPolicy;
 const CURRICULUM=globalThis.ManjingoCurriculumV1;
@@ -14,6 +16,7 @@ const SKILL_EVIDENCE=globalThis.ManjingoSkillEvidenceV1;
 const ANSWER_VERIFICATION=globalThis.ManjingoAnswerVerificationV1;
 const SERVER_SKILL_PLAN=globalThis.ManjingoServerSkillPlan;
 const SERVER_PRACTICE=globalThis.ManjingoServerPracticeState;
+const STAGE3_CALIBRATION=globalThis.ManjingoStage3CalibrationServer;
 const PROJECT_FALLBACK = 'manjingo-95d9a';
 const TOKEN_SCOPE = 'https://www.googleapis.com/auth/datastore';
 const FIRESTORE_ROOT = 'https://firestore.googleapis.com/v1';
@@ -81,7 +84,7 @@ async function getServiceAccessToken(env) {
   const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion })
+    body: new URLSearchParams({ grant_type: 'urn:params:oauth:grant-type:jwt-bearer'.replace('urn:params','urn:ietf:params'), assertion })
   });
   if (!response.ok) throw new Error(`Google OAuth failed (${response.status})`);
   const data = await response.json();
@@ -376,6 +379,18 @@ async function submitAnswer(request, env, uid, trace) {
   }
 }
 
+async function submitStage3Calibration(request,env,uid,trace){
+  let raw;try{raw=await request.json()}catch(_){throw Object.assign(new Error('JSON body required'),{status:400})}
+  const event=STAGE3_CALIBRATION.validate(raw),token=await timed(trace,'calibration_oauth',()=>getServiceAccessToken(env)),tx=await timed(trace,'calibration_tx_begin',()=>beginTransaction(env,token));
+  try{
+    const calibrationPath=`users/${uid}/stage3Calibrations/${event.calibrationId}`,answerPaths=event.verificationAnswers.map(item=>`users/${uid}/answerLogs/${item.answerId}`),docs=await timed(trace,'calibration_tx_reads',()=>batchGetDocuments(env,token,[calibrationPath,...answerPaths],tx)),existing=docs[0];
+    if(existing){await timed(trace,'calibration_tx_rollback',()=>rollback(env,token,tx));return json({success:true,...existing.data,duplicate:true})}
+    const outcome=STAGE3_CALIBRATION.derive(event,docs.slice(1)),now=new Date(),stored=STAGE3_CALIBRATION.stored(event,outcome,now);
+    await timed(trace,'calibration_commit',()=>commit(env,token,tx,[updateWrite(env,calibrationPath,{...stored,receivedAt:now})]));
+    return json({success:true,...stored,duplicate:false});
+  }catch(error){await timed(trace,'calibration_tx_rollback',()=>rollback(env,token,tx));throw error}
+}
+
 async function submitPracticeSession(request,env,uid,trace){
   let raw;try{raw=await request.json()}catch(_){throw Object.assign(new Error('JSON body required'),{status:400})}
   const session=validatePracticeSession(raw),token=await timed(trace,'oauth',()=>getServiceAccessToken(env)),kpUniverse=await timed(trace,'kp_list',()=>getKnowledgePointUniverse(env,token)),route=kpUniverse.find(row=>String(row&&row.id)===session.routeKpId),allowed=route?SERVER_SKILL_PLAN.skillIdsForKp(session.routeKpId,route.data||{}):[];
@@ -414,9 +429,10 @@ async function dueKnowledge(env, uid, trace) {
 
 async function api(request, env, trace) {
   const url = new URL(request.url);
-  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION });
+  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION });
   const uid = await timed(trace,'auth',()=>verifyFirebaseIdToken(request, env));
   if (url.pathname === '/api/submit-answer' && request.method === 'POST') return submitAnswer(request, env, uid, trace);
+  if (url.pathname === '/api/stage3-calibration' && request.method === 'POST') return submitStage3Calibration(request,env,uid,trace);
   if (url.pathname === '/api/practice-session' && request.method === 'POST') return submitPracticeSession(request, env, uid, trace);
   if (url.pathname === '/api/practice-state' && request.method === 'GET') return practiceState(env, uid, trace);
   if (url.pathname === '/api/daily-plan' && (request.method === 'GET' || request.method === 'POST')) return dailyPlan(env, uid, trace);
