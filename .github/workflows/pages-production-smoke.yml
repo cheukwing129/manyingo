@@ -34,6 +34,7 @@ jobs:
           for attempt in $(seq 1 18); do
             if curl -fsS "$MANJINGO_BASE_URL/practice-outbox.js" | grep -q 'manjingo_practice_outbox_v1' && \
                curl -fsS "$MANJINGO_BASE_URL/stage3-reading.js" | grep -q 'ManjingoStage3Reading' && \
+               curl -fsS "$MANJINGO_BASE_URL/stage3-diagnostics.js" | grep -q 'ManjingoStage3Diagnostics' && \
                curl -fsS "$MANJINGO_BASE_URL/stage3-diagnostics.js" | grep -q 'stage3-choice-diagnostics-v1' && \
                curl -fsS "$MANJINGO_BASE_URL/stage3-calibration.js" | grep -q 'ManjingoStage3Calibration' && \
                curl -fsS "$MANJINGO_BASE_URL/theme-runtime.js" | grep -q 'stage3-diagnostics.js' && \
