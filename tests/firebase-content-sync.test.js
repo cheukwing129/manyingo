@@ -63,6 +63,35 @@ test('successful main tests trigger only non-destructive automatic catalog upser
   assert.doesNotMatch(autoBlock,/--prune|--verify/);
 });
 
+test('automatic content sync touches Firestore only when reviewed catalog inputs changed',()=>{
+  const workflow=read('.github/workflows/firebase-content-sync.yml');
+  assert.match(workflow,/Detect reviewed catalog changes/);
+  assert.match(workflow,/fetch-depth: 2/);
+  assert.match(workflow,/git diff-tree --no-commit-id --name-only -r "\$HEAD_SHA\^" "\$HEAD_SHA"/);
+  assert.match(workflow,/data\/texts_template\.csv/);
+  assert.match(workflow,/scripts\/reviewed_catalog\.js/);
+  assert.match(workflow,/public\/content-catalog\.js/);
+  assert.match(workflow,/public\/curriculum-v1\.js/);
+  assert.match(workflow,/public\/question-metadata-v1\.js/);
+  assert.match(workflow,/public\/question-pack-\*\.js/);
+  assert.match(workflow,/No reviewed catalog inputs changed; skipping all Firestore access/);
+  assert.match(workflow,/Firestore quota untouched/);
+  for(const step of ['Require Firebase ADC credential','Authenticate to Google Cloud','Install Firebase Admin runtime','Preview Firestore catalog drift']){
+    const start=workflow.indexOf(`- name: ${step}`);
+    assert.ok(start>=0,`missing ${step}`);
+    const block=workflow.slice(start,workflow.indexOf('\n      - name:',start+1));
+    assert.match(block,/steps\.content_scope\.outputs\.needs_sync == 'true'/,`${step} must be path-gated`);
+  }
+});
+
+test('manual content operations always bypass the automatic path gate',()=>{
+  const workflow=read('.github/workflows/firebase-content-sync.yml');
+  const detect=workflow.slice(workflow.indexOf('- name: Detect reviewed catalog changes'),workflow.indexOf('- name: Skip unchanged reviewed catalog'));
+  assert.match(detect,/if \[ "\$EVENT_NAME" = "workflow_dispatch" \]/);
+  assert.match(detect,/echo "needs_sync=true" >> "\$GITHUB_OUTPUT"/);
+  assert.match(detect,/Manual content operation requested; Firestore access enabled/);
+});
+
 test('manual prune still requires preview explicit confirmation and final exact verification',()=>{
   const workflow=read('.github/workflows/firebase-content-sync.yml');
   assert.match(workflow,/sync-and-prune/);
