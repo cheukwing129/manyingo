@@ -52,7 +52,9 @@ const stage3 = context.ManjingoStage3Reading;
 const pack = context.window.ManjingoQuestionPackTransfer07;
 check(diagnostics && typeof diagnostics.recordAttempt === 'function', 'deployed Stage 3 diagnostics runtime is missing recordAttempt()');
 check(typeof diagnostics.recordVerification === 'function', 'deployed Stage 3 diagnostics runtime is missing recordVerification()');
+check(typeof diagnostics.diagnosticSelection === 'function', 'deployed Stage 3 diagnostics runtime is missing option selection diagnosis');
 check(Object.keys(diagnostics.DIAGNOSTIC_MAP || {}).length === 36, 'deployed Stage 3 diagnostic map does not cover all 36 questions');
+check(Object.keys(diagnostics.CHOICE_DIAGNOSTIC_MAP || {}).length === 36, 'deployed Stage 3 choice diagnostic map does not cover all 36 questions');
 check(stage3 && typeof stage3.buildChallenge === 'function', 'deployed Stage 3 runtime is missing buildChallenge()');
 check(typeof stage3.summarizeResults === 'function', 'deployed Stage 3 runtime is missing summarizeResults()');
 check(typeof stage3.isStage3Question === 'function', 'deployed Stage 3 runtime is missing Stage 3 filtering');
@@ -64,7 +66,24 @@ for (const [questionId, mappedSkillIds] of Object.entries(diagnostics.DIAGNOSTIC
   check(mappedSkillIds.length > 0, `${questionId} has no diagnostic skill`);
   check(mappedSkillIds.every(skillId => coreSkillIds.has(skillId)), `${questionId} maps outside the 49 core skills`);
 }
+for (const [questionId, choiceMap] of Object.entries(diagnostics.CHOICE_DIAGNOSTIC_MAP)) {
+  check([1, 2, 3].every(index => Array.isArray(choiceMap[index]) && choiceMap[index].length > 0), `${questionId} does not review all three distractors`);
+  check(Object.values(choiceMap).flat().every(skillId => coreSkillIds.has(skillId)), `${questionId} distractor maps outside the 49 core skills`);
+}
 
+const contextQuestion = pack.questions.find(question => question.id === 'tr10q012');
+check(contextQuestion && contextQuestion.o.length === 4, 'deployed diagnostic probe question is missing');
+const actorSelection = diagnostics.diagnosticSelection('tr10q012', contextQuestion.o[1], false);
+const lexicalSelection = diagnostics.diagnosticSelection('tr10q012', contextQuestion.o[2], false);
+const syntaxSelection = diagnostics.diagnosticSelection('tr10q012', contextQuestion.o[3], false);
+check(actorSelection.mode === 'choice' && actorSelection.skillIds[0] === 'read.actor-tracking', 'actor distractor did not resolve to actor tracking');
+check(lexicalSelection.mode === 'choice' && lexicalSelection.skillIds[0] === 'lex.context-inference', 'lexical distractor did not resolve to context inference');
+check(syntaxSelection.mode === 'choice' && syntaxSelection.skillIds[0] === 'syn.interrogative-patterns', 'syntax distractor did not resolve to interrogative patterns');
+
+diagnostics.clear();
+diagnostics.recordAttempt('tr10q012', false, '2026-09-12T09:59:00Z', contextQuestion.o[1]);
+const choiceEvent = diagnostics.readState().skills['read.actor-tracking'].events[0];
+check(choiceEvent.choiceIndex === 1 && choiceEvent.diagnosticMode === 'choice', 'deployed option-level diagnostic provenance was not persisted');
 diagnostics.clear();
 diagnostics.recordAttempt('tr10q001', false, '2026-09-12T10:00:00Z');
 check(diagnostics.signals().length === 0, 'one Stage 3 miss incorrectly became a core weakness signal');
@@ -107,4 +126,4 @@ const summary = stage3.summarizeResults([
 ]);
 check(summary.total === 6 && summary.correct === 4 && summary.rows.length === 3, 'deployed Stage 3 result summary is invalid');
 
-console.log('✓ deployed Stage 3 loader, 36-question bank, soft core diagnostics, verification reset, rotation, and summary are healthy');
+console.log('✓ deployed Stage 3 loader, 36-question bank, choice-aware soft diagnostics, verification reset, rotation, and summary are healthy');
