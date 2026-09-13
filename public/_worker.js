@@ -84,7 +84,7 @@ async function getServiceAccessToken(env) {
   const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'urn:params:oauth:grant-type:jwt-bearer'.replace('urn:params','urn:ietf:params'), assertion })
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion })
   });
   if (!response.ok) throw new Error(`Google OAuth failed (${response.status})`);
   const data = await response.json();
