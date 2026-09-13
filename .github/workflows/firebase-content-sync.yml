@@ -45,9 +45,50 @@ jobs:
     steps:
       - name: Checkout reviewed catalog
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Detect reviewed catalog changes
+        id: content_scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "needs_sync=true" >> "$GITHUB_OUTPUT"
+            echo "Manual content operation requested; Firestore access enabled."
+            exit 0
+          fi
+
+          changed_files="$(git diff-tree --no-commit-id --name-only -r "$HEAD_SHA^" "$HEAD_SHA")"
+          echo "Changed files:"
+          printf '%s\n' "$changed_files"
+
+          needs_sync=false
+          while IFS= read -r file; do
+            case "$file" in
+              data/texts_template.csv|scripts/reviewed_catalog.js|public/content-catalog.js|public/curriculum-v1.js|public/question-metadata-v1.js|public/question-difficulty.js|public/difficulty-calibration.js|public/question-pack-*.js)
+                needs_sync=true
+                break
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          echo "needs_sync=$needs_sync" >> "$GITHUB_OUTPUT"
+          if [ "$needs_sync" = "true" ]; then
+            echo "Reviewed catalog inputs changed; production Firestore review will run."
+          else
+            echo "No reviewed catalog inputs changed; skipping all Firestore access."
+          fi
+
+      - name: Skip unchanged reviewed catalog
+        if: steps.content_scope.outputs.needs_sync != 'true'
+        run: echo "✅ No reviewed catalog inputs changed; Firestore quota untouched."
 
       - name: Require explicit prune confirmation
-        if: env.OPERATION == 'sync-and-prune'
+        if: steps.content_scope.outputs.needs_sync == 'true' && env.OPERATION == 'sync-and-prune'
         shell: bash
         run: |
           if [ "$CONFIRMATION" != "PRUNE_REVIEWED_CONTENT" ]; then
@@ -56,6 +97,7 @@ jobs:
           fi
 
       - name: Require Firebase ADC credential
+        if: steps.content_scope.outputs.needs_sync == 'true'
         shell: bash
         run: |
           if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
@@ -64,37 +106,42 @@ jobs:
           fi
 
       - name: Authenticate to Google Cloud
+        if: steps.content_scope.outputs.needs_sync == 'true'
         uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.FIREBASE_PROJECT_ID }}
           credentials_json: ${{ env.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Setup Node
+        if: steps.content_scope.outputs.needs_sync == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install Firebase Admin runtime
+        if: steps.content_scope.outputs.needs_sync == 'true'
         run: npm install --prefix functions --no-audit --no-fund
 
       - name: Verify repository before production content access
+        if: steps.content_scope.outputs.needs_sync == 'true'
         run: npm test
 
       - name: Preview Firestore catalog drift
+        if: steps.content_scope.outputs.needs_sync == 'true'
         run: node scripts/import_to_firestore.js --check
 
       - name: Safely upsert reviewed catalog after successful main tests
-        if: github.event_name == 'workflow_run'
+        if: steps.content_scope.outputs.needs_sync == 'true' && github.event_name == 'workflow_run'
         run: node scripts/import_to_firestore.js --apply
 
       - name: Safely upsert reviewed catalog
-        if: github.event_name == 'workflow_dispatch' && env.OPERATION == 'sync'
+        if: steps.content_scope.outputs.needs_sync == 'true' && github.event_name == 'workflow_dispatch' && env.OPERATION == 'sync'
         run: node scripts/import_to_firestore.js --apply
 
       - name: Synchronize reviewed catalog and prune stale content
-        if: env.OPERATION == 'sync-and-prune'
+        if: steps.content_scope.outputs.needs_sync == 'true' && env.OPERATION == 'sync-and-prune'
         run: node scripts/import_to_firestore.js --prune
 
       - name: Verify Firestore exactly matches reviewed catalog
-        if: env.OPERATION == 'sync-and-prune'
+        if: steps.content_scope.outputs.needs_sync == 'true' && env.OPERATION == 'sync-and-prune'
         run: node scripts/import_to_firestore.js --verify
