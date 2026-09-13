@@ -30,6 +30,9 @@ function cleanup(){
   delete global.ManjingoCurriculumV1;
   delete global.ManjingoStage3Diagnostics;
   delete global.ManjingoLocalLearning;
+  delete global.ManjingoContent;
+  delete global.ManjingoQuestionPackTransfer07;
+  delete global.window;
 }
 
 test.afterEach(cleanup);
@@ -48,6 +51,68 @@ test('all 36 Stage 3 questions carry separate core diagnostic provenance',()=>{
       assert.equal(advanced.has(skillId),false,questionId+' never reuses Stage 3 identity as diagnosis');
     }
   }
+});
+
+test('all Stage 3 distractors have reviewed option-level diagnostic routes inside the 49-skill core',()=>{
+  const diagnostics=freshDiagnostics();
+  const ids=Object.keys(diagnostics.CHOICE_DIAGNOSTIC_MAP).sort();
+  assert.equal(ids.length,36);
+  assert.deepEqual(ids,Object.keys(diagnostics.DIAGNOSTIC_MAP).sort());
+  const core=new Set(curriculum.coreSkills().map(x=>x.id));
+  for(const [questionId,choiceMap] of Object.entries(diagnostics.CHOICE_DIAGNOSTIC_MAP)){
+    assert.deepEqual(Object.keys(choiceMap).map(Number).sort(),[1,2,3],questionId+' reviews all three distractors');
+    for(const skillIds of Object.values(choiceMap)){
+      assert.ok(skillIds.length>=1,questionId+' distractor maps to at least one skill');
+      assert.ok(skillIds.every(skillId=>core.has(skillId)),questionId+' distractor stays inside core skills');
+    }
+  }
+});
+
+test('high-information distractors can point to different underlying skills on the same Stage 3 question',()=>{
+  const diagnostics=freshDiagnostics();
+  assert.deepEqual(diagnostics.diagnosticSelection('tr10q012',1,false),{
+    questionId:'tr10q012',skillIds:['read.actor-tracking'],choiceIndex:1,mode:'choice'
+  });
+  assert.deepEqual(diagnostics.diagnosticSelection('tr10q012',2,false),{
+    questionId:'tr10q012',skillIds:['lex.context-inference'],choiceIndex:2,mode:'choice'
+  });
+  assert.deepEqual(diagnostics.diagnosticSelection('tr10q012',3,false),{
+    questionId:'tr10q012',skillIds:['syn.interrogative-patterns'],choiceIndex:3,mode:'choice'
+  });
+});
+
+test('browser selected-answer text resolves back to the reviewed distractor index',()=>{
+  const diagnostics=freshDiagnostics();
+  global.window={ManjingoQuestionPackTransfer07:{questions:[{
+    id:'tr10q012',
+    o:['忽略前後語境','把所有人物都當成同一個人','把「俄而」誤作地名','把問句誤作命令句']
+  }]}};
+  const selection=diagnostics.diagnosticSelection('tr10q012','把「俄而」誤作地名',false);
+  assert.equal(selection.choiceIndex,2);
+  assert.equal(selection.mode,'choice');
+  assert.deepEqual(selection.skillIds,['lex.context-inference']);
+});
+
+test('unknown or unavailable distractor identity safely falls back to the reviewed question-level diagnosis',()=>{
+  const diagnostics=freshDiagnostics();
+  const selection=diagnostics.diagnosticSelection('tr10q012',null,false);
+  assert.equal(selection.choiceIndex,null);
+  assert.equal(selection.mode,'question');
+  assert.deepEqual(selection.skillIds,['read.context-clues']);
+});
+
+test('choice-level provenance is persisted for audit without becoming mastery evidence',()=>{
+  const diagnostics=freshDiagnostics();
+  let masteryWrites=0;
+  global.ManjingoLocalLearning={submit(){masteryWrites+=1;}};
+  diagnostics.recordAttempt('tr10q012',false,'2026-09-12T10:00:00Z',1);
+  const state=diagnostics.readState();
+  const event=state.skills['read.actor-tracking'].events[0];
+  assert.equal(event.questionId,'tr10q012');
+  assert.equal(event.choiceIndex,1);
+  assert.equal(event.diagnosticMode,'choice');
+  assert.equal(masteryWrites,0);
+  assert.equal(state.version,2);
 });
 
 test('one noisy Stage 3 miss never becomes a core weakness signal',()=>{
@@ -117,8 +182,11 @@ test('homepage and lesson wire diagnostics without changing the Stage 3 advanced
   assert.doesNotMatch(pack,/diagnosticSkillIds/,'advanced scoring metadata stays separate from diagnostic provenance');
 });
 
-test('browser integration exposes a two-question verification route and soft-evidence copy',()=>{
+test('browser integration exposes option-aware soft evidence and a two-question verification route',()=>{
   const source=fs.readFileSync(path.join(root,'public/stage3-diagnostics.js'),'utf8');
+  assert.match(source,/CHOICE_DIAGNOSTIC_MAP/);
+  assert.match(source,/detail&&detail\.selectedAnswer/);
+  assert.match(source,/依你剛才選的答案/);
   assert.match(source,/verify=stage3/);
   assert.match(source,/\.slice\(0,2\)/);
   assert.match(source,/不會直接降低核心技能掌握度/);
