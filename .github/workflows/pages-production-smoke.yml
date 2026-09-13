@@ -35,19 +35,21 @@ jobs:
             if curl -fsS "$MANJINGO_BASE_URL/practice-outbox.js" | grep -q 'manjingo_practice_outbox_v1' && \
                curl -fsS "$MANJINGO_BASE_URL/stage3-reading.js" | grep -q 'ManjingoStage3Reading' && \
                curl -fsS "$MANJINGO_BASE_URL/stage3-diagnostics.js" | grep -q 'ManjingoStage3Diagnostics' && \
+               curl -fsS "$MANJINGO_BASE_URL/stage3-diagnostics.js" | grep -q 'stage3-choice-diagnostics-v1' && \
+               curl -fsS "$MANJINGO_BASE_URL/stage3-calibration.js" | grep -q 'ManjingoStage3Calibration' && \
                curl -fsS "$MANJINGO_BASE_URL/theme-runtime.js" | grep -q 'stage3-diagnostics.js' && \
                curl -fsS "$MANJINGO_BASE_URL/question-pack-transfer-07.js" | grep -q 'tr10q036' && \
                curl -fsS "$MANJINGO_BASE_URL/question-pack-settext-language-01.js" | grep -q 'stl1q036' && \
                curl -fsS "$MANJINGO_BASE_URL/question-pack-settext-language-02.js" | grep -q 'stl2q024' && \
                curl -fsS "$MANJINGO_BASE_URL/content-catalog.js" | grep -q 'question-pack-settext-language-02.js' && \
                curl -fsS "$MANJINGO_BASE_URL/home-shell.js" | grep -q 'stage3-reading.js'; then
-              echo "Pages reliability, Stage 3 diagnostics, and prescribed-text language assets are available."
+              echo "Pages reliability, Stage 3 diagnostics/calibration, and prescribed-text language assets are available."
               exit 0
             fi
             echo "Waiting for Pages deployment ($attempt/18)..."
             sleep 10
           done
-          echo "::error::Pages did not expose the required reliability, Stage 3 diagnostics, and prescribed-text language assets within 3 minutes."
+          echo "::error::Pages did not expose the required reliability, Stage 3 diagnostics/calibration, and prescribed-text language assets within 3 minutes."
           exit 1
       - name: Install Firebase Admin cleanup runtime
         run: npm install --prefix functions --no-audit --no-fund
