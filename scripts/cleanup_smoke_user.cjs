@@ -28,18 +28,26 @@ const { getFirestore } = functionsRequire('firebase-admin/firestore');
 initializeApp({ credential: cert(serviceAccount), projectId: serviceAccount.project_id || 'manjingo-95d9a' });
 
 (async () => {
+  const failures = [];
   const db = getFirestore();
-  await db.recursiveDelete(db.collection('users').doc(uid));
-  console.log('✓ temporary smoke Firestore learning data deleted');
+  try {
+    await db.recursiveDelete(db.collection('users').doc(uid));
+    console.log('✓ temporary smoke Firestore learning data deleted');
+  } catch (error) {
+    failures.push(`Firestore cleanup: ${error.message || error}`);
+    console.error(`⚠ temporary smoke Firestore cleanup deferred for uid ${uid}: ${error.message || error}`);
+  }
   try {
     await getAuth().deleteUser(uid);
     console.log('✓ temporary anonymous Firebase user deleted');
   } catch (error) {
-    if (error && error.code !== 'auth/user-not-found') throw error;
-    console.log('✓ temporary Firebase Auth user already absent');
+    if (error && error.code === 'auth/user-not-found') console.log('✓ temporary Firebase Auth user already absent');
+    else failures.push(`Auth cleanup: ${error.message || error}`);
   }
+  if (failures.length) throw new Error(failures.join('; '));
   fs.unlinkSync(stateFile);
 })().catch(error => {
-  console.error(`❌ smoke cleanup failed for uid ${uid}: ${error.message || error}`);
+  console.error(`❌ smoke cleanup incomplete for uid ${uid}: ${error.message || error}`);
+  console.error('The cleanup manifest was retained so Firestore cleanup can be retried safely.');
   process.exitCode = 1;
 });
