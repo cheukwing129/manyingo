@@ -99,6 +99,7 @@ function catalogTargets(catalog) {
     id:String(question.id), data:{
       type:question.type,kpId:question.kpId,textId:question.textId==='CROSS'?null:(question.textId||null),question:question.q,
       options:Array.isArray(question.o)?Array.from(question.o,String):[],answer:question.a==null?'':String(question.a),explanation:question.explanation||'',
+      fragments:Array.isArray(question.fragments)?question.fragments.map(item=>({id:String(item.id),text:String(item.text)})):[],answerOrder:Array.isArray(question.answerOrder)?question.answerOrder.map(String):[],modelAnswer:question.modelAnswer||null,
       misconceptionKey:question.misconceptionKey||null,misconceptionLabel:question.misconceptionLabel||null,difficultyTier:question.difficultyTier||null,
       skillIds:Array.isArray(question.skillIds)?Array.from(question.skillIds,String):[],skillContractVersion:question.skillContractVersion||null,sourceTextId:question.sourceTextId||null,sourceSentenceId:question.sourceSentenceId||null,
       sourceWorkId:question.sourceWorkId||null,setTextLanguage:question.setTextLanguage===true?true:null,
