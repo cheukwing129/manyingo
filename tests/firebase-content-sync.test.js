@@ -56,6 +56,8 @@ test('successful main tests trigger only non-destructive automatic catalog upser
   assert.match(workflow,/workflow_run\.conclusion == 'success'/);
   assert.match(workflow,/workflow_run\.head_branch == 'main'/);
   assert.doesNotMatch(workflow,/\npush:/);
+  assert.match(workflow,/group: firebase-content-production-/);
+  assert.match(workflow,/cancel-in-progress: \$\{\{ github\.event_name != 'workflow_dispatch' \}\}/);
   const autoStep=workflow.indexOf('Safely upsert reviewed catalog after successful main tests');
   const applyIndex=workflow.indexOf('import_to_firestore.js --apply',autoStep);
   assert.ok(autoStep>=0&&applyIndex>autoStep);
