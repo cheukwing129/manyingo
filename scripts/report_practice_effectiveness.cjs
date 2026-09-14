@@ -25,7 +25,7 @@ function parseArgs(argv){
   return args;
 }
 function ensureParent(file){if(file)fs.mkdirSync(path.dirname(path.resolve(file)),{recursive:true});}
-function learnerIdFrom(doc){const user=doc.ref.parent.parent&&doc.ref.parent.parent.parent&&doc.ref.parent.parent.parent.parent?null:null;return doc.ref.parent.parent?doc.ref.parent.parent.id:'unknown';}
+function learnerIdFrom(doc){return doc&&doc.ref&&doc.ref.parent&&doc.ref.parent.parent?doc.ref.parent.parent.id:'unknown';}
 async function loadRows(days){
   if(!getApps().length)initializeApp({credential:applicationDefault(),projectId:process.env.FIREBASE_PROJECT_ID||'manjingo-95d9a'});
   const db=getFirestore(),now=Date.now(),answerSince=Timestamp.fromMillis(now-(days+DEFAULTS.lookbackDays)*86400000),practiceSince=Timestamp.fromMillis(now-days*86400000);
