@@ -19,6 +19,10 @@ check(themeSource.includes("PROGRESSIVE_BOOT_VERSION='v1'"),'deployed theme runt
 check(themeSource.includes("classList.remove('app-booting')"),'deployed theme runtime does not release the blocking homepage boot');
 check(themeSource.includes('正在準備今日學習…')&&themeSource.includes('準備中…'),'deployed progressive boot is missing honest pending UI');
 check(homeSource.indexOf('<script src="./theme-runtime.js"></script>')>=0&&homeSource.indexOf('<script src="./theme-runtime.js"></script>')<homeSource.indexOf('<body>'),'homepage does not run the progressive boot runtime before body parsing');
+check(homeSource.includes('function schedulePreparedQuestion(targetIndex)'),'deployed homepage is missing next-question prewarming');
+check(homeSource.includes("requestIdleCallback(run,{timeout:180})"),'deployed homepage does not prewarm the next question during idle time');
+check(homeSource.includes('takePreparedQuestion(index)||buildQuestionFragment(q,index,questions.length)'),'deployed next button cannot consume prepared question DOM');
+check(homeSource.includes('invalidatePreparedQuestion();showPlan(merged.remaining,currentPlanSource,true)'),'deployed adaptive replan does not invalidate stale prepared question DOM');
 const captured=[];
 const learning={
   getKnowledge:()=>({attempts:3,mastery:64,lastAnsweredAt:'2026-09-11T01:10:00.000Z'}),
@@ -37,4 +41,4 @@ check(stale.totalXp===24&&stale.todayXp===16&&stale.streak===2,'deployed sync gu
 learning.syncRemoteResult('kp1',{attempts:4,mastery:55,lastCorrect:false,lastAnsweredAt:'2026-09-11T01:12:00.000Z',totalXp:24,todayXp:16,streak:2});
 const newer=captured.at(-1)||{};
 check(newer.mastery===55&&newer.lastCorrect===false,'deployed sync guard blocks a genuinely newer wrong-answer update');
-console.log('✓ deployed progressive homepage boot, nonblocking sync guard, and per-page daily-plan read budget are healthy');
+console.log('✓ deployed progressive homepage boot, next-question prewarm, nonblocking sync guard, and per-page daily-plan read budget are healthy');
