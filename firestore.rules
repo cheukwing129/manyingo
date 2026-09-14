@@ -35,6 +35,11 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      match /planState/{document} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
+
       match /concepts/{conceptKey} {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow write: if false;

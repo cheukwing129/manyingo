@@ -8,6 +8,7 @@ import './practice-effectiveness.js';
 import './server-practice-state.js';
 import './stage3-diagnostics.js';
 import './stage3-calibration-server.js';
+import './plan-state-v1.js';
 
 const POLICY=globalThis.ManjingoLearningPolicy;
 const CURRICULUM=globalThis.ManjingoCurriculumV1;
@@ -17,6 +18,7 @@ const ANSWER_VERIFICATION=globalThis.ManjingoAnswerVerificationV1;
 const SERVER_SKILL_PLAN=globalThis.ManjingoServerSkillPlan;
 const SERVER_PRACTICE=globalThis.ManjingoServerPracticeState;
 const STAGE3_CALIBRATION=globalThis.ManjingoStage3CalibrationServer;
+const PLAN_STATE=globalThis.ManjingoPlanStateV1;
 const PROJECT_FALLBACK = 'manjingo-95d9a';
 const TOKEN_SCOPE = 'https://www.googleapis.com/auth/datastore';
 const FIRESTORE_ROOT = 'https://firestore.googleapis.com/v1';
@@ -232,6 +234,9 @@ async function getKnowledgePointUniverse(env, token) {
   return value;
 }
 function updateWrite(env, path, data) { return { update: docObject(documentName(env, path), data) }; }
+function maskedUpdateWrite(env,path,data,fieldPaths){return{update:docObject(documentName(env,path),data),updateMask:{fieldPaths}}}
+function planStatePath(uid){return `users/${uid}/planState/current`;}
+function planStateDeltaWrite(env,uid,changes,now){const delta=PLAN_STATE.delta(changes,now);return maskedUpdateWrite(env,planStatePath(uid),delta.data,delta.fieldPaths)}
 function masteryStatus(mastery) { return POLICY.masteryStatus(mastery); }
 function calculateLearningUpdate(prev, answer, baseXp, now) { return POLICY.calculateLearningUpdate({ prev, isCorrect: answer.isCorrect, usedHint: answer.usedHint, attemptCount: answer.attemptCount, baseXp, now }); }
 function calculateConceptUpdate(prev, answer, conceptKey, conceptLabel, now) { return POLICY.calculateConceptMasteryUpdate({ prev, conceptKey, conceptLabel, kpId: answer.kpId, questionId: answer.questionId, selectedAnswer: answer.selectedAnswer, correctAnswer: answer.correctAnswer, isCorrect: answer.isCorrect, usedHint: answer.usedHint, attemptCount: answer.attemptCount, now }); }
@@ -370,6 +375,10 @@ async function submitAnswer(request, env, uid, trace) {
     if(skillPath&&nativeSkill)writes.push(updateWrite(env,skillPath,nativeSkill));
     writes.push(updateWrite(env, gamePath, gameUpdate));
     if (conceptPath && conceptUpdate) writes.push(updateWrite(env, conceptPath, { ...conceptUpdate, lastAnsweredAt: conceptUpdate.lastAnsweredAt, updatedAt: now }));
+    const plannerChanges={knowledge:{id:answer.kpId,data:kpUpdate}};
+    if(skillPath&&nativeSkill)plannerChanges.skills={id:skillId,data:nativeSkill};
+    if(conceptPath&&conceptUpdate)plannerChanges.concepts={id:conceptKey,data:{...conceptUpdate,lastAnsweredAt:conceptUpdate.lastAnsweredAt,updatedAt:now}};
+    writes.push(planStateDeltaWrite(env,uid,plannerChanges,now));
     writes.push(updateWrite(env, logPath, log));
     await timed(trace,'commit',()=>commit(env, token, tx, writes));
     return json({ success: true, isCorrect:answer.isCorrect, verificationVersion:ANSWER_VERIFICATION.VERSION, quality: update.quality, xpEarned: update.xpEarned, mastery: update.mastery, status: update.status, nextReviewAt: update.nextReviewAt.toISOString(), interval: update.interval, easeFactor: update.easeFactor, repetition: update.repetition, attempts: update.attempts, correctCount: update.correctCount, wrongCount: update.wrongCount, hintCount: update.hintCount, lastCorrect: update.lastCorrect, lastAnsweredAt: update.lastAnsweredAt.toISOString(), totalXp, todayXp, streak, streakFreezes, streakIncreased, level, skillId, skillMastery, conceptMastery: conceptResult, duplicate: false });
@@ -400,22 +409,42 @@ async function submitPracticeSession(request,env,uid,trace){
     const sessionPath=`users/${uid}/practiceSessions/${session.practiceId}`,interventionPath=`users/${uid}/interventions/${session.skillId}`,[sessionDoc,interventionDoc]=await timed(trace,'practice_tx_reads',()=>batchGetDocuments(env,token,[sessionPath,interventionPath],tx));
     if(sessionDoc){await timed(trace,'practice_tx_rollback',()=>rollback(env,token,tx));const current=interventionDoc&&interventionDoc.data||{};return json({success:true,practiceSession:sessionDoc.data,interventionState:{...(current.learningState||{}),skillId:session.skillId,kpIds:current.kpIds||[],routeKpId:current.routeKpId||session.routeKpId,updatedAt:current.updatedAt||null,source:current.source||'server-native-v1'},duplicate:true})}
     const now=new Date(),next=SERVER_PRACTICE.buildIntervention(interventionDoc&&interventionDoc.data,session,now),storedSession={...session,source:'server-native-v1',receivedAt:now};
-    await timed(trace,'practice_commit',()=>commit(env,token,tx,[updateWrite(env,sessionPath,storedSession),updateWrite(env,interventionPath,next)]));
+    await timed(trace,'practice_commit',()=>commit(env,token,tx,[updateWrite(env,sessionPath,storedSession),updateWrite(env,interventionPath,next),planStateDeltaWrite(env,uid,{interventions:{id:session.skillId,data:next}},now)]));
     return json({success:true,practiceSession:{...session,source:'server-native-v1',receivedAt:now.toISOString()},interventionState:{...next.learningState,skillId:session.skillId,kpIds:next.kpIds,routeKpId:next.routeKpId,updatedAt:now.toISOString(),source:'server-native-v1'},duplicate:false});
   }catch(error){await timed(trace,'practice_tx_rollback',()=>rollback(env,token,tx));throw error}
 }
 async function practiceState(env,uid,trace){const token=await timed(trace,'oauth',()=>getServiceAccessToken(env)),rows=await timed(trace,'interventions_list',()=>listDocuments(env,token,`users/${uid}/interventions`)),state=SERVER_PRACTICE.flattenInterventions(rows);return json({...state,serverTime:new Date().toISOString()})}
 
 function isDue(data, now) { const value = data && data.nextReviewAt; return !value || new Date(value).getTime() <= now.getTime(); }
+async function promotePlanState(env,token,uid,collections,startedAt,trace){
+  const path=planStatePath(uid),tx=await timed(trace,'plan_state_tx_begin',()=>beginTransaction(env,token));
+  try{
+    const current=await timed(trace,'plan_state_tx_read',()=>getDocument(env,token,path,tx));
+    if(PLAN_STATE.changedAfter(current&&current.data,startedAt)){await timed(trace,'plan_state_tx_rollback',()=>rollback(env,token,tx));return false}
+    const snapshot=PLAN_STATE.full(collections,new Date());
+    await timed(trace,'plan_state_commit',()=>commit(env,token,tx,[updateWrite(env,path,snapshot)]));
+    return true;
+  }catch(error){await timed(trace,'plan_state_tx_rollback',()=>rollback(env,token,tx));throw error}
+}
 async function dailyPlan(env, uid, trace) {
   const token = await timed(trace,'oauth',()=>getServiceAccessToken(env));
-  const [knowledge, skills, concepts, interventions, kpUniverseDocs] = await Promise.all([
-    timed(trace,'knowledge_list',()=>listDocuments(env, token, `users/${uid}/knowledge`)),
-    timed(trace,'skills_list',()=>listDocuments(env, token, `users/${uid}/skills`)),
-    timed(trace,'concepts_list',()=>listDocuments(env, token, `users/${uid}/concepts`)),
-    timed(trace,'interventions_list',()=>listDocuments(env, token, `users/${uid}/interventions`)),
+  const startedAt=new Date();
+  const [plannerDoc,kpUniverseDocs] = await Promise.all([
+    timed(trace,'plan_state_read',()=>getDocument(env,token,planStatePath(uid))),
     timed(trace,'kp_list',()=>getKnowledgePointUniverse(env, token))
   ]);
+  let knowledge,skills,concepts,interventions;
+  if(PLAN_STATE.usable(plannerDoc&&plannerDoc.data)){
+    knowledge=PLAN_STATE.rows(plannerDoc.data,'knowledge');skills=PLAN_STATE.rows(plannerDoc.data,'skills');concepts=PLAN_STATE.rows(plannerDoc.data,'concepts');interventions=PLAN_STATE.rows(plannerDoc.data,'interventions');
+  }else{
+    [knowledge, skills, concepts, interventions] = await Promise.all([
+      timed(trace,'knowledge_list',()=>listDocuments(env, token, `users/${uid}/knowledge`)),
+      timed(trace,'skills_list',()=>listDocuments(env, token, `users/${uid}/skills`)),
+      timed(trace,'concepts_list',()=>listDocuments(env, token, `users/${uid}/concepts`)),
+      timed(trace,'interventions_list',()=>listDocuments(env, token, `users/${uid}/interventions`))
+    ]);
+    try{await promotePlanState(env,token,uid,{knowledge,skills,concepts,interventions},startedAt,trace)}catch(error){console.warn('plan state promotion deferred',error)}
+  }
   const plan=SERVER_SKILL_PLAN.buildPlan({knowledge,skills,concepts,interventions,kpUniverse:kpUniverseDocs,targetCount:Number(CURRICULUM&&CURRICULUM.dailyPolicy&&CURRICULUM.dailyPolicy.sessionSize)||10,now:new Date()});
   return json(plan);
 }

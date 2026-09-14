@@ -186,7 +186,7 @@ const plan = await readJson(planResponse, 'daily plan');
 check(planResponse.ok, `daily plan failed (${planResponse.status}): ${plan.error || 'unknown error'}`);
 check(Array.isArray(plan.items), 'daily plan did not return items[]');
 check(Number.isFinite(Number(plan.totalRecommended)), 'daily plan did not return totalRecommended');
-reportTiming(planResponse, 'daily-plan', ['auth','oauth','knowledge_list','concepts_list','interventions_list','kp_list','total']);
+reportTiming(planResponse, 'daily-plan', ['auth','oauth','plan_state_read','kp_list','total']);
 console.log(`✓ authenticated Firestore daily plan: ${plan.items.length} item(s)`);
 
 const practiceRoute = plan.items.find(item => item && item.skillId && item.kpId);

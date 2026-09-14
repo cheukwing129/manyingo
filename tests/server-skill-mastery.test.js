@@ -101,6 +101,14 @@ test('Firestore exposes skill mastery read-only to its owner',()=>{
  assert.match(block[1],/allow write: if false/);
 });
 
+test('Firestore exposes the materialized plan state read-only to its owner',()=>{
+ const rules=read('firestore.rules');
+ const block=rules.match(/match \/planState\/\{document\} \{([\s\S]*?)\n      \}/);
+ assert.ok(block);
+ assert.match(block[1],/request\.auth\.uid == userId/);
+ assert.match(block[1],/allow write: if false/);
+});
+
 test('server-native skill tie wins over an equally fresh projection during account merge',()=>{
  const sync=require('../public/account-sync.js');
  const time='2026-09-12T05:00:00Z';
