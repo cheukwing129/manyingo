@@ -446,7 +446,8 @@ async function dailyPlan(env, uid, trace) {
     try{await promotePlanState(env,token,uid,{knowledge,skills,concepts,interventions},startedAt,trace)}catch(error){console.warn('plan state promotion deferred',error)}
   }
   const plan=SERVER_SKILL_PLAN.buildPlan({knowledge,skills,concepts,interventions,kpUniverse:kpUniverseDocs,targetCount:Number(CURRICULUM&&CURRICULUM.dailyPolicy&&CURRICULUM.dailyPolicy.sessionSize)||10,now:new Date()});
-  return json(plan);
+  const conceptState=Object.fromEntries(concepts.map(row=>[row.id,{...row.data,conceptKey:row.id}]));
+  return json({...plan,conceptState});
 }
 async function dueKnowledge(env, uid, trace) {
   const token = await timed(trace,'oauth',()=>getServiceAccessToken(env));

@@ -38,9 +38,10 @@ test('firebase client downloads concept state and sends learning writes to same-
  assert.doesNotMatch(firebase,/httpsCallable\(functions/);
 });
 
-test('homepage syncs cloud concepts before selection and avoids double local concept increments',()=>{
+test('homepage reuses concepts returned by daily plan and avoids a duplicate collection read',()=>{
  const html=read('public/index.html');
- assert.match(html,/fetchUserConceptState\(uid\)/);
+ assert.match(html,/remotePlan&&remotePlan\.conceptState\|\|\{\}/);
+ assert.doesNotMatch(html,/fetchUserConceptState\(uid\)/);
  assert.match(html,/syncRemoteConceptState\(remoteConcepts\)/);
  assert.match(html,/selectedAnswer:value/);
  assert.match(html,/correctAnswer:displayAnswer\(q\)/);
@@ -49,6 +50,12 @@ test('homepage syncs cloud concepts before selection and avoids double local con
  assert.doesNotMatch(cloud[0],/conceptKey:/);
  assert.doesNotMatch(cloud[0],/conceptLabel:/);
  assert.match(html,/resolveQuestionMisconceptions\(q\.kpId,q\.id,\{skipConcept:true\}\)/);
+});
+
+test('daily plan returns the already-read private concept projection',()=>{
+ const worker=read('public/_worker.js');
+ assert.match(worker,/const conceptState=Object\.fromEntries\(concepts\.map/);
+ assert.match(worker,/return json\(\{\.\.\.plan,conceptState\}\)/);
 });
 
 test('local engine merges returned cloud concept mastery without overwriting newer offline progress',()=>{
