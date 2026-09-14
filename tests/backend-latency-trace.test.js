@@ -48,6 +48,8 @@ test('production smoke requires and prints latency breakdowns before accepting b
   assert.match(source,/function reportTiming\(response, label, required = \[\]\)/);
   assert.match(source,/console\.log\(`⏱ \$\{label\}: \$\{value\}`\)/);
   assert.match(source,/reportTiming\(planResponse, 'daily-plan', \['auth','oauth','plan_state_read','kp_list','total'\]\)/);
+  assert.match(source,/reportTiming\(warmPlanResponse, 'daily-plan-warm', \['auth','oauth','plan_state_read','kp_list','total'\]\)/);
+  assert.match(source,/checkTimingAbsent\(warmPlanTiming, 'daily-plan-warm', \['knowledge_list','skills_list','concepts_list','interventions_list'\]\)/);
   assert.match(source,/reportTiming\(practiceResponse, 'practice-session', \['auth','oauth','kp_list','practice_tx_begin','practice_tx_reads','practice_commit','total'\]\)/);
   assert.match(source,/reportTiming\(practiceStateResponse, 'practice-state', \['auth','oauth','interventions_list','total'\]\)/);
   assert.match(source,/reportTiming\(duplicatePracticeResponse, 'practice-duplicate', \['auth','oauth','kp_list','practice_tx_begin','practice_tx_reads','practice_tx_rollback','total'\]\)/);

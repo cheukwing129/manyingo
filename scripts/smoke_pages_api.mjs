@@ -22,6 +22,11 @@ function reportTiming(response, label, required = []) {
   console.log(`⏱ ${label}: ${value}`);
   return value;
 }
+function checkTimingAbsent(value, label, forbidden = []) {
+  for (const name of forbidden) {
+    check(!new RegExp(`(?:^|,\\s*)${name};dur=`).test(value), `${label} unexpectedly used ${name}: ${value}`);
+  }
+}
 async function readJson(response, label) {
   let data;
   try { data = await response.json(); }
@@ -188,6 +193,14 @@ check(Array.isArray(plan.items), 'daily plan did not return items[]');
 check(Number.isFinite(Number(plan.totalRecommended)), 'daily plan did not return totalRecommended');
 reportTiming(planResponse, 'daily-plan', ['auth','oauth','plan_state_read','kp_list','total']);
 console.log(`✓ authenticated Firestore daily plan: ${plan.items.length} item(s)`);
+
+const warmPlanResponse = await api('/api/daily-plan', idToken);
+const warmPlan = await readJson(warmPlanResponse, 'warm daily plan');
+check(warmPlanResponse.ok, `warm daily plan failed (${warmPlanResponse.status}): ${warmPlan.error || 'unknown error'}`);
+check(Array.isArray(warmPlan.items), 'warm daily plan did not return items[]');
+const warmPlanTiming = reportTiming(warmPlanResponse, 'daily-plan-warm', ['auth','oauth','plan_state_read','kp_list','total']);
+checkTimingAbsent(warmPlanTiming, 'daily-plan-warm', ['knowledge_list','skills_list','concepts_list','interventions_list']);
+console.log('✓ warm daily plan uses the private snapshot instead of four user collection scans');
 
 const practiceRoute = plan.items.find(item => item && item.skillId && item.kpId);
 check(practiceRoute, 'daily plan did not provide a valid skill + KP practice route');
