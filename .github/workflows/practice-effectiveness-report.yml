@@ -1,0 +1,75 @@
+name: Practice Effectiveness Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many recent days of practice sessions to analyze"
+        required: true
+        default: "60"
+        type: string
+      min_episodes:
+        description: "Minimum eligible transfer episodes before classifying a skill × strategy"
+        required: true
+        default: "20"
+        type: string
+      min_learners:
+        description: "Minimum distinct learners before classifying a skill × strategy"
+        required: true
+        default: "10"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_PROJECT_ID: manjingo-95d9a
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MANJINGO }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require Firebase ADC credential
+        shell: bash
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::Missing FIREBASE_SERVICE_ACCOUNT_MANJINGO GitHub Actions secret."
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.FIREBASE_PROJECT_ID }}
+          credentials_json: ${{ env.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Firebase Admin runtime
+        run: npm install --prefix functions --no-audit --no-fund
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Generate anonymous practice effectiveness report
+        run: >-
+          node scripts/report_practice_effectiveness.cjs
+          --days "${{ inputs.days }}"
+          --min-episodes "${{ inputs.min_episodes }}"
+          --min-learners "${{ inputs.min_learners }}"
+          --json artifacts/practice-effectiveness-report.json
+          --markdown artifacts/practice-effectiveness-report.md
+
+      - name: Upload practice effectiveness report
+        uses: actions/upload-artifact@v4
+        with:
+          name: practice-effectiveness-report
+          path: artifacts/practice-effectiveness-report.*
+          if-no-files-found: error
+          retention-days: 30
