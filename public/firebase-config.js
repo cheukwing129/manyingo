@@ -264,6 +264,10 @@ export async function fetchAllQuestions() {
 }
 
 export async function fetchAllKnowledgePoints() {
+  const content = typeof window !== 'undefined' ? window.ManjingoContent : null;
+  if (content && Array.isArray(content.knowledgePoints) && content.knowledgePoints.length) {
+    return content.knowledgePoints.map(point => ({ ...point, id: point.id || point.kpId }));
+  }
   try {
     const { firestoreModule } = await withTimeout(getFirebase(), 8000, 'Firebase SDK');
     return await withTimeout(firestoreModule.getDocs(firestoreModule.collection(db, "knowledgePoints")).then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }))),8000,'knowledge points read');
