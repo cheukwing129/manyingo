@@ -25,12 +25,13 @@ function memoryStorage() {
 
 console.log(`Smoke testing Stage 3 UI at ${baseUrl}`);
 
-const [homepageSource, homeShellSource, themeSource, curriculumSource, diagnosticsSource, stage3Source, packSource] = await Promise.all([
+const [homepageSource, homeShellSource, themeSource, curriculumSource, diagnosticsSource, diagnosticSyncSource, stage3Source, packSource] = await Promise.all([
   readTextAsset('/', 'homepage'),
   readTextAsset('/home-shell.js', 'home shell asset'),
   readTextAsset('/theme-runtime.js', 'theme runtime asset'),
   readTextAsset('/curriculum-v1.js', 'curriculum asset'),
   readTextAsset('/stage3-diagnostics.js', 'Stage 3 diagnostics asset'),
+  readTextAsset('/stage3-diagnostic-sync.js', 'Stage 3 diagnostic sync asset'),
   readTextAsset('/stage3-reading.js', 'Stage 3 reading asset'),
   readTextAsset('/question-pack-transfer-07.js', 'Stage 3 question pack')
 ]);
@@ -40,14 +41,17 @@ check(homepageSource.includes('./theme-runtime.js'), 'deployed homepage does not
 check(homeShellSource.includes("script.src='./stage3-reading.js'"), 'deployed home shell does not load the Stage 3 reading runtime');
 check(homeShellSource.includes('loadStage3Reading();'), 'deployed home shell does not install the Stage 3 reading runtime');
 check(themeSource.includes("script.src='./stage3-diagnostics.js'"), 'deployed homepage runtime does not load Stage 3 diagnostics');
+check(themeSource.includes("script.src='./stage3-diagnostic-sync.js'"), 'deployed homepage runtime does not load Stage 3 diagnostic sync');
 
 const context = { console, window: {}, Array, Object, Number, String, Math, Set, Map, Date, localStorage: memoryStorage() };
 vm.createContext(context);
 vm.runInContext(curriculumSource, context, { filename: 'production/curriculum-v1.js' });
 vm.runInContext(diagnosticsSource, context, { filename: 'production/stage3-diagnostics.js' });
+vm.runInContext(diagnosticSyncSource, context, { filename: 'production/stage3-diagnostic-sync.js' });
 vm.runInContext(stage3Source, context, { filename: 'production/stage3-reading.js' });
 vm.runInContext(packSource, context, { filename: 'production/question-pack-transfer-07.js' });
 const diagnostics = context.ManjingoStage3Diagnostics;
+const diagnosticSync = context.ManjingoStage3DiagnosticSync;
 const stage3 = context.ManjingoStage3Reading;
 const pack = context.window.ManjingoQuestionPackTransfer07;
 check(diagnostics && typeof diagnostics.recordAttempt === 'function', 'deployed Stage 3 diagnostics runtime is missing recordAttempt()');
@@ -55,6 +59,8 @@ check(typeof diagnostics.recordVerification === 'function', 'deployed Stage 3 di
 check(typeof diagnostics.diagnosticSelection === 'function', 'deployed Stage 3 diagnostics runtime is missing option selection diagnosis');
 check(Object.keys(diagnostics.DIAGNOSTIC_MAP || {}).length === 36, 'deployed Stage 3 diagnostic map does not cover all 36 questions');
 check(Object.keys(diagnostics.CHOICE_DIAGNOSTIC_MAP || {}).length === 36, 'deployed Stage 3 choice diagnostic map does not cover all 36 questions');
+check(diagnosticSync && typeof diagnosticSync.mergeStates === 'function', 'deployed Stage 3 diagnostic sync runtime is missing mergeStates()');
+check(diagnosticSync.CLOUD_FIELD === 'stage3Diagnostics', 'deployed Stage 3 diagnostic sync uses the wrong cloud field');
 check(stage3 && typeof stage3.buildChallenge === 'function', 'deployed Stage 3 runtime is missing buildChallenge()');
 check(typeof stage3.summarizeResults === 'function', 'deployed Stage 3 runtime is missing summarizeResults()');
 check(typeof stage3.isStage3Question === 'function', 'deployed Stage 3 runtime is missing Stage 3 filtering');
@@ -93,6 +99,17 @@ const verification = diagnostics.recordVerification('read.logical-relation', { c
 check(verification && verification.passed, 'two-question core verification did not pass');
 check(diagnostics.signals().length === 0, 'passed verification did not retire Stage 3 soft evidence');
 
+const mergedDiagnosticState = diagnosticSync.mergeStates(
+  {version:2,skills:{'read.logical-relation':{events:[{questionId:'tr10q001',correct:false,at:'2026-09-12T10:00:00Z',choiceIndex:1,diagnosticMode:'choice'}]}}},
+  {version:2,skills:{'read.logical-relation':{events:[{questionId:'tr10q002',correct:false,at:'2026-09-12T10:01:00Z',choiceIndex:2,diagnosticMode:'choice'}]}}}
+);
+check(mergedDiagnosticState.skills['read.logical-relation'].events.length === 2, 'deployed cross-device diagnostic merge lost independent evidence');
+const verifiedDiagnosticState = diagnosticSync.mergeStates(
+  mergedDiagnosticState,
+  {version:2,skills:{'read.logical-relation':{events:[],verifiedAt:'2026-09-12T10:05:00Z',lastVerification:{correctCount:2,total:2,at:'2026-09-12T10:05:00Z'}}}}
+);
+check(verifiedDiagnosticState.skills['read.logical-relation'].events.length === 0, 'deployed verification timestamp did not suppress stale cross-device evidence');
+
 const skillIds = ['read.argumentation', 'transfer.short-passage', 'transfer.mixed'];
 for (const skillId of skillIds) {
   const questions = pack.questions.filter(question => Array.isArray(question.skillIds) && question.skillIds.includes(skillId));
@@ -126,4 +143,4 @@ const summary = stage3.summarizeResults([
 ]);
 check(summary.total === 6 && summary.correct === 4 && summary.rows.length === 3, 'deployed Stage 3 result summary is invalid');
 
-console.log('✓ deployed Stage 3 loader, 36-question bank, choice-aware soft diagnostics, verification reset, rotation, and summary are healthy');
+console.log('✓ deployed Stage 3 loader, 36-question bank, choice-aware diagnostics, cross-device merge, verification reset, rotation, and summary are healthy');
