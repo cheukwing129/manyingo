@@ -44,16 +44,34 @@ test('homepage answer feedback is revealed synchronously before cloud persistenc
   assert.match(home,/showLearningFeedback\(box,q,correct,null\);try\{const result=await cloudSubmit\(q,answerId,value\)/);
 });
 
-test('next question unlocks without waiting for cloud persistence',async()=>{
+test('next question becomes actionable synchronously at answer click',()=>{
+  const ui=load(),next={disabled:true};
+  const scope={querySelector:selector=>selector==='#next'?next:null};
+  assert.equal(ui.unlockNextNow(scope),true);
+  assert.equal(next.disabled,false,'next question must unlock in the same task as the answer click');
+  const source=read('public/feedback-ui.js');
+  assert.match(source,/feedback\.textContent=correct\?'答對了！':'正確答案：'\+clean\(question\.a\);\s*unlockNextNow\(scope\)/);
+  assert.doesNotMatch(source,/feedback\.textContent=correct\?'答對了！':'正確答案：'\+clean\(question\.a\);\s*unlockNextSoon\(scope\)/);
+});
+
+test('deferred unlock remains a safe fallback after the answer handler marks the quiz answered',async()=>{
   const ui=load(),next={disabled:true};
   const scope={dataset:{answered:'1'},querySelector:selector=>selector==='#next'?next:null};
   ui.unlockNextSoon(scope);
-  assert.equal(next.disabled,true,'unlock is deferred until the answer handler has set its temporary disabled state');
+  assert.equal(next.disabled,true);
   await Promise.resolve();
-  assert.equal(next.disabled,false,'next question should be available before any cloud request resolves');
+  assert.equal(next.disabled,false);
+});
+
+test('answered study session keeps next CTA visible independently of cloud progress details',()=>{
   const source=read('public/feedback-ui.js');
-  assert.match(source,/unlockNextSoon\(scope\)/);
-  assert.match(source,/next\.disabled=false/);
+  assert.match(source,/instantNextStyle/);
+  assert.match(source,/body\.study-focus #quiz\[data-answered="1"\]>#next\{position:fixed/);
+  assert.match(source,/bottom:max\(14px,env\(safe-area-inset-bottom,14px\)\)/);
+  assert.match(source,/#quiz\[data-answered="1"\]\{padding-bottom:90px!important\}/);
+  const progressPos=source.indexOf("summary=build('summary','', '查看學習進度')");
+  const unlockPos=source.indexOf('unlockNextNow(scope)');
+  assert.ok(unlockPos>=0&&progressPos>=0,'both immediate next and optional progress UI should exist');
 });
 
 test('today task owns a synchronous nonblocking next button and stale cloud answers cannot repaint a later question',()=>{
