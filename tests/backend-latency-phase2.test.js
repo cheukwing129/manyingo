@@ -34,7 +34,10 @@ test('latency optimization preserves authoritative question validation and OAuth
   assert.match(worker,/\(\{conceptKey,conceptLabel\}=reviewedConcept\(question\.data\)\)/);
 });
 
-test('daily plan reads live skill state while reusing only the global knowledge-point universe cache',()=>{
+test('daily plan prefers the private materialized state and safely falls back for migration',()=>{
+  assert.match(worker,/timed\(trace,'plan_state_read'/);
+  assert.match(worker,/PLAN_STATE\.usable/);
+  assert.match(worker,/PLAN_STATE\.rows/);
   assert.match(worker,/timed\(trace,'knowledge_list',\(\)=>listDocuments\(env, token, `users\/\$\{uid\}\/knowledge`\)\)/);
   assert.match(worker,/timed\(trace,'skills_list',\(\)=>listDocuments\(env, token, `users\/\$\{uid\}\/skills`\)\)/);
   assert.match(worker,/timed\(trace,'concepts_list',\(\)=>listDocuments\(env, token, `users\/\$\{uid\}\/concepts`\)\)/);
