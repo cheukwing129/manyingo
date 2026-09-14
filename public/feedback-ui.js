@@ -8,6 +8,10 @@ function installMascotStyle(){
  if(typeof document==='undefined'||document.getElementById('mascotFeedbackStyle'))return false;
  const style=document.createElement('style');style.id='mascotFeedbackStyle';style.textContent='.feedback-result{grid-template-columns:36px minmax(0,1fr) auto!important}.feedback-mascot{display:flex;align-items:center;gap:7px;margin-left:4px;max-width:138px}.feedback-mascot img{display:block;width:42px;height:62px;object-fit:contain;flex:0 0 auto;transform-origin:50% 88%}.feedback-mascot span{font-size:10px;line-height:1.3;font-weight:900;color:var(--ui-muted,#8e948b)}.feedback-ui.correct .feedback-mascot img{animation:moling-correct .48s cubic-bezier(.2,.8,.3,1)}.feedback-ui.wrong .feedback-mascot img{animation:moling-encourage .5s ease-out}.session-summary-icon.mascot-celebrate{width:auto;height:auto;border-radius:0;background:transparent;display:flex;flex-direction:column;gap:4px}.session-summary-icon.mascot-celebrate img{width:76px;height:104px;object-fit:contain;animation:moling-celebrate .72s cubic-bezier(.2,.8,.3,1)}.session-summary-icon.mascot-celebrate span{color:var(--ui-green-dark,#398500);font-size:11px;font-weight:900}@keyframes moling-correct{0%{transform:translateY(5px) scale(.94)}55%{transform:translateY(-6px) scale(1.04)}100%{transform:translateY(0) scale(1)}}@keyframes moling-encourage{0%{transform:translateY(4px) scale(.97)}55%{transform:translateY(-2px) scale(1.01)}100%{transform:translateY(0) scale(1)}}@keyframes moling-celebrate{0%{transform:translateY(8px) scale(.92)}45%{transform:translateY(-10px) rotate(-3deg) scale(1.04)}72%{transform:translateY(-3px) rotate(3deg)}100%{transform:translateY(0) rotate(0) scale(1)}}@media(max-width:430px){.feedback-mascot{max-width:92px;gap:4px}.feedback-mascot img{width:34px;height:50px}.feedback-mascot span{font-size:9px}.session-summary-icon.mascot-celebrate img{width:68px;height:94px}}@media(max-width:370px){.feedback-result{grid-template-columns:32px minmax(0,1fr)!important}.feedback-mascot{grid-column:2;justify-self:start;margin:2px 0 0}.feedback-mascot span{max-width:none}}@media(prefers-reduced-motion:reduce){.feedback-mascot img,.session-summary-icon.mascot-celebrate img{animation:none!important}}';document.head.appendChild(style);return true
 }
+function installFastNextStyle(){
+ if(typeof document==='undefined'||document.getElementById('instantNextStyle'))return false;
+ const style=document.createElement('style');style.id='instantNextStyle';style.textContent='body.study-focus #quiz[data-answered="1"]{padding-bottom:90px!important}body.study-focus #quiz[data-answered="1"]>#next{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom,14px));transform:translateX(-50%);z-index:70;width:min(calc(100% - 28px),600px);margin:0!important;box-shadow:0 8px 24px rgba(0,4,55,.18)}body.study-focus #quiz[data-answered="1"]>#next:disabled{display:none}@media(min-width:700px){body.study-focus #quiz[data-answered="1"]>#next{bottom:18px}}';document.head.appendChild(style);return true
+}
 function questionForScope(scope){
  const content=window.ManjingoContent;if(!content||!Array.isArray(content.questions)||!scope||!scope.querySelector)return null;
  const node=scope.querySelector('.question,.lesson-question'),text=clean(node&&node.textContent);if(!text)return null;
@@ -80,8 +84,11 @@ function enhance(feedback){
  feedback.dataset.feedbackRendered=clean(feedback.textContent);
  return true;
 }
+function unlockNextNow(scope){
+ if(!scope||!scope.querySelector)return false;const next=scope.querySelector('#next');if(!next)return false;next.disabled=false;return true
+}
 function unlockNextSoon(scope){
- const run=()=>{if(!scope||!scope.dataset||!scope.dataset.answered)return;const next=scope.querySelector&&scope.querySelector('#next');if(next)next.disabled=false};
+ const run=()=>{if(!scope||!scope.dataset||!scope.dataset.answered)return;unlockNextNow(scope)};
  if(typeof queueMicrotask==='function')queueMicrotask(run);else Promise.resolve().then(run);
 }
 function instantAnswer(event){
@@ -91,15 +98,15 @@ function instantAnswer(event){
  const input=scope.querySelector('.input'),value=target.classList&&target.classList.contains('option')?clean(target.textContent):clean(input&&input.value),correct=answerKey(value)===answerKey(question.a);
  if(target.classList&&target.classList.contains('option'))scope.querySelectorAll('.option').forEach(button=>{if(button===target)button.classList.add(correct?'correct':'wrong');if(!correct&&answerKey(button.textContent)===answerKey(question.a))button.classList.add('correct')});
  delete feedback.dataset.feedbackUi;delete feedback.dataset.feedbackRendered;feedback.className='feedback '+(correct?'correct':'wrong');feedback.textContent=correct?'答對了！':'正確答案：'+clean(question.a);
- unlockNextSoon(scope);
+ unlockNextNow(scope);
  return true;
 }
 function scan(root){if(!root)return;if(root.matches&&root.matches('.feedback'))enhance(root);if(root.querySelectorAll)root.querySelectorAll('.feedback').forEach(enhance)}
 function install(){
- installMascotStyle();document.addEventListener('click',instantAnswer,true);
+ installMascotStyle();installFastNextStyle();document.addEventListener('click',instantAnswer,true);
  scan(document);if(typeof MutationObserver!=='function'||!document.body)return;
  const observer=new MutationObserver(records=>records.forEach(record=>{if(record.target&&record.target.classList&&record.target.classList.contains('feedback'))enhance(record.target);record.addedNodes&&record.addedNodes.forEach(scan)}));observer.observe(document.body,{childList:true,subtree:true});window.ManjingoFeedbackUI.observer=observer
 }
-window.ManjingoFeedbackUI={enhance,scan,install,instantAnswer,unlockNextSoon,questionFor,questionForScope,answerKey,explanationFromText,parseCorrectAnswer,metricLines,supportingLines,clean,installMascotStyle,mascotFeedback,mascotFeedbackState,mascotFeedbackAsset,mascotRuntime,observer:null};
+window.ManjingoFeedbackUI={enhance,scan,install,instantAnswer,unlockNextNow,unlockNextSoon,questionFor,questionForScope,answerKey,explanationFromText,parseCorrectAnswer,metricLines,supportingLines,clean,installMascotStyle,installFastNextStyle,mascotFeedback,mascotFeedbackState,mascotFeedbackAsset,mascotRuntime,observer:null};
 if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install()}
 })();
