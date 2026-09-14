@@ -2,19 +2,13 @@
 'use strict';
 
 if(typeof document!=='undefined'&&document.readyState==='loading'){
- if(!window.ManjingoQuestionPack02)document.write('<script src="./question-pack-02.js"><\/script>');
- if(!window.ManjingoQuestionPack03)document.write('<script src="./question-pack-03.js"><\/script>');
- if(!window.ManjingoQuestionPackLesson)document.write('<script src="./question-pack-lesson.js"><\/script>');
- if(!window.ManjingoQuestionPackCapacity01)document.write('<script src="./question-pack-capacity-01.js"><\/script>');
- if(!window.ManjingoQuestionPackTransfer01)document.write('<script src="./question-pack-transfer-01.js"><\/script>');
- if(!window.ManjingoQuestionPackTransfer03)document.write('<script src="./question-pack-transfer-03.js"><\/script>');
- if(!window.ManjingoQuestionPackTransfer04)document.write('<script src="./question-pack-transfer-04.js"><\/script>');
- if(!window.ManjingoQuestionPackTransfer05)document.write('<script src="./question-pack-transfer-05.js"><\/script>');
- if(!window.ManjingoQuestionPackTransfer06)document.write('<script src="./question-pack-transfer-06.js"><\/script>');
- if(!window.ManjingoQuestionPackTransfer07)document.write('<script src="./question-pack-transfer-07.js"><\/script>');
- if(!window.ManjingoQuestionPackSetTextLanguage01)document.write('<script src="./question-pack-settext-language-01.js"><\/script>');
- if(!window.ManjingoQuestionPackSetTextLanguage02)document.write('<script src="./question-pack-settext-language-02.js"><\/script>');
- if(!window.ManjingoQuestionPackReorder01)document.write('<script src="./question-pack-reorder-01.js"><\/script>');
+ // question-packs-core.js is generated from question-pack-02.js, question-pack-03.js,
+ // question-pack-lesson.js, question-pack-capacity-01.js, question-pack-transfer-01.js,
+ // question-pack-transfer-03.js, question-pack-transfer-04.js, question-pack-transfer-05.js,
+ // question-pack-transfer-06.js, question-pack-transfer-07.js,
+ // question-pack-settext-language-01.js, question-pack-settext-language-02.js,
+ // and question-pack-reorder-01.js.
+ if(!window.ManjingoQuestionPack02)document.write('<script src="./question-packs-core.js"><\/script>');
 }
 
 const baseKnowledgePoints=[
