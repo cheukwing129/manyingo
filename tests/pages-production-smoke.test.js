@@ -141,12 +141,12 @@ test('cleanup recursively removes temporary Firestore data and Firebase Auth use
   assert.match(source,/unlinkSync\(stateFile\)/);
 });
 
-test('production smoke runs automatically after successful main tests and always cleans up',()=>{
+test('production smoke runs after content synchronization, skips irrelevant commits, and always cleans up',()=>{
   const workflow=read('.github/workflows/pages-production-smoke.yml');
   assert.match(workflow,/workflow_dispatch/);
   assert.match(workflow,/schedule:/);
   assert.match(workflow,/workflow_run:/);
-  assert.match(workflow,/workflows: \['Tests'\]/);
+  assert.match(workflow,/workflows: \['Firebase Content Sync'\]/);
   assert.match(workflow,/github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(workflow,/github\.event\.workflow_run\.head_branch == 'main'/);
   assert.match(workflow,/ENABLE_PAGES_SMOKE == 'true'/);
@@ -156,7 +156,10 @@ test('production smoke runs automatically after successful main tests and always
   assert.match(workflow,/MANJINGO_BASE_URL/);
   assert.match(workflow,/Install Firebase Admin cleanup runtime/);
   assert.match(workflow,/FIREBASE_SERVICE_ACCOUNT_MANJINGO/);
-  assert.match(workflow,/if: always\(\)/);
+  assert.match(workflow,/group: pages-production-smoke/);
+  assert.match(workflow,/Detect production surface changes/);
+  assert.match(workflow,/No production runtime or smoke contract changed; Firestore quota untouched/);
+  assert.match(workflow,/if: always\(\) && steps\.production_scope\.outputs\.needs_smoke == 'true'/);
   assert.match(workflow,/cleanup_smoke_user\.cjs/);
   const smokeStep=workflow.slice(workflow.indexOf('Smoke test production Pages learning API with a real write'),workflow.indexOf('Cleanup temporary smoke user and learning data'));
   assert.doesNotMatch(smokeStep,/FIREBASE_SERVICE_ACCOUNT/);

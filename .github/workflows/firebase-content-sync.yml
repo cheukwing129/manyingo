@@ -24,8 +24,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: firebase-content-production
-  cancel-in-progress: false
+  group: firebase-content-production-${{ github.event_name == 'workflow_dispatch' && 'manual' || 'automatic' }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 env:
   FIREBASE_PROJECT_ID: manjingo-95d9a

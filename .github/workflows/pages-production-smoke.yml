@@ -5,11 +5,15 @@ on:
   schedule:
     - cron: '17 9 * * *'
   workflow_run:
-    workflows: ['Tests']
+    workflows: ['Firebase Content Sync']
     types: [completed]
 
 permissions:
   contents: read
+
+concurrency:
+  group: pages-production-smoke
+  cancel-in-progress: false
 
 jobs:
   smoke:
@@ -24,12 +28,41 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+      - name: Detect production surface changes
+        id: production_scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          if [ "$EVENT_NAME" != "workflow_run" ]; then
+            echo "needs_smoke=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed_files="$(git diff-tree --no-commit-id --name-only -r "$HEAD_SHA^" "$HEAD_SHA")"
+          needs_smoke=false
+          while IFS= read -r file; do
+            case "$file" in
+              public/*|functions/*|firestore.rules|firebase.json|wrangler.toml|package.json|package-lock.json|scripts/smoke_*|scripts/cleanup_smoke_user.cjs|.github/workflows/pages-production-smoke.yml|.github/workflows/firebase-content-sync.yml)
+                needs_smoke=true
+                break
+                ;;
+            esac
+          done <<< "$changed_files"
+          echo "needs_smoke=$needs_smoke" >> "$GITHUB_OUTPUT"
+      - name: Skip unchanged production surface
+        if: steps.production_scope.outputs.needs_smoke != 'true'
+        run: echo "✅ No production runtime or smoke contract changed; Firestore quota untouched."
       - name: Setup Node
+        if: steps.production_scope.outputs.needs_smoke == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 24
       - name: Wait for Pages reliability assets after main
-        if: github.event_name == 'workflow_run'
+        if: steps.production_scope.outputs.needs_smoke == 'true' && github.event_name == 'workflow_run'
         run: |
           for attempt in $(seq 1 18); do
             if curl -fsS "$MANJINGO_BASE_URL/practice-outbox.js" | grep -q 'manjingo_practice_outbox_v1' && \
@@ -52,8 +85,10 @@ jobs:
           echo "::error::Pages did not expose the required reliability, Stage 3 diagnostics/calibration, and prescribed-text language assets within 3 minutes."
           exit 1
       - name: Install Firebase Admin cleanup runtime
+        if: steps.production_scope.outputs.needs_smoke == 'true'
         run: npm install --prefix functions --no-audit --no-fund
       - name: Require cleanup credential before creating a smoke user
+        if: steps.production_scope.outputs.needs_smoke == 'true'
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MANJINGO }}
         run: |
@@ -62,11 +97,13 @@ jobs:
             exit 1
           fi
       - name: Smoke test deployed Stage 3 learning path UI
+        if: steps.production_scope.outputs.needs_smoke == 'true'
         run: npm run smoke:stage3
       - name: Smoke test production Pages learning API with a real write
+        if: steps.production_scope.outputs.needs_smoke == 'true'
         run: npm run smoke:pages
       - name: Cleanup temporary smoke user and learning data
-        if: always()
+        if: always() && steps.production_scope.outputs.needs_smoke == 'true'
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MANJINGO }}
         run: node scripts/cleanup_smoke_user.cjs
