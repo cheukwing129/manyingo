@@ -4,11 +4,15 @@ const baseUrl=String(process.env.MANJINGO_BASE_URL||'https://manjingo.pages.dev'
 async function read(path,label){const response=await fetch(baseUrl+path,{headers:{accept:'text/javascript,*/*;q=0.8'}});if(!response.ok)throw new Error(`${label} unavailable (${response.status})`);const text=await response.text();if(text.length<100)throw new Error(`${label} returned an unexpectedly small payload`);return text}
 function check(value,message){if(!value)throw new Error(message)}
 
-const[guardSource,rotationSource]=await Promise.all([
+const[guardSource,rotationSource,firebaseSource]=await Promise.all([
   read('/remote-sync-guard.js','remote sync guard asset'),
-  read('/question-rotation.js','question rotation asset')
+  read('/question-rotation.js','question rotation asset'),
+  read('/firebase-config.js','firebase client asset')
 ]);
 check(rotationSource.includes('remote-sync-guard.js'),'deployed adaptive loader does not load the remote sync guard');
+check(firebaseSource.includes('dailyPlanDeferredUsers'),'deployed firebase client is missing the daily-plan read guard');
+check(firebaseSource.includes('Daily plan refresh deferred to the local adaptive queue until the next page load'),'deployed firebase client is missing the local adaptive daily-plan deferral contract');
+check(firebaseSource.includes('if(result&&result.success)markDailyPlanDeferred(uid)'),'deployed answer path does not defer redundant daily-plan reads after server confirmation');
 const captured=[];
 const learning={
   getKnowledge:()=>({attempts:3,mastery:64,lastAnsweredAt:'2026-09-11T01:10:00.000Z'}),
@@ -27,4 +31,4 @@ check(stale.totalXp===24&&stale.todayXp===16&&stale.streak===2,'deployed sync gu
 learning.syncRemoteResult('kp1',{attempts:4,mastery:55,lastCorrect:false,lastAnsweredAt:'2026-09-11T01:12:00.000Z',totalXp:24,todayXp:16,streak:2});
 const newer=captured.at(-1)||{};
 check(newer.mastery===55&&newer.lastCorrect===false,'deployed sync guard blocks a genuinely newer wrong-answer update');
-console.log('✓ deployed nonblocking background sync rejects stale responses without blocking newer learning updates');
+console.log('✓ deployed nonblocking sync guard and per-page daily-plan read budget are healthy');

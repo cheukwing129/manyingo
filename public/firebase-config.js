@@ -21,6 +21,7 @@ let redirectCheckPromise = null;
 let outboxFlushPromise = null;
 let outboxRetryTimer = null;
 const answerInFlight = new Map();
+const dailyPlanDeferredUsers = new Set();
 
 async function getFirebase() {
   if (firebaseReadyPromise) return firebaseReadyPromise;
@@ -69,6 +70,16 @@ function isCredentialConflict(error) {
 function preferRedirectFlow() {
   try { return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches && window.innerWidth < 820; }
   catch (_) { return false; }
+}
+function markDailyPlanDeferred(userId) {
+  const uid=String(userId||'');
+  if(uid)dailyPlanDeferredUsers.add(uid);
+}
+function dailyPlanDeferredError() {
+  const error=new Error('Daily plan refresh deferred to the local adaptive queue until the next page load');
+  error.code='daily-plan-refresh-deferred';
+  error.deferred=true;
+  return error;
 }
 
 export async function completeGoogleRedirect() {
@@ -207,6 +218,7 @@ function sendAnswerOnce(payload){
 }
 function applyRetriedAnswer(payload,result){
   if(!result||!result.success||typeof window==='undefined')return;
+  markDailyPlanDeferred(currentUserId);
   try{const learning=window.ManjingoLocalLearning;if(learning&&typeof learning.syncRemoteResult==='function')learning.syncRemoteResult(payload.kpId,result)}catch(error){console.warn('retried answer local reconciliation unavailable:',error)}
   try{window.dispatchEvent(new CustomEvent('manjingo:answer-sync-complete',{detail:{answerId:payload.answerId,kpId:payload.kpId,duplicate:!!result.duplicate}}))}catch(_){}
 }
@@ -331,6 +343,7 @@ export async function submitAnswer(answer) {
     const uid=currentUserId||await ensureLogin();if(box&&uid)box.bindUnowned(uid);
     const result = await sendAnswerOnce(payload);
     if(box)box.remove(payload.answerId);
+    if(result&&result.success)markDailyPlanDeferred(uid);
     recordDifficultyOutcome(payload, result);
     void flushAnswerOutbox();
     return result;
@@ -348,6 +361,9 @@ export async function getDueKnowledgePoints() {
 }
 
 export async function getDailyLearningPlan() {
+  const uid=currentUserId||await ensureLogin();
+  if(!uid)throw new Error('Firebase authentication unavailable');
+  if(dailyPlanDeferredUsers.has(String(uid)))throw dailyPlanDeferredError();
   return authorizedApi('/api/daily-plan');
 }
 
