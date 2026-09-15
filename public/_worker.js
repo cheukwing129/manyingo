@@ -235,7 +235,7 @@ async function getKnowledgePointUniverse(env, token) {
 }
 function updateWrite(env, path, data) { return { update: docObject(documentName(env, path), data) }; }
 function maskedUpdateWrite(env,path,data,fieldPaths){return{update:docObject(documentName(env,path),data),updateMask:{fieldPaths}}}
-function planStatePath(uid){return `users/${uid}/planState/current-v2`;}
+function planStatePath(uid){return `users/${uid}/planState/current-v3`;}
 function planStateDeltaWrite(env,uid,changes,now){const delta=PLAN_STATE.delta(changes,now);return maskedUpdateWrite(env,planStatePath(uid),delta.data,delta.fieldPaths)}
 function masteryStatus(mastery) { return POLICY.masteryStatus(mastery); }
 function calculateLearningUpdate(prev, answer, baseXp, now) { return POLICY.calculateLearningUpdate({ prev, isCorrect: answer.isCorrect, usedHint: answer.usedHint, attemptCount: answer.attemptCount, baseXp, now }); }
@@ -452,13 +452,13 @@ async function dailyPlan(env, uid, trace) {
 async function accountState(env,uid,trace){
   const token=await timed(trace,'oauth',()=>getServiceAccessToken(env)),startedAt=new Date();
   const plannerDoc=await timed(trace,'account_state_read',()=>getDocument(env,token,planStatePath(uid)));
-  let knowledge,skills,concepts;
+  let knowledge,skills,concepts,interventions;
   if(PLAN_STATE.usable(plannerDoc&&plannerDoc.data)){
     knowledge=PLAN_STATE.rows(plannerDoc.data,'knowledge');
     skills=PLAN_STATE.rows(plannerDoc.data,'skills');
     concepts=PLAN_STATE.rows(plannerDoc.data,'concepts');
+    interventions=PLAN_STATE.rows(plannerDoc.data,'interventions');
   }else{
-    let interventions;
     [knowledge,skills,concepts,interventions]=await Promise.all([
       timed(trace,'knowledge_list',()=>listDocuments(env,token,`users/${uid}/knowledge`)),
       timed(trace,'skills_list',()=>listDocuments(env,token,`users/${uid}/skills`)),
@@ -471,7 +471,8 @@ async function accountState(env,uid,trace){
     version:PLAN_STATE.VERSION,
     knowledgeState:Object.fromEntries(knowledge.map(row=>[row.id,row.data])),
     skillState:Object.fromEntries(skills.map(row=>[row.id,{...row.data,skillId:row.id,source:row.data.source||'server-native-v1'}])),
-    conceptState:Object.fromEntries(concepts.map(row=>[row.id,{...row.data,conceptKey:row.id}]))
+    conceptState:Object.fromEntries(concepts.map(row=>[row.id,{...row.data,conceptKey:row.id}])),
+    practiceState:{...SERVER_PRACTICE.flattenInterventions(interventions),serverTime:new Date().toISOString()}
   });
 }
 async function dueKnowledge(env, uid, trace) {

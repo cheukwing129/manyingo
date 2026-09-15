@@ -69,11 +69,13 @@ test('practice API queues before network submit and retries on reconnect visibil
   assert.match(source,/manjingo:practice-sync-complete/);
 });
 
-test('account sync flushes durable practice before reading authoritative practice state',()=>{
+test('account sync flushes durable practice before restoring snapshot practice state',()=>{
   const source=read('public/account-sync.js');
   const flush=source.indexOf("practice.flushPracticeOutbox({force:true,uid})");
+  const snapshot=source.indexOf('remotePractice=accountState&&accountState.practiceState||null');
   const fetch=source.indexOf('remotePractice=await practice.fetchPracticeState()');
-  assert.ok(flush>0&&fetch>flush,'pending practice must reach the server before authoritative state is restored');
+  assert.ok(flush>0&&snapshot>flush,'pending practice must reach the server before authoritative state is restored');
+  assert.ok(fetch>snapshot,'the separate practice endpoint must only remain as a snapshot fallback');
   assert.match(source,/manjingo:practice-sync-complete/);
   assert.match(source,/applyPracticeResult\(detail\.payload,detail\.result\)/);
 });

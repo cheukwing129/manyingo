@@ -59,7 +59,9 @@ test('account sync downloads one authoritative learning snapshot and feeds the l
  assert.match(firebase,/source:data\.source\|\|'server-native-v1'/);
  assert.match(firebase,/export async function fetchAccountLearningState\(userId\)/);
  assert.match(firebase,/authorizedApi\('\/api\/account-state'\)/);
+ assert.match(firebase,/practiceState:state\.practiceState/);
  assert.match(sync,/fb\.fetchAccountLearningState\(uid\)/);
+ assert.match(sync,/remotePractice=accountState&&accountState\.practiceState\|\|null/);
  assert.doesNotMatch(sync,/fb\.fetchUserSkillState\(uid\)/);
  assert.match(sync,/engine\.syncRemoteSkillState\(skillState\|\|\{\}\)/);
  assert.match(sync,/skillMastery:skillState\|\|\{\}/);

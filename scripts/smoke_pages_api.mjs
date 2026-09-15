@@ -385,12 +385,13 @@ console.log('✓ reorder answer is server-scored and stored as translation produ
 const accountStateResponse=await api('/api/account-state',idToken);
 const accountState=await readJson(accountStateResponse,'account state');
 check(accountStateResponse.ok,`account state failed (${accountStateResponse.status}): ${accountState.error||'unknown error'}`);
-check(accountState.version==='plan-state-v2','account state did not use the evidence-aware snapshot version');
+check(accountState.version==='plan-state-v3','account state did not use the practice-aware snapshot version');
 check(accountState.knowledgeState?.[validPayload.kpId]&&accountState.conceptState?.[authoritativeConceptKey],'account state omitted authoritative knowledge or concept progress');
 check(accountState.skillState?.['trans.reorder']?.evidence?.productionQuestionIds?.includes('rq007'),'account state omitted reorder production evidence');
+check(accountState.practiceState?.practiceIds?.includes(practiceId)&&accountState.practiceState?.interventionState?.[practicePayload.skillId],'account state omitted authoritative practice history or intervention state');
 const accountStateTiming=reportTiming(accountStateResponse,'account-state',['auth','oauth','account_state_read','total']);
 checkTimingAbsent(accountStateTiming,'account-state',['knowledge_list','skills_list','concepts_list','interventions_list']);
-console.log('✓ account sync snapshot returns knowledge, skills, concepts, and production evidence with one document read');
+console.log('✓ account sync snapshot returns learning, production evidence, and practice state with one document read');
 
 const malformedReorderId = `smokebadreorder${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 const malformedReorderResponse=await api('/api/submit-answer',idToken,{method:'POST',body:JSON.stringify({...reorderPayload,answerId:malformedReorderId,selectedAnswer:'a|b'})});
