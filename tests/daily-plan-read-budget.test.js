@@ -33,10 +33,17 @@ test('homepage keeps local adaptive tail replanning as the no-read fallback',()=
 });
 
 test('server daily plan remains authoritative on initial load while read-heavy collections are visible to audits',()=>{
-  assert.match(worker,/async function dailyPlan\(env, uid, trace\)/);
+  assert.match(worker,/async function dailyPlan\(env, uid, trace, ctx\)/);
   assert.match(worker,/knowledge_list/);
   assert.match(worker,/skills_list/);
   assert.match(worker,/concepts_list/);
   assert.match(worker,/interventions_list/);
   assert.equal((firebase.match(/authorizedApi\('\/api\/daily-plan'\)/g)||[]).length,1,'there must be one explicit daily-plan network boundary');
+});
+
+test('cold daily plan defers snapshot promotion through the execution context',()=>{
+  assert.match(worker,/ctx&&typeof ctx\.waitUntil==='function'/);
+  assert.match(worker,/ctx\.waitUntil\(task\)/);
+  assert.match(worker,/planStatePromotions\.get\(uid\)/);
+  assert.match(worker,/timed\(trace,'plan_state_wait'/);
 });
