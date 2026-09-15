@@ -49,6 +49,15 @@ test('shared runtime carries keyboard and feedback affordances into lesson and s
   assert.match(source,/event\.key==='n'\|\|event\.key==='N'/);
 });
 
+test('answered lesson input is locked and question changes return content to view',()=>{
+  const source=read('public/ux-runtime.js');
+  assert.match(source,/if\(input\)input\.disabled=true/);
+  assert.match(source,/if\(check\)check\.disabled=true/);
+  assert.match(source,/syncQuestionViewport\(app,'\.lesson-question'/);
+  assert.match(source,/safeScroll\(app,'start'\)/);
+  assert.match(source,/syncQuestionViewport\(host,'\.stage3-prompt'/);
+});
+
 test('mobile guardrails stack narrow dashboard and weakness actions instead of squeezing them',()=>{
   const source=read('public/ux-runtime.js');
   assert.match(source,/@media\(max-width:430px\)/);
