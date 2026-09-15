@@ -19,7 +19,7 @@ test('worker exposes only fixed safe latency stages through Server-Timing',()=>{
   assert.doesNotMatch(source,/timed\(trace,'kp_list'/);
   assert.match(source,/timed\(trace,'plan_state_read'/);
   assert.match(source,/timed\(trace,'question_read'/);
-  assert.match(source,/timed\(trace,'tx_begin'/);
+  assert.doesNotMatch(source,/timed\(trace,'tx_begin'/);
   assert.match(source,/timed\(trace,'tx_reads'/);
   assert.match(source,/timed\(trace,'commit'/);
   assert.match(source,/timed\(trace,'practice_tx_begin'/);
@@ -52,7 +52,7 @@ test('production smoke requires and prints latency breakdowns before accepting b
   assert.match(source,/reportTiming\(warmPlanResponse, 'daily-plan-warm', \['auth','total'\]\)/);
   assert.match(source,/checkTimingAbsent\(warmPlanTiming, 'daily-plan-warm', \['kp_list','knowledge_list','skills_list','concepts_list','interventions_list'\]\)/);
   assert.match(source,/reportTiming\(practiceStateResponse, 'practice-state', \['auth','oauth','interventions_list','total'\]\)/);
-  assert.match(source,/reportTiming\(submitResponse, 'submit-answer-practice', \['auth','oauth','question_read','tx_begin','tx_reads','commit','total'\]\)/);
+  assert.match(source,/reportTiming\(submitResponse, 'submit-answer-practice', \['auth','oauth','question_read','tx_reads','commit','total'\]\)/);
   assert.match(source,/timingDuration\(submitTiming,'question_read'\)<=10/);
-  assert.match(source,/reportTiming\(duplicatePracticeResponse,'submit-answer-practice-duplicate',\['auth','oauth','question_read','tx_begin','tx_reads','tx_rollback','total'\]\)/);
+  assert.match(source,/reportTiming\(duplicatePracticeResponse,'submit-answer-practice-duplicate',\['auth','oauth','question_read','tx_reads','tx_rollback','total'\]\)/);
 });

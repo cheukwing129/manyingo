@@ -204,6 +204,21 @@ async function batchGetDocuments(env, token, paths, transaction) {
   }
   return names.map(name=>byName.has(name)?byName.get(name):null);
 }
+async function beginBatchGetDocuments(env,token,paths){
+  const names=paths.map(path=>documentName(env,path));
+  const response=await googleFetch(`${databaseRoot(env)}/documents:batchGet`,token,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({documents:names,newTransaction:{readWrite:{}}})
+  });
+  if(!response.ok)throw new Error(`Firestore transactional batch read failed (${response.status})`);
+  const rows=parseBatchGetStream(await response.text()),transaction=rows.find(row=>row&&row.transaction)?.transaction;
+  if(!transaction)throw new Error('Firestore transactional batch read returned no transaction');
+  const byName=new Map();
+  for(const row of rows){
+    if(row&&row.found&&row.found.name)byName.set(row.found.name,{name:row.found.name,data:fromFields(row.found.fields||{})});
+    else if(row&&row.missing)byName.set(row.missing,null);
+  }
+  return{transaction,documents:names.map(name=>byName.has(name)?byName.get(name):null)};
+}
 async function beginTransaction(env, token) {
   const response = await googleFetch(`${databaseRoot(env)}/documents:beginTransaction`, token, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
   if (!response.ok) throw new Error(`Firestore transaction start failed (${response.status})`);
@@ -305,7 +320,7 @@ async function submitAnswer(request, env, uid, trace) {
     const route=SERVER_KP_UNIVERSE.rows.find(row=>String(row&&row.id)===practice.routeKpId),allowed=route?SERVER_SKILL_PLAN.skillIdsForKp(practice.routeKpId,route.data||{}):[];
     if(!route||practice.routeKpId!==answer.kpId||practice.skillId!==skillId||!allowed.includes(practice.skillId))throw Object.assign(new Error('practice summary does not match final answer route'),{status:400});
   }
-  const tx = await timed(trace,'tx_begin',()=>beginTransaction(env, token));
+  let tx=null;
   try {
     const kpPath = `users/${uid}/knowledge/${answer.kpId}`;
     const skillPath = skillId ? `users/${uid}/skills/${skillId}` : null;
@@ -314,7 +329,9 @@ async function submitAnswer(request, env, uid, trace) {
     const conceptPath = conceptKey ? `users/${uid}/concepts/${conceptKey}` : null;
     const practicePath=practice?`users/${uid}/practiceSessions/${practice.practiceId}`:null,interventionPath=practice?`users/${uid}/interventions/${practice.skillId}`:null;
     const txPaths=[kpPath,...(skillPath?[skillPath]:[]),gamePath,logPath,...(conceptPath?[conceptPath]:[]),...(practicePath?[practicePath,interventionPath]:[])];
-    const txDocs=await timed(trace,'tx_reads',()=>batchGetDocuments(env,token,txPaths,tx));
+    const begun=await timed(trace,'tx_reads',()=>beginBatchGetDocuments(env,token,txPaths));
+    tx=begun.transaction;
+    const txDocs=begun.documents;
     let cursor=0;
     const kpDoc=txDocs[cursor++];
     const skillDoc=skillPath?txDocs[cursor++]:null;
@@ -397,7 +414,7 @@ async function submitAnswer(request, env, uid, trace) {
     await timed(trace,'commit',()=>commit(env, token, tx, writes));
     return json({ success: true, isCorrect:answer.isCorrect, verificationVersion:ANSWER_VERIFICATION.VERSION, quality: update.quality, xpEarned: update.xpEarned, mastery: update.mastery, status: update.status, nextReviewAt: update.nextReviewAt.toISOString(), interval: update.interval, easeFactor: update.easeFactor, repetition: update.repetition, attempts: update.attempts, correctCount: update.correctCount, wrongCount: update.wrongCount, hintCount: update.hintCount, lastCorrect: update.lastCorrect, lastAnsweredAt: update.lastAnsweredAt.toISOString(), totalXp, todayXp, streak, streakFreezes, streakIncreased, level, skillId, skillMastery, conceptMastery: conceptResult, practiceSession:storedPractice, interventionState, duplicate: false });
   } catch (error) {
-    await timed(trace,'tx_rollback',()=>rollback(env, token, tx));
+    if(tx)await timed(trace,'tx_rollback',()=>rollback(env, token, tx));
     throw error;
   }
 }

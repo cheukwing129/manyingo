@@ -264,8 +264,9 @@ check(Number(submit.xpEarned) === 8, `expected 8 XP from first correct answer, g
 check(Number(submit.mastery) > 0, 'valid answer did not increase mastery');
 check(Number(submit.totalXp) === 8, `expected total XP 8 for temporary user, got ${submit.totalXp}`);
 check(submit.practiceSession?.practiceId===practiceId&&submit.interventionState?.skillId===practicePayload.skillId,'answer transaction did not persist its attached practice summary');
-const submitTiming=reportTiming(submitResponse, 'submit-answer-practice', ['auth','oauth','question_read','tx_begin','tx_reads','commit','total']);
+const submitTiming=reportTiming(submitResponse, 'submit-answer-practice', ['auth','oauth','question_read','tx_reads','commit','total']);
 check(timingDuration(submitTiming,'question_read')<=10,`reviewed question metadata did not use the bundled index: ${submitTiming}`);
+checkTimingAbsent(submitTiming,'submit-answer-practice',['tx_begin']);
 console.log(`✓ real reviewed answer committed: +${submit.xpEarned} XP, mastery ${submit.mastery}%`);
 
 const practiceStateResponse = await api('/api/practice-state', idToken);
@@ -276,7 +277,8 @@ reportTiming(practiceStateResponse, 'practice-state', ['auth','oauth','intervent
 const duplicatePracticeResponse=await api('/api/submit-answer',idToken,{method:'POST',body:JSON.stringify(validPayload)});
 const duplicatePractice=await readJson(duplicatePracticeResponse,'duplicate folded practice');
 check(duplicatePracticeResponse.ok&&duplicatePractice.duplicate===true&&duplicatePractice.practiceSession?.practiceId===practiceId,'folded answer + practice retry was not idempotent');
-reportTiming(duplicatePracticeResponse,'submit-answer-practice-duplicate',['auth','oauth','question_read','tx_begin','tx_reads','tx_rollback','total']);
+const duplicatePracticeTiming=reportTiming(duplicatePracticeResponse,'submit-answer-practice-duplicate',['auth','oauth','question_read','tx_reads','tx_rollback','total']);
+checkTimingAbsent(duplicatePracticeTiming,'submit-answer-practice-duplicate',['tx_begin']);
 console.log(`✓ answer and practice persisted, restored, and deduplicated in one transaction for ${practicePayload.skillId}`);
 
 const [knowledge, game, concept, forgedConcept, answerLog] = await Promise.all([

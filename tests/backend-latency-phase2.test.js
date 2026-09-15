@@ -5,13 +5,16 @@ const path=require('node:path');
 
 const worker=fs.readFileSync(path.join(__dirname,'..','public','_worker.js'),'utf8');
 
-test('answer transaction batches KP skill and user-state reads into one Firestore batchGet',()=>{
+test('answer transaction starts inside the batched KP skill and user-state read',()=>{
   assert.match(worker,/documents:batchGet/);
   assert.match(worker,/function batchGetDocuments\(env, token, paths, transaction\)/);
   assert.match(worker,/body:JSON\.stringify\(\{documents:names,\.\.\.\(transaction\?\{transaction\}:\{\}\)\}\)/);
-  assert.match(worker,/timed\(trace,'tx_reads',\(\)=>batchGetDocuments\(env,token,txPaths,tx\)\)/);
+  assert.match(worker,/newTransaction:\{readWrite:\{\}\}/);
+  assert.match(worker,/rows\.find\(row=>row&&row\.transaction\)\?\.transaction/);
+  assert.match(worker,/timed\(trace,'tx_reads',\(\)=>beginBatchGetDocuments\(env,token,txPaths\)\)/);
   assert.match(worker,/const txPaths=\[kpPath,\.\.\.\(skillPath\?\[skillPath\]:\[\]\),gamePath,logPath,\.\.\.\(conceptPath\?\[conceptPath\]:\[\]\),\.\.\.\(practicePath\?\[practicePath,interventionPath\]:\[\]\)\]/);
   assert.doesNotMatch(worker,/timed\(trace,'tx_reads',\(\)=>Promise\.all/);
+  assert.doesNotMatch(worker,/timed\(trace,'tx_begin',\(\)=>beginTransaction\(env, token\)\)/);
 });
 
 test('reviewed KP routing is bundled and the remaining question cache stays bounded',()=>{
