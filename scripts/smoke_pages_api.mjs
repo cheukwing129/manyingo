@@ -216,9 +216,9 @@ check(practiceRoute, 'daily plan did not provide a valid skill + KP practice rou
 const practiceId = `smokepractice${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 const practicePayload = {
   practiceId,
-  skillId: String(practiceRoute.skillId),
-  routeKpId: String(practiceRoute.kpId),
-  kpId: String(practiceRoute.kpId),
+  skillId: 'fw.zhi',
+  routeKpId: 'kp_virtual_zhi',
+  kpId: 'kp_virtual_zhi',
   beforeMastery: 30,
   afterMastery: 32,
   correctCount: 1,
@@ -226,27 +226,6 @@ const practicePayload = {
   strategy: 'targeted',
   completedAt: new Date().toISOString()
 };
-const practiceResponse = await api('/api/practice-session', idToken, { method: 'POST', body: JSON.stringify(practicePayload) });
-const practice = await readJson(practiceResponse, 'practice session');
-check(practiceResponse.ok && practice.success === true && practice.duplicate === false, `practice session failed (${practiceResponse.status}): ${practice.error || 'unknown error'}`);
-check(practice.practiceSession && practice.practiceSession.practiceId === practiceId, 'practice session did not return the persisted practice identity');
-check(practice.interventionState && practice.interventionState.skillId === practicePayload.skillId, 'practice session did not return server intervention state for the selected skill');
-const practiceTiming=reportTiming(practiceResponse, 'practice-session', ['auth','oauth','practice_tx_begin','practice_tx_reads','practice_commit','total']);
-checkTimingAbsent(practiceTiming,'practice-session',['kp_list']);
-
-const practiceStateResponse = await api('/api/practice-state', idToken);
-const practiceState = await readJson(practiceStateResponse, 'practice state');
-check(practiceStateResponse.ok, `practice state failed (${practiceStateResponse.status}): ${practiceState.error || 'unknown error'}`);
-check(Array.isArray(practiceState.practiceIds) && practiceState.practiceIds.includes(practiceId), 'authoritative practice state did not restore the persisted practice event');
-check(practiceState.interventionState && practiceState.interventionState[practicePayload.skillId], 'authoritative practice state did not restore the skill intervention document');
-reportTiming(practiceStateResponse, 'practice-state', ['auth','oauth','interventions_list','total']);
-
-const duplicatePracticeResponse = await api('/api/practice-session', idToken, { method: 'POST', body: JSON.stringify(practicePayload) });
-const duplicatePractice = await readJson(duplicatePracticeResponse, 'duplicate practice session');
-check(duplicatePracticeResponse.ok && duplicatePractice.success === true && duplicatePractice.duplicate === true, 'practice retry was not idempotent');
-const duplicatePracticeTiming=reportTiming(duplicatePracticeResponse, 'practice-duplicate', ['auth','oauth','practice_tx_begin','practice_tx_reads','practice_tx_rollback','total']);
-checkTimingAbsent(duplicatePracticeTiming,'practice-duplicate',['kp_list']);
-console.log(`✓ server-authoritative practice persisted, restored, and deduplicated for ${practicePayload.skillId}`);
 
 const dueResponse = await api('/api/due-knowledge-points', idToken);
 const due = await readJson(dueResponse, 'due knowledge points');
@@ -272,7 +251,8 @@ const validPayload = {
   usedHint: false,
   attemptCount: 1,
   responseTimeMs: 250,
-  localDate
+  localDate,
+  practiceSession:practicePayload
 };
 const submitResponse = await api('/api/submit-answer', idToken, { method: 'POST', body: JSON.stringify(validPayload) });
 const submit = await readJson(submitResponse, 'valid answer submit');
@@ -281,8 +261,20 @@ check(submit.isCorrect === true && submit.verificationVersion === 'server-answer
 check(Number(submit.xpEarned) === 8, `expected 8 XP from first correct answer, got ${submit.xpEarned}`);
 check(Number(submit.mastery) > 0, 'valid answer did not increase mastery');
 check(Number(submit.totalXp) === 8, `expected total XP 8 for temporary user, got ${submit.totalXp}`);
-reportTiming(submitResponse, 'submit-answer', ['auth','oauth','question_read','tx_begin','tx_reads','commit','total']);
+check(submit.practiceSession?.practiceId===practiceId&&submit.interventionState?.skillId===practicePayload.skillId,'answer transaction did not persist its attached practice summary');
+reportTiming(submitResponse, 'submit-answer-practice', ['auth','oauth','question_read','tx_begin','tx_reads','commit','total']);
 console.log(`✓ real reviewed answer committed: +${submit.xpEarned} XP, mastery ${submit.mastery}%`);
+
+const practiceStateResponse = await api('/api/practice-state', idToken);
+const practiceState = await readJson(practiceStateResponse, 'practice state');
+check(practiceStateResponse.ok&&practiceState.practiceIds?.includes(practiceId)&&practiceState.interventionState?.[practicePayload.skillId], 'folded practice state was not restored');
+reportTiming(practiceStateResponse, 'practice-state', ['auth','oauth','interventions_list','total']);
+
+const duplicatePracticeResponse=await api('/api/submit-answer',idToken,{method:'POST',body:JSON.stringify(validPayload)});
+const duplicatePractice=await readJson(duplicatePracticeResponse,'duplicate folded practice');
+check(duplicatePracticeResponse.ok&&duplicatePractice.duplicate===true&&duplicatePractice.practiceSession?.practiceId===practiceId,'folded answer + practice retry was not idempotent');
+reportTiming(duplicatePracticeResponse,'submit-answer-practice-duplicate',['auth','oauth','question_read','tx_begin','tx_reads','tx_rollback','total']);
+console.log(`✓ answer and practice persisted, restored, and deduplicated in one transaction for ${practicePayload.skillId}`);
 
 const [knowledge, game, concept, forgedConcept, answerLog] = await Promise.all([
   firestoreDocument(health.firestoreProject, `users/${uid}/knowledge/${validPayload.kpId}`, idToken),

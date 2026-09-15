@@ -278,6 +278,7 @@ async function submitAnswer(request, env, uid, trace) {
   let raw;
   try { raw = await request.json(); } catch (_) { throw Object.assign(new Error('JSON body required'), { status: 400 }); }
   const answer = validateAnswer(raw);
+  const practice=raw.practiceSession?validatePracticeSession(raw.practiceSession):null;
   const token = await timed(trace,'oauth',()=>getServiceAccessToken(env));
   let baseXp = 8, conceptKey = null, conceptLabel = null, skillId = null, questionData = null;
   if (answer.questionId) {
@@ -296,6 +297,10 @@ async function submitAnswer(request, env, uid, trace) {
     }
     else throw Object.assign(new Error('Verified question metadata required'),{status:400});
   }
+  if(practice){
+    const route=SERVER_KP_UNIVERSE.rows.find(row=>String(row&&row.id)===practice.routeKpId),allowed=route?SERVER_SKILL_PLAN.skillIdsForKp(practice.routeKpId,route.data||{}):[];
+    if(!route||practice.routeKpId!==answer.kpId||practice.skillId!==skillId||!allowed.includes(practice.skillId))throw Object.assign(new Error('practice summary does not match final answer route'),{status:400});
+  }
   const tx = await timed(trace,'tx_begin',()=>beginTransaction(env, token));
   try {
     const kpPath = `users/${uid}/knowledge/${answer.kpId}`;
@@ -303,7 +308,8 @@ async function submitAnswer(request, env, uid, trace) {
     const gamePath = `users/${uid}/gamification/state`;
     const logPath = `users/${uid}/answerLogs/${answer.answerId}`;
     const conceptPath = conceptKey ? `users/${uid}/concepts/${conceptKey}` : null;
-    const txPaths=[kpPath,...(skillPath?[skillPath]:[]),gamePath,logPath,...(conceptPath?[conceptPath]:[])];
+    const practicePath=practice?`users/${uid}/practiceSessions/${practice.practiceId}`:null,interventionPath=practice?`users/${uid}/interventions/${practice.skillId}`:null;
+    const txPaths=[kpPath,...(skillPath?[skillPath]:[]),gamePath,logPath,...(conceptPath?[conceptPath]:[]),...(practicePath?[practicePath,interventionPath]:[])];
     const txDocs=await timed(trace,'tx_reads',()=>batchGetDocuments(env,token,txPaths,tx));
     let cursor=0;
     const kpDoc=txDocs[cursor++];
@@ -311,11 +317,12 @@ async function submitAnswer(request, env, uid, trace) {
     const gameDoc=txDocs[cursor++];
     const logDoc=txDocs[cursor++];
     const conceptDoc=conceptPath?txDocs[cursor++]:null;
+    const practiceDoc=practicePath?txDocs[cursor++]:null,interventionDoc=interventionPath?txDocs[cursor++]:null;
     const gameExisting = gameDoc ? gameDoc.data : {};
     if (logDoc) {
       await timed(trace,'tx_rollback',()=>rollback(env, token, tx));
       const existing = logDoc.data;
-      return json({ success: true, isCorrect:existing.isCorrect===true, quality: existing.quality, xpEarned: Number(existing.xpEarned || 0), mastery: Number(existing.mastery || 0), status: existing.status || null, nextReviewAt: existing.nextReviewAt || null, attempts: Number(existing.attempts || 0), correctCount: Number(existing.correctCount || 0), wrongCount: Number(existing.wrongCount || 0), hintCount: Number(existing.hintCount || 0), lastCorrect: existing.lastCorrect ?? null, lastAnsweredAt: existing.lastAnsweredAt || existing.answeredAt || null, totalXp: Number(existing.totalXp ?? gameExisting.totalXp ?? 0), todayXp: Number(existing.todayXp ?? gameExisting.todayXp ?? 0), streak: Number(existing.streak ?? gameExisting.streak ?? 0), streakFreezes: Number(existing.streakFreezes ?? gameExisting.streakFreezes ?? 0), streakIncreased: Boolean(existing.streakIncreased), level: Number(existing.level ?? gameExisting.level ?? 1), skillId: existing.skillId || skillId || null, skillMastery: existing.skillMastery || null, conceptMastery: existing.conceptMastery || null, duplicate: true });
+      return json({ success: true, isCorrect:existing.isCorrect===true, quality: existing.quality, xpEarned: Number(existing.xpEarned || 0), mastery: Number(existing.mastery || 0), status: existing.status || null, nextReviewAt: existing.nextReviewAt || null, attempts: Number(existing.attempts || 0), correctCount: Number(existing.correctCount || 0), wrongCount: Number(existing.wrongCount || 0), hintCount: Number(existing.hintCount || 0), lastCorrect: existing.lastCorrect ?? null, lastAnsweredAt: existing.lastAnsweredAt || existing.answeredAt || null, totalXp: Number(existing.totalXp ?? gameExisting.totalXp ?? 0), todayXp: Number(existing.todayXp ?? gameExisting.todayXp ?? 0), streak: Number(existing.streak ?? gameExisting.streak ?? 0), streakFreezes: Number(existing.streakFreezes ?? gameExisting.streakFreezes ?? 0), streakIncreased: Boolean(existing.streakIncreased), level: Number(existing.level ?? gameExisting.level ?? 1), skillId: existing.skillId || skillId || null, skillMastery: existing.skillMastery || null, conceptMastery: existing.conceptMastery || null, practiceSession:existing.practiceSession||null, interventionState:existing.interventionState||null, duplicate: true });
     }
     const now = new Date();
     const prev = kpDoc ? kpDoc.data : {};
@@ -356,6 +363,13 @@ async function submitAnswer(request, env, uid, trace) {
       conceptUpdate = calculateConceptUpdate(conceptDoc ? conceptDoc.data : {}, answer, conceptKey, conceptLabel, now);
       conceptResult = { ...conceptUpdate, status: masteryStatus(conceptUpdate.mastery), lastAnsweredAt: now.toISOString() };
     }
+    let storedPractice=null,interventionUpdate=null,interventionState=null;
+    if(practice){
+      storedPractice=practiceDoc?practiceDoc.data:{...practice,source:'server-native-v1',receivedAt:now};
+      if(practiceDoc)interventionUpdate=interventionDoc&&interventionDoc.data||null;
+      else interventionUpdate=SERVER_PRACTICE.buildIntervention(interventionDoc&&interventionDoc.data,practice,now);
+      if(interventionUpdate)interventionState={...(interventionUpdate.learningState||{}),skillId:practice.skillId,kpIds:interventionUpdate.kpIds||[],routeKpId:interventionUpdate.routeKpId||practice.routeKpId,updatedAt:interventionUpdate.updatedAt||now,source:interventionUpdate.source||'server-native-v1'};
+    }
     const kpUpdate = { ...prev, ...update, nextReviewAt: update.nextReviewAt, lastAnsweredAt: update.lastAnsweredAt, updatedAt: now };
     const gameUpdate = { ...game, totalXp, todayXp, todayXpDate: answer.localDate, dailyGoalXp, streak, streakFreezes, lastActiveDate: todayXp >= dailyGoalXp ? answer.localDate : previousActiveDate, level, updatedAt: now };
     const log = {
@@ -364,7 +378,7 @@ async function submitAnswer(request, env, uid, trace) {
       usedHint: answer.usedHint, attemptCount: answer.attemptCount, responseTimeMs: answer.responseTimeMs, localDate: answer.localDate,
       quality: update.quality, xpEarned: update.xpEarned, mastery: update.mastery, status: update.status, nextReviewAt: update.nextReviewAt,
       interval: update.interval, easeFactor: update.easeFactor, repetition: update.repetition, attempts: update.attempts, correctCount: update.correctCount, wrongCount: update.wrongCount, hintCount: update.hintCount, lastCorrect: update.lastCorrect, lastAnsweredAt: update.lastAnsweredAt,
-      totalXp, todayXp, streak, streakFreezes, streakIncreased, level, answeredAt: now
+      totalXp, todayXp, streak, streakFreezes, streakIncreased, level, practiceSession:storedPractice, interventionState, answeredAt: now
     };
     const writes = [updateWrite(env, kpPath, kpUpdate)];
     if(skillPath&&nativeSkill)writes.push(updateWrite(env,skillPath,nativeSkill));
@@ -373,10 +387,11 @@ async function submitAnswer(request, env, uid, trace) {
     const plannerChanges={knowledge:{id:answer.kpId,data:kpUpdate}};
     if(skillPath&&nativeSkill)plannerChanges.skills={id:skillId,data:nativeSkill};
     if(conceptPath&&conceptUpdate)plannerChanges.concepts={id:conceptKey,data:{...conceptUpdate,lastAnsweredAt:conceptUpdate.lastAnsweredAt,updatedAt:now}};
+    if(practice&&!practiceDoc&&interventionUpdate){writes.push(updateWrite(env,practicePath,storedPractice),updateWrite(env,interventionPath,interventionUpdate));plannerChanges.interventions={id:practice.skillId,data:interventionUpdate}}
     writes.push(planStateDeltaWrite(env,uid,plannerChanges,now));
     writes.push(updateWrite(env, logPath, log));
     await timed(trace,'commit',()=>commit(env, token, tx, writes));
-    return json({ success: true, isCorrect:answer.isCorrect, verificationVersion:ANSWER_VERIFICATION.VERSION, quality: update.quality, xpEarned: update.xpEarned, mastery: update.mastery, status: update.status, nextReviewAt: update.nextReviewAt.toISOString(), interval: update.interval, easeFactor: update.easeFactor, repetition: update.repetition, attempts: update.attempts, correctCount: update.correctCount, wrongCount: update.wrongCount, hintCount: update.hintCount, lastCorrect: update.lastCorrect, lastAnsweredAt: update.lastAnsweredAt.toISOString(), totalXp, todayXp, streak, streakFreezes, streakIncreased, level, skillId, skillMastery, conceptMastery: conceptResult, duplicate: false });
+    return json({ success: true, isCorrect:answer.isCorrect, verificationVersion:ANSWER_VERIFICATION.VERSION, quality: update.quality, xpEarned: update.xpEarned, mastery: update.mastery, status: update.status, nextReviewAt: update.nextReviewAt.toISOString(), interval: update.interval, easeFactor: update.easeFactor, repetition: update.repetition, attempts: update.attempts, correctCount: update.correctCount, wrongCount: update.wrongCount, hintCount: update.hintCount, lastCorrect: update.lastCorrect, lastAnsweredAt: update.lastAnsweredAt.toISOString(), totalXp, todayXp, streak, streakFreezes, streakIncreased, level, skillId, skillMastery, conceptMastery: conceptResult, practiceSession:storedPractice, interventionState, duplicate: false });
   } catch (error) {
     await timed(trace,'tx_rollback',()=>rollback(env, token, tx));
     throw error;
