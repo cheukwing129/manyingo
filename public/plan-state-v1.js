@@ -6,10 +6,10 @@ root.ManjingoPlanStateV1=api;
 if(root.window&&root.window!==root)root.window.ManjingoPlanStateV1=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
-const VERSION='plan-state-v1';
+const VERSION='plan-state-v2';
 const FIELDS={
   knowledge:['mastery','repetition','easeFactor','interval','nextReviewAt','attempts','correctCount','wrongCount','hintCount','lastCorrect','lastAnsweredAt','updatedAt'],
-  skills:['skillId','mastery','repetition','easeFactor','interval','nextReviewAt','attempts','correctCount','wrongCount','hintCount','lastCorrect','lastAnsweredAt','updatedAt','kpIds','source','masteryVerified'],
+  skills:['skillId','mastery','repetition','easeFactor','interval','nextReviewAt','attempts','correctCount','wrongCount','hintCount','lastCorrect','lastAnsweredAt','updatedAt','kpIds','source','masteryVerified','evidence'],
   concepts:['conceptKey','conceptLabel','mastery','attempts','correctCount','wrongCount','lastCorrect','lastAnsweredAt','updatedAt','kpIds','questionIds'],
   interventions:['learningState','routeKpId','kpIds','updatedAt','source']
 };

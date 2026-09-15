@@ -308,6 +308,23 @@ export async function fetchUserConceptState(userId) {
   } catch (error) { console.warn('concept mastery read unavailable:', error); return {}; }
 }
 
+export async function fetchAccountLearningState(userId) {
+  const empty={knowledgeState:{},skillState:{},conceptState:{}};
+  if(!userId)return empty;
+  try{
+    const state=await authorizedApi('/api/account-state');
+    const normalize=(records,kind)=>Object.fromEntries(Object.entries(records||{}).map(([id,value])=>{
+      const data=value&&typeof value==='object'?value:{};
+      return[id,{...data,...(kind==='skill'?{skillId:id,source:data.source||'server-native-v1'}:{}),...(kind==='concept'?{conceptKey:id}:{}),lastAnsweredAt:isoTimestamp(data.lastAnsweredAt),updatedAt:isoTimestamp(data.updatedAt)}];
+    }));
+    return{knowledgeState:normalize(state.knowledgeState,'knowledge'),skillState:normalize(state.skillState,'skill'),conceptState:normalize(state.conceptState,'concept')};
+  }catch(error){
+    console.warn('account learning snapshot unavailable; using collection fallback:',error);
+    const [knowledgeState,skillState,conceptState]=await Promise.all([fetchUserKnowledgeState(userId),fetchUserSkillState(userId),fetchUserConceptState(userId)]);
+    return{knowledgeState,skillState,conceptState};
+  }
+}
+
 export async function fetchClientSyncState(userId) {
   if (!userId) return null;
   try {

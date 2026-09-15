@@ -11,14 +11,15 @@ const rules=fs.readFileSync(path.join(root,'firestore.rules'),'utf8');
 test('full plan state projects only bounded planner fields and round-trips rows',()=>{
   const state=planState.full({
     knowledge:[{id:'kp1',data:{mastery:42,attempts:3,selectedAnswer:'private-noise'}}],
-    skills:[{id:'trans.reorder',data:{mastery:70,kpIds:['kp1'],evidence:{large:'omitted'}}}],
+    skills:[{id:'trans.reorder',data:{mastery:70,kpIds:['kp1'],evidence:{productionQuestionIds:['rq007'],productionTextIds:['text1']}}}],
     concepts:[{id:'c1',data:{mastery:25,kpIds:['kp1'],questionIds:['q1'],unbounded:'omitted'}}],
     interventions:[{id:'trans.reorder',data:{routeKpId:'kp1',learningState:{key:'remedial'}}}]
   },'2026-09-14T00:00:00.000Z');
   assert.equal(planState.usable(state),true);
   assert.equal(state.knowledgeById.kp1.mastery,42);
   assert.equal(state.knowledgeById.kp1.selectedAnswer,undefined);
-  assert.equal(state.skillsById['trans.reorder'].evidence,undefined);
+  assert.equal(planState.VERSION,'plan-state-v2');
+  assert.deepEqual(state.skillsById['trans.reorder'].evidence,{productionQuestionIds:['rq007'],productionTextIds:['text1']});
   assert.deepEqual(planState.rows(state,'concepts'),[{id:'c1',data:{mastery:25,kpIds:['kp1'],questionIds:['q1']}}]);
 });
 
@@ -45,6 +46,11 @@ test('partial state cannot bypass migration and concurrent writes block stale pr
   assert.equal(planState.changedAfter(partial,'2026-09-14T00:03:00.000Z'),false);
 });
 
+test('legacy v1 snapshots cannot bypass the evidence migration',()=>{
+  assert.equal(planState.usable({version:'plan-state-v1',complete:true}),false);
+  assert.match(worker,/planState\/current-v2/);
+});
+
 test('worker maintains one private snapshot inside authoritative transactions',()=>{
   assert.match(worker,/import '\.\/plan-state-v1\.js'/);
   assert.match(worker,/planStateDeltaWrite\(env,uid,plannerChanges,now\)/);
@@ -65,4 +71,16 @@ test('steady-state daily plan replaces four collection lists with one document r
   assert.equal((fast.match(/getDocument\(/g)||[]).length,1);
   assert.equal((fast.match(/listDocuments\(/g)||[]).length,0);
   assert.match(fast,/PLAN_STATE\.rows/);
+});
+
+test('steady-state account sync reads one private snapshot and preserves migration fallback',()=>{
+  const body=worker.match(/async function accountState\(env,uid,trace\)\{([\s\S]*?)\n\}/)[1];
+  const fast=body.slice(0,body.indexOf('}else{'));
+  assert.equal((fast.match(/getDocument\(/g)||[]).length,1);
+  assert.equal((fast.match(/listDocuments\(/g)||[]).length,0);
+  assert.match(body,/knowledgeState:Object\.fromEntries/);
+  assert.match(body,/skillState:Object\.fromEntries/);
+  assert.match(body,/conceptState:Object\.fromEntries/);
+  assert.match(body,/promotePlanState/);
+  assert.match(worker,/url\.pathname === '\/api\/account-state'/);
 });

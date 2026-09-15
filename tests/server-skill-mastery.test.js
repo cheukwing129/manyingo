@@ -51,13 +51,16 @@ test('answer idempotency returns the originally committed skill result',()=>{
  assert.match(worker,/duplicate: true/);
 });
 
-test('account sync downloads authoritative skill documents and feeds the local engine',()=>{
+test('account sync downloads one authoritative learning snapshot and feeds the local engine',()=>{
  const firebase=read('public/firebase-config.js');
  const sync=read('public/account-sync.js');
  assert.match(firebase,/export async function fetchUserSkillState\(userId\)/);
  assert.match(firebase,/collection\(db, "users", userId, "skills"\)/);
  assert.match(firebase,/source:data\.source\|\|'server-native-v1'/);
- assert.match(sync,/fb\.fetchUserSkillState\(uid\)/);
+ assert.match(firebase,/export async function fetchAccountLearningState\(userId\)/);
+ assert.match(firebase,/authorizedApi\('\/api\/account-state'\)/);
+ assert.match(sync,/fb\.fetchAccountLearningState\(uid\)/);
+ assert.doesNotMatch(sync,/fb\.fetchUserSkillState\(uid\)/);
  assert.match(sync,/engine\.syncRemoteSkillState\(skillState\|\|\{\}\)/);
  assert.match(sync,/skillMastery:skillState\|\|\{\}/);
 });
