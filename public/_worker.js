@@ -3,6 +3,7 @@ import './curriculum-v1.js';
 import './question-skill-contract.js';
 import './skill-evidence-v1.js';
 import './answer-verification-v1.js';
+import './server-kp-universe.js';
 import './server-skill-plan.js';
 import './practice-effectiveness.js';
 import './server-practice-state.js';
@@ -15,6 +16,7 @@ const CURRICULUM=globalThis.ManjingoCurriculumV1;
 const QUESTION_SKILL_CONTRACT=globalThis.ManjingoQuestionSkillContract;
 const SKILL_EVIDENCE=globalThis.ManjingoSkillEvidenceV1;
 const ANSWER_VERIFICATION=globalThis.ManjingoAnswerVerificationV1;
+const SERVER_KP_UNIVERSE=globalThis.ManjingoServerKpUniverse;
 const SERVER_SKILL_PLAN=globalThis.ManjingoServerSkillPlan;
 const SERVER_PRACTICE=globalThis.ManjingoServerPracticeState;
 const STAGE3_CALIBRATION=globalThis.ManjingoStage3CalibrationServer;
@@ -24,12 +26,10 @@ const TOKEN_SCOPE = 'https://www.googleapis.com/auth/datastore';
 const FIRESTORE_ROOT = 'https://firestore.googleapis.com/v1';
 const FIREBASE_JWKS = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
-const STATIC_CACHE_TTL_MS = 5 * 60 * 1000;
 const QUESTION_CACHE_TTL_MS = 10 * 60 * 1000;
 const QUESTION_CACHE_MAX = 400;
 let serviceTokenCache = null;
 let firebaseJwksCache = null;
-let kpUniverseCache = null;
 const questionMetadataCache = new Map();
 
 function json(data, status = 200) {
@@ -226,13 +226,6 @@ async function getQuestionMetadata(env, token, questionId) {
   }
   return value;
 }
-async function getKnowledgePointUniverse(env, token) {
-  const now=Date.now(),pid=projectId(env);
-  if(kpUniverseCache&&kpUniverseCache.projectId===pid&&kpUniverseCache.expiresAt>now)return kpUniverseCache.value;
-  const value=await listDocuments(env,token,'knowledgePoints');
-  kpUniverseCache={projectId:pid,value,expiresAt:now+STATIC_CACHE_TTL_MS};
-  return value;
-}
 function updateWrite(env, path, data) { return { update: docObject(documentName(env, path), data) }; }
 function maskedUpdateWrite(env,path,data,fieldPaths){return{update:docObject(documentName(env,path),data),updateMask:{fieldPaths}}}
 function planStatePath(uid){return `users/${uid}/planState/current-v3`;}
@@ -402,7 +395,7 @@ async function submitStage3Calibration(request,env,uid,trace){
 
 async function submitPracticeSession(request,env,uid,trace){
   let raw;try{raw=await request.json()}catch(_){throw Object.assign(new Error('JSON body required'),{status:400})}
-  const session=validatePracticeSession(raw),token=await timed(trace,'oauth',()=>getServiceAccessToken(env)),kpUniverse=await timed(trace,'kp_list',()=>getKnowledgePointUniverse(env,token)),route=kpUniverse.find(row=>String(row&&row.id)===session.routeKpId),allowed=route?SERVER_SKILL_PLAN.skillIdsForKp(session.routeKpId,route.data||{}):[];
+  const session=validatePracticeSession(raw),token=await timed(trace,'oauth',()=>getServiceAccessToken(env)),route=SERVER_KP_UNIVERSE.rows.find(row=>String(row&&row.id)===session.routeKpId),allowed=route?SERVER_SKILL_PLAN.skillIdsForKp(session.routeKpId,route.data||{}):[];
   if(!route||!allowed.includes(session.skillId))throw Object.assign(new Error('practice skill does not match route knowledge point'),{status:400});
   const tx=await timed(trace,'practice_tx_begin',()=>beginTransaction(env,token));
   try{
@@ -441,10 +434,8 @@ async function dailyPlan(env, uid, trace, ctx) {
   const pendingPromotion=planStatePromotions.get(uid);
   if(pendingPromotion)await timed(trace,'plan_state_wait',()=>pendingPromotion);
   const startedAt=new Date();
-  const [plannerDoc,kpUniverseDocs] = await Promise.all([
-    timed(trace,'plan_state_read',()=>getDocument(env,token,planStatePath(uid))),
-    timed(trace,'kp_list',()=>getKnowledgePointUniverse(env, token))
-  ]);
+  const kpUniverseDocs=SERVER_KP_UNIVERSE.rows;
+  const plannerDoc=await timed(trace,'plan_state_read',()=>getDocument(env,token,planStatePath(uid)));
   let knowledge,skills,concepts,interventions;
   if(PLAN_STATE.usable(plannerDoc&&plannerDoc.data)){
     knowledge=PLAN_STATE.rows(plannerDoc.data,'knowledge');skills=PLAN_STATE.rows(plannerDoc.data,'skills');concepts=PLAN_STATE.rows(plannerDoc.data,'concepts');interventions=PLAN_STATE.rows(plannerDoc.data,'interventions');
@@ -499,7 +490,7 @@ async function dueKnowledge(env, uid, trace) {
 
 async function api(request, env, trace, ctx) {
   const url = new URL(request.url);
-  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION });
+  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION, kpUniversePolicy:SERVER_KP_UNIVERSE.VERSION });
   const uid = await timed(trace,'auth',()=>verifyFirebaseIdToken(request, env));
   if (url.pathname === '/api/submit-answer' && request.method === 'POST') return submitAnswer(request, env, uid, trace);
   if (url.pathname === '/api/stage3-calibration' && request.method === 'POST') return submitStage3Calibration(request,env,uid,trace);
