@@ -13,14 +13,15 @@ test('full plan state projects only bounded planner fields and round-trips rows'
     knowledge:[{id:'kp1',data:{mastery:42,attempts:3,selectedAnswer:'private-noise'}}],
     skills:[{id:'trans.reorder',data:{mastery:70,kpIds:['kp1'],evidence:{productionQuestionIds:['rq007'],productionTextIds:['text1']}}}],
     concepts:[{id:'c1',data:{mastery:25,kpIds:['kp1'],questionIds:['q1'],unbounded:'omitted'}}],
-    interventions:[{id:'trans.reorder',data:{routeKpId:'kp1',learningState:{key:'remedial'}}}]
+    interventions:[{id:'trans.reorder',data:{skillId:'trans.reorder',routeKpId:'kp1',latestPracticeId:'practice1',history:[{practiceId:'practice1',skillId:'trans.reorder',kpId:'kp1',completedAt:'2026-09-14T00:00:00.000Z'}],learningState:{key:'remedial'}}}]
   },'2026-09-14T00:00:00.000Z');
   assert.equal(planState.usable(state),true);
   assert.equal(state.knowledgeById.kp1.mastery,42);
   assert.equal(state.knowledgeById.kp1.selectedAnswer,undefined);
-  assert.equal(planState.VERSION,'plan-state-v2');
+  assert.equal(planState.VERSION,'plan-state-v3');
   assert.deepEqual(state.skillsById['trans.reorder'].evidence,{productionQuestionIds:['rq007'],productionTextIds:['text1']});
   assert.deepEqual(planState.rows(state,'concepts'),[{id:'c1',data:{mastery:25,kpIds:['kp1'],questionIds:['q1']}}]);
+  assert.equal(state.interventionsById['trans.reorder'].history[0].practiceId,'practice1');
 });
 
 test('incremental answer and practice updates preserve completeness',()=>{
@@ -46,9 +47,16 @@ test('partial state cannot bypass migration and concurrent writes block stale pr
   assert.equal(planState.changedAfter(partial,'2026-09-14T00:03:00.000Z'),false);
 });
 
-test('legacy v1 snapshots cannot bypass the evidence migration',()=>{
+test('legacy snapshots cannot bypass evidence and practice history migrations',()=>{
   assert.equal(planState.usable({version:'plan-state-v1',complete:true}),false);
-  assert.match(worker,/planState\/current-v2/);
+  assert.equal(planState.usable({version:'plan-state-v2',complete:true}),false);
+  assert.match(worker,/planState\/current-v3/);
+});
+
+test('practice history remains bounded inside the shared account snapshot',()=>{
+  const history=Array.from({length:30},(_,index)=>({practiceId:`p${index}`}));
+  const projected=planState.project('interventions',{history});
+  assert.equal(projected.history.length,planState.MAX_INTERVENTION_HISTORY);
 });
 
 test('worker maintains one private snapshot inside authoritative transactions',()=>{
@@ -81,6 +89,7 @@ test('steady-state account sync reads one private snapshot and preserves migrati
   assert.match(body,/knowledgeState:Object\.fromEntries/);
   assert.match(body,/skillState:Object\.fromEntries/);
   assert.match(body,/conceptState:Object\.fromEntries/);
+  assert.match(body,/SERVER_PRACTICE\.flattenInterventions\(interventions\)/);
   assert.match(body,/promotePlanState/);
   assert.match(worker,/url\.pathname === '\/api\/account-state'/);
 });

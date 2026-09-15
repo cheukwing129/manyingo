@@ -6,15 +6,16 @@ root.ManjingoPlanStateV1=api;
 if(root.window&&root.window!==root)root.window.ManjingoPlanStateV1=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
-const VERSION='plan-state-v2';
+const VERSION='plan-state-v3';
+const MAX_INTERVENTION_HISTORY=20;
 const FIELDS={
   knowledge:['mastery','repetition','easeFactor','interval','nextReviewAt','attempts','correctCount','wrongCount','hintCount','lastCorrect','lastAnsweredAt','updatedAt'],
   skills:['skillId','mastery','repetition','easeFactor','interval','nextReviewAt','attempts','correctCount','wrongCount','hintCount','lastCorrect','lastAnsweredAt','updatedAt','kpIds','source','masteryVerified','evidence'],
   concepts:['conceptKey','conceptLabel','mastery','attempts','correctCount','wrongCount','lastCorrect','lastAnsweredAt','updatedAt','kpIds','questionIds'],
-  interventions:['learningState','routeKpId','kpIds','updatedAt','source']
+  interventions:['skillId','learningState','routeKpId','kpIds','latestPracticeId','history','updatedAt','source']
 };
 function object(value){return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}
-function project(kind,value){const data=object(value),out={};for(const key of FIELDS[kind]||[])if(data[key]!==undefined)out[key]=data[key];return out}
+function project(kind,value){const data=object(value),out={};for(const key of FIELDS[kind]||[])if(data[key]!==undefined)out[key]=kind==='interventions'&&key==='history'&&Array.isArray(data[key])?data[key].slice(0,MAX_INTERVENTION_HISTORY):data[key];return out}
 function mapName(kind){return`${kind}ById`}
 function base(value){const data=object(value);return{version:VERSION,complete:data.version===VERSION&&data.complete===true,knowledgeById:{...object(data.knowledgeById)},skillsById:{...object(data.skillsById)},conceptsById:{...object(data.conceptsById)},interventionsById:{...object(data.interventionsById)},updatedAt:data.updatedAt||null}}
 function apply(value,changes,now){const next=base(value);for(const kind of Object.keys(FIELDS)){const change=changes&&changes[kind];if(!change||change.id==null)continue;next[mapName(kind)][String(change.id)]=project(kind,change.data)}next.updatedAt=now instanceof Date?now.toISOString():String(now||new Date().toISOString());return next}
@@ -24,5 +25,5 @@ function full(collections,now){const next=base({complete:true});next.complete=tr
 function usable(value){return !!(value&&value.version===VERSION&&value.complete===true)}
 function rows(value,kind){const map=object(value&&value[mapName(kind)]);return Object.entries(map).map(([id,data])=>({id,data:object(data)}))}
 function changedAfter(value,startedAt){const changed=new Date(value&&value.updatedAt||0).getTime(),started=startedAt instanceof Date?startedAt.getTime():new Date(startedAt||0).getTime();return Number.isFinite(changed)&&Number.isFinite(started)&&changed>started}
-return{VERSION,FIELDS,project,base,apply,delta,full,usable,rows,changedAfter};
+return{VERSION,MAX_INTERVENTION_HISTORY,FIELDS,project,base,apply,delta,full,usable,rows,changedAfter};
 });

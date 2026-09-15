@@ -309,7 +309,7 @@ export async function fetchUserConceptState(userId) {
 }
 
 export async function fetchAccountLearningState(userId) {
-  const empty={knowledgeState:{},skillState:{},conceptState:{}};
+  const empty={knowledgeState:{},skillState:{},conceptState:{},practiceState:null};
   if(!userId)return empty;
   try{
     const state=await authorizedApi('/api/account-state');
@@ -317,11 +317,11 @@ export async function fetchAccountLearningState(userId) {
       const data=value&&typeof value==='object'?value:{};
       return[id,{...data,...(kind==='skill'?{skillId:id,source:data.source||'server-native-v1'}:{}),...(kind==='concept'?{conceptKey:id}:{}),lastAnsweredAt:isoTimestamp(data.lastAnsweredAt),updatedAt:isoTimestamp(data.updatedAt)}];
     }));
-    return{knowledgeState:normalize(state.knowledgeState,'knowledge'),skillState:normalize(state.skillState,'skill'),conceptState:normalize(state.conceptState,'concept')};
+    return{knowledgeState:normalize(state.knowledgeState,'knowledge'),skillState:normalize(state.skillState,'skill'),conceptState:normalize(state.conceptState,'concept'),practiceState:state.practiceState&&typeof state.practiceState==='object'?state.practiceState:null};
   }catch(error){
     console.warn('account learning snapshot unavailable; using collection fallback:',error);
     const [knowledgeState,skillState,conceptState]=await Promise.all([fetchUserKnowledgeState(userId),fetchUserSkillState(userId),fetchUserConceptState(userId)]);
-    return{knowledgeState,skillState,conceptState};
+    return{knowledgeState,skillState,conceptState,practiceState:null};
   }
 }
 
