@@ -33,7 +33,7 @@ test('homepage keeps local adaptive tail replanning as the no-read fallback',()=
 });
 
 test('server daily plan remains authoritative on initial load while read-heavy collections are visible to audits',()=>{
-  assert.match(worker,/async function dailyPlan\(env, uid, trace, ctx\)/);
+  assert.match(worker,/async function dailyPlan\(env, uid, trace, ctx, identity\)/);
   assert.match(worker,/knowledge_list/);
   assert.match(worker,/skills_list/);
   assert.match(worker,/concepts_list/);
@@ -46,4 +46,12 @@ test('cold daily plan defers snapshot promotion through the execution context',(
   assert.match(worker,/ctx\.waitUntil\(task\)/);
   assert.match(worker,/planStatePromotions\.get\(uid\)/);
   assert.match(worker,/timed\(trace,'plan_state_wait'/);
+});
+
+test('fresh anonymous account skips four empty collection scans without weakening migration fallback',()=>{
+  assert.match(worker,/provider==='anonymous'/);
+  assert.match(worker,/now-authTime<=120/);
+  assert.match(worker,/else if\(!plannerDoc&&identity&&identity\.freshAnonymous\)/);
+  assert.match(worker,/knowledge=\[\];skills=\[\];concepts=\[\];interventions=\[\]/);
+  assert.match(worker,/else\{\s*\[knowledge, skills, concepts, interventions\] = await Promise\.all/);
 });

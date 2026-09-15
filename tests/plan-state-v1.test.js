@@ -74,7 +74,7 @@ test('worker maintains one private snapshot inside authoritative transactions',(
 });
 
 test('steady-state daily plan replaces four collection lists with one document read',()=>{
-  const body=worker.match(/async function dailyPlan\(env, uid, trace, ctx\) \{([\s\S]*?)\n\}/)[1];
+  const body=worker.match(/async function dailyPlan\(env, uid, trace, ctx, identity\) \{([\s\S]*?)\n\}/)[1];
   const fast=body.slice(0,body.indexOf('}else{'));
   assert.equal((fast.match(/getDocument\(/g)||[]).length,1);
   assert.equal((fast.match(/listDocuments\(/g)||[]).length,0);
@@ -93,4 +93,10 @@ test('steady-state account sync reads one private snapshot and preserves migrati
   assert.match(body,/promotePlanState/);
   assert.match(worker,/url\.pathname === '\/api\/account-state'/);
   assert.match(body,/planStatePromotions\.get\(uid\)/);
+});
+
+test('new anonymous bootstrap only applies when no plan state document exists',()=>{
+  assert.match(worker,/!plannerDoc&&identity&&identity\.freshAnonymous/);
+  assert.match(worker,/settlePlanStatePromotion\(env,token,uid,\{knowledge,skills,concepts,interventions\},startedAt,ctx\)/);
+  assert.match(worker,/return\{uid:String\(payload\.sub\),freshAnonymous:provider==='anonymous'/);
 });

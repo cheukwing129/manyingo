@@ -122,7 +122,8 @@ async function verifyFirebaseIdToken(request, env) {
   const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
   const valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, decodeBase64Url(parts[2]), new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
   if (!valid) throw Object.assign(new Error('Firebase ID token signature rejected'), { status: 401 });
-  return String(payload.sub);
+  const authTime=Number(payload.auth_time||0),provider=String(payload.firebase&&payload.firebase.sign_in_provider||'');
+  return{uid:String(payload.sub),freshAnonymous:provider==='anonymous'&&Number.isFinite(authTime)&&authTime>0&&now-authTime>=-300&&now-authTime<=120};
 }
 
 function fsValue(value) {
@@ -429,7 +430,7 @@ async function settlePlanStatePromotion(env,token,uid,collections,startedAt,ctx)
   if(ctx&&typeof ctx.waitUntil==='function'){ctx.waitUntil(task);return}
   await task;
 }
-async function dailyPlan(env, uid, trace, ctx) {
+async function dailyPlan(env, uid, trace, ctx, identity) {
   const token = await timed(trace,'oauth',()=>getServiceAccessToken(env));
   const pendingPromotion=planStatePromotions.get(uid);
   if(pendingPromotion)await timed(trace,'plan_state_wait',()=>pendingPromotion);
@@ -439,6 +440,9 @@ async function dailyPlan(env, uid, trace, ctx) {
   let knowledge,skills,concepts,interventions;
   if(PLAN_STATE.usable(plannerDoc&&plannerDoc.data)){
     knowledge=PLAN_STATE.rows(plannerDoc.data,'knowledge');skills=PLAN_STATE.rows(plannerDoc.data,'skills');concepts=PLAN_STATE.rows(plannerDoc.data,'concepts');interventions=PLAN_STATE.rows(plannerDoc.data,'interventions');
+  }else if(!plannerDoc&&identity&&identity.freshAnonymous){
+    knowledge=[];skills=[];concepts=[];interventions=[];
+    await settlePlanStatePromotion(env,token,uid,{knowledge,skills,concepts,interventions},startedAt,ctx);
   }else{
     [knowledge, skills, concepts, interventions] = await Promise.all([
       timed(trace,'knowledge_list',()=>listDocuments(env, token, `users/${uid}/knowledge`)),
@@ -490,14 +494,14 @@ async function dueKnowledge(env, uid, trace) {
 
 async function api(request, env, trace, ctx) {
   const url = new URL(request.url);
-  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION, kpUniversePolicy:SERVER_KP_UNIVERSE.VERSION });
-  const uid = await timed(trace,'auth',()=>verifyFirebaseIdToken(request, env));
+  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION, kpUniversePolicy:SERVER_KP_UNIVERSE.VERSION, planBootstrapPolicy:'fresh-anonymous-v1' });
+  const identity=await timed(trace,'auth',()=>verifyFirebaseIdToken(request, env)),uid=identity.uid;
   if (url.pathname === '/api/submit-answer' && request.method === 'POST') return submitAnswer(request, env, uid, trace);
   if (url.pathname === '/api/stage3-calibration' && request.method === 'POST') return submitStage3Calibration(request,env,uid,trace);
   if (url.pathname === '/api/practice-session' && request.method === 'POST') return submitPracticeSession(request, env, uid, trace);
   if (url.pathname === '/api/practice-state' && request.method === 'GET') return practiceState(env, uid, trace);
   if (url.pathname === '/api/account-state' && request.method === 'GET') return accountState(env, uid, trace);
-  if (url.pathname === '/api/daily-plan' && (request.method === 'GET' || request.method === 'POST')) return dailyPlan(env, uid, trace, ctx);
+  if (url.pathname === '/api/daily-plan' && (request.method === 'GET' || request.method === 'POST')) return dailyPlan(env, uid, trace, ctx, identity);
   if (url.pathname === '/api/due-knowledge-points' && (request.method === 'GET' || request.method === 'POST')) return dueKnowledge(env, uid, trace);
   return json({ error: 'Not found' }, 404);
 }
