@@ -26,6 +26,7 @@ function parseArgs(argv){
 }
 function ensureParent(file){if(file)fs.mkdirSync(path.dirname(path.resolve(file)),{recursive:true});}
 function learnerIdFrom(doc){return doc&&doc.ref&&doc.ref.parent&&doc.ref.parent.parent?doc.ref.parent.parent.id:'unknown';}
+function practiceKey(row){return `${row.learnerId}|${String(row.data&&row.data.practiceId||'')}`;}
 async function loadRows(days){
   if(!getApps().length)initializeApp({credential:applicationDefault(),projectId:process.env.FIREBASE_PROJECT_ID||'manjingo-95d9a'});
   const db=getFirestore(),now=Date.now(),answerSince=Timestamp.fromMillis(now-(days+DEFAULTS.lookbackDays)*86400000),practiceSince=Timestamp.fromMillis(now-days*86400000);
@@ -33,8 +34,11 @@ async function loadRows(days){
     db.collectionGroup('practiceSessions').where('completedAt','>=',practiceSince).get(),
     db.collectionGroup('answerLogs').where('answeredAt','>=',answerSince).get()
   ]);
-  const practices=practiceSnap.docs.map(doc=>({learnerId:learnerIdFrom(doc),data:doc.data()}));
   const answers=answerSnap.docs.map(doc=>({learnerId:learnerIdFrom(doc),data:doc.data()}));
+  const practices=[],seen=[];
+  for(const row of [...practiceSnap.docs.map(doc=>({learnerId:learnerIdFrom(doc),data:doc.data()})),...answers.filter(row=>row.data&&row.data.practiceSession).map(row=>({learnerId:row.learnerId,data:row.data.practiceSession}))]){
+    const key=practiceKey(row);if(!row.data||!row.data.practiceId||seen.includes(key))continue;seen.push(key);practices.push(row);
+  }
   return{practices,answers};
 }
 async function main(){

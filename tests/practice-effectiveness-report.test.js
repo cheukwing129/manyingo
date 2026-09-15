@@ -86,5 +86,6 @@ test('manual effectiveness workflow is read-only and never scheduled',()=>{
   assert.doesNotMatch(workflow,/schedule:/);
   assert.match(cli,/collectionGroup\('practiceSessions'\)/);
   assert.match(cli,/collectionGroup\('answerLogs'\)/);
+  assert.match(cli,/row\.data\.practiceSession/);
   assert.doesNotMatch(cli,/\.set\(|\.update\(|\.delete\(|\.add\(|batch\.commit/);
 });
