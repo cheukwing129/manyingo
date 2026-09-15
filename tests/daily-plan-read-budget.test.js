@@ -48,10 +48,12 @@ test('cold daily plan defers snapshot promotion through the execution context',(
   assert.match(worker,/timed\(trace,'plan_state_wait'/);
 });
 
-test('fresh anonymous account skips four empty collection scans without weakening migration fallback',()=>{
+test('fresh anonymous account returns an empty plan without a foreground Firestore call',()=>{
+  const body=worker.match(/async function dailyPlan\(env, uid, trace, ctx, identity\) \{([\s\S]*?)\n\}/)[1];
   assert.match(worker,/provider==='anonymous'/);
   assert.match(worker,/now-authTime<=120/);
-  assert.match(worker,/else if\(!plannerDoc&&identity&&identity\.freshAnonymous\)/);
+  assert.match(worker,/if\(identity&&identity\.freshAnonymous\)/);
   assert.match(worker,/knowledge=\[\];skills=\[\];concepts=\[\];interventions=\[\]/);
-  assert.match(worker,/else\{\s*\[knowledge, skills, concepts, interventions\] = await Promise\.all/);
+  assert.match(worker,/settleFreshPlanBootstrap\(env,uid,startedAt,ctx\)/);
+  assert.ok(body.indexOf('if(identity&&identity.freshAnonymous)')<body.indexOf("timed(trace,'oauth'"));
 });

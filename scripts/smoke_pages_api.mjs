@@ -184,7 +184,7 @@ check(health.service === 'manjingo-learning', 'unexpected health service');
 check(health.practicePolicy === 'server-practice-v1', 'deployed practice policy is not server-authoritative v1');
 check(health.stage3CalibrationPolicy === 'stage3-calibration-v1', 'deployed Stage 3 calibration policy is missing or outdated');
 check(health.kpUniversePolicy === 'server-kp-universe-reviewed-v4', 'deployed server KP universe is missing or outdated');
-check(health.planBootstrapPolicy === 'fresh-anonymous-v1', 'deployed new-account plan bootstrap is missing or outdated');
+check(health.planBootstrapPolicy === 'fresh-anonymous-zero-read-v2', 'deployed new-account plan bootstrap is missing or outdated');
 reportTiming(healthResponse, 'health', ['total']);
 console.log(`✓ health: ${health.service} / ${health.firestoreProject}`);
 
@@ -199,15 +199,15 @@ const plan = await readJson(planResponse, 'daily plan');
 check(planResponse.ok, `daily plan failed (${planResponse.status}): ${plan.error || 'unknown error'}`);
 check(Array.isArray(plan.items), 'daily plan did not return items[]');
 check(Number.isFinite(Number(plan.totalRecommended)), 'daily plan did not return totalRecommended');
-const coldPlanTiming=reportTiming(planResponse, 'daily-plan', ['auth','oauth','plan_state_read','total']);
-checkTimingAbsent(coldPlanTiming,'daily-plan',['kp_list','knowledge_list','skills_list','concepts_list','interventions_list','plan_state_tx_begin','plan_state_tx_read','plan_state_commit']);
+const coldPlanTiming=reportTiming(planResponse, 'daily-plan', ['auth','total']);
+checkTimingAbsent(coldPlanTiming,'daily-plan',['oauth','plan_state_read','plan_state_wait','kp_list','knowledge_list','skills_list','concepts_list','interventions_list','plan_state_tx_begin','plan_state_tx_read','plan_state_commit']);
 console.log(`✓ authenticated Firestore daily plan: ${plan.items.length} item(s)`);
 
 const warmPlanResponse = await api('/api/daily-plan', idToken);
 const warmPlan = await readJson(warmPlanResponse, 'warm daily plan');
 check(warmPlanResponse.ok, `warm daily plan failed (${warmPlanResponse.status}): ${warmPlan.error || 'unknown error'}`);
 check(Array.isArray(warmPlan.items), 'warm daily plan did not return items[]');
-const warmPlanTiming = reportTiming(warmPlanResponse, 'daily-plan-warm', ['auth','oauth','plan_state_read','total']);
+const warmPlanTiming = reportTiming(warmPlanResponse, 'daily-plan-warm', ['auth','total']);
 checkTimingAbsent(warmPlanTiming, 'daily-plan-warm', ['kp_list','knowledge_list','skills_list','concepts_list','interventions_list']);
 console.log('✓ warm daily plan uses the private snapshot instead of four user collection scans');
 
