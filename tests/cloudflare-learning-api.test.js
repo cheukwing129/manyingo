@@ -38,6 +38,8 @@ test('health endpoint reports learning and practice policy without exposing cred
  assert.equal(body.firestoreProject,'manjingo-95d9a');
  assert.equal(body.learningPolicy,'shared-v1');
  assert.equal(body.practicePolicy,'server-practice-v1');
+ assert.equal(body.questionIndexPolicy,'reviewed-v4');
+ assert.ok(body.questionIndexCount>=450);
  assert.equal(JSON.stringify(body).includes('PRIVATE KEY'),false);
 });
 

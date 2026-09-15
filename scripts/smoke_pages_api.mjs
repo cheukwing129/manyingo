@@ -27,6 +27,7 @@ function checkTimingAbsent(value, label, forbidden = []) {
     check(!new RegExp(`(?:^|,\\s*)${name};dur=`).test(value), `${label} unexpectedly used ${name}: ${value}`);
   }
 }
+function timingDuration(value,name){const match=String(value).match(new RegExp(`(?:^|,\\s*)${name};dur=(\\d+(?:\\.\\d+)?)`));return match?Number(match[1]):null;}
 async function readJson(response, label) {
   let data;
   try { data = await response.json(); }
@@ -184,6 +185,7 @@ check(health.service === 'manjingo-learning', 'unexpected health service');
 check(health.practicePolicy === 'server-practice-v1', 'deployed practice policy is not server-authoritative v1');
 check(health.stage3CalibrationPolicy === 'stage3-calibration-v1', 'deployed Stage 3 calibration policy is missing or outdated');
 check(health.kpUniversePolicy === 'server-kp-universe-reviewed-v4', 'deployed server KP universe is missing or outdated');
+check(health.questionIndexPolicy === 'reviewed-v4' && Number(health.questionIndexCount) >= 450, 'deployed reviewed question index is missing or incomplete');
 check(health.planBootstrapPolicy === 'fresh-anonymous-zero-read-v2', 'deployed new-account plan bootstrap is missing or outdated');
 reportTiming(healthResponse, 'health', ['total']);
 console.log(`✓ health: ${health.service} / ${health.firestoreProject}`);
@@ -262,7 +264,8 @@ check(Number(submit.xpEarned) === 8, `expected 8 XP from first correct answer, g
 check(Number(submit.mastery) > 0, 'valid answer did not increase mastery');
 check(Number(submit.totalXp) === 8, `expected total XP 8 for temporary user, got ${submit.totalXp}`);
 check(submit.practiceSession?.practiceId===practiceId&&submit.interventionState?.skillId===practicePayload.skillId,'answer transaction did not persist its attached practice summary');
-reportTiming(submitResponse, 'submit-answer-practice', ['auth','oauth','question_read','tx_begin','tx_reads','commit','total']);
+const submitTiming=reportTiming(submitResponse, 'submit-answer-practice', ['auth','oauth','question_read','tx_begin','tx_reads','commit','total']);
+check(timingDuration(submitTiming,'question_read')<=10,`reviewed question metadata did not use the bundled index: ${submitTiming}`);
 console.log(`✓ real reviewed answer committed: +${submit.xpEarned} XP, mastery ${submit.mastery}%`);
 
 const practiceStateResponse = await api('/api/practice-state', idToken);

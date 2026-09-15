@@ -3,6 +3,7 @@ import './curriculum-v1.js';
 import './question-skill-contract.js';
 import './skill-evidence-v1.js';
 import './answer-verification-v1.js';
+import './server-question-index.js';
 import './server-kp-universe.js';
 import './server-skill-plan.js';
 import './practice-effectiveness.js';
@@ -16,6 +17,7 @@ const CURRICULUM=globalThis.ManjingoCurriculumV1;
 const QUESTION_SKILL_CONTRACT=globalThis.ManjingoQuestionSkillContract;
 const SKILL_EVIDENCE=globalThis.ManjingoSkillEvidenceV1;
 const ANSWER_VERIFICATION=globalThis.ManjingoAnswerVerificationV1;
+const SERVER_QUESTION_INDEX=globalThis.ManjingoServerQuestionIndex;
 const SERVER_KP_UNIVERSE=globalThis.ManjingoServerKpUniverse;
 const SERVER_SKILL_PLAN=globalThis.ManjingoServerSkillPlan;
 const SERVER_PRACTICE=globalThis.ManjingoServerPracticeState;
@@ -217,6 +219,8 @@ async function commit(env, token, transaction, writes) {
 }
 function cacheKey(env,id){return `${projectId(env)}:${id}`;}
 async function getQuestionMetadata(env, token, questionId) {
+  const bundled=SERVER_QUESTION_INDEX&&SERVER_QUESTION_INDEX.get(questionId);
+  if(bundled)return bundled;
   const key=cacheKey(env,questionId),now=Date.now(),cached=questionMetadataCache.get(key);
   if(cached&&cached.expiresAt>now)return cached.value;
   if(cached)questionMetadataCache.delete(key);
@@ -531,7 +535,7 @@ async function dueKnowledge(env, uid, trace) {
 
 async function api(request, env, trace, ctx) {
   const url = new URL(request.url);
-  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION, kpUniversePolicy:SERVER_KP_UNIVERSE.VERSION, planBootstrapPolicy:'fresh-anonymous-zero-read-v2' });
+  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION, kpUniversePolicy:SERVER_KP_UNIVERSE.VERSION, questionIndexPolicy:SERVER_QUESTION_INDEX.version, questionIndexCount:SERVER_QUESTION_INDEX.count, planBootstrapPolicy:'fresh-anonymous-zero-read-v2' });
   const identity=await timed(trace,'auth',()=>verifyFirebaseIdToken(request, env)),uid=identity.uid;
   if (url.pathname === '/api/submit-answer' && request.method === 'POST') return submitAnswer(request, env, uid, trace);
   if (url.pathname === '/api/stage3-calibration' && request.method === 'POST') return submitStage3Calibration(request,env,uid,trace);
