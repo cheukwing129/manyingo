@@ -39,6 +39,31 @@ test('targeted remedial and reteach lesson completion return to learning results
  assert.equal(reteach.action.href,'./index.html#masteryDashboard');
 });
 
+test('session summary counts provisional XP once and accepts delayed confirmed XP without duplicating the answer',()=>{
+ global.ManjingoContent={questions:[{q:'測試題',kpId:'kp_test',baseXp:8}],knowledgePoints:[]};
+ const scope={querySelector:()=>({textContent:'測試題'})};
+ const feedback={
+  classList:{contains:name=>name==='correct'},
+  dataset:{},
+  textContent:'答對了！',
+  closest:()=>scope,
+  parentElement:scope
+ };
+ summary.reset({page:'home'});
+ assert.equal(summary.countFeedback(feedback),true);
+ let state=summary.snapshot();
+ assert.equal(state.answered,1);
+ assert.equal(state.correct,1);
+ assert.equal(state.xp,8);
+ feedback.textContent='答對了！ 本題獲得：10 XP';
+ assert.equal(summary.countFeedback(feedback),true);
+ state=summary.snapshot();
+ assert.equal(state.answered,1);
+ assert.equal(state.correct,1);
+ assert.equal(state.xp,10);
+ delete global.ManjingoContent;
+});
+
 test('session summary is loaded after answer feedback and preserves homepage completion status',()=>{
  const catalog=read('public/content-catalog.js'),runtime=read('public/session-summary.js'),css=read('public/app-ui.css');
  assert.match(catalog,/feedback-ui\.js.*session-summary\.js/);
