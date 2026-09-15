@@ -426,8 +426,20 @@ async function promotePlanState(env,token,uid,collections,startedAt,trace){
     return true;
   }catch(error){await timed(trace,'plan_state_tx_rollback',()=>rollback(env,token,tx));throw error}
 }
-async function dailyPlan(env, uid, trace) {
+const planStatePromotions=new Map();
+async function settlePlanStatePromotion(env,token,uid,collections,startedAt,ctx){
+  let task=planStatePromotions.get(uid);
+  if(!task){
+    task=promotePlanState(env,token,uid,collections,startedAt,createTrace()).catch(error=>{console.warn('plan state promotion deferred',error);return false}).finally(()=>planStatePromotions.delete(uid));
+    planStatePromotions.set(uid,task);
+  }
+  if(ctx&&typeof ctx.waitUntil==='function'){ctx.waitUntil(task);return}
+  await task;
+}
+async function dailyPlan(env, uid, trace, ctx) {
   const token = await timed(trace,'oauth',()=>getServiceAccessToken(env));
+  const pendingPromotion=planStatePromotions.get(uid);
+  if(pendingPromotion)await timed(trace,'plan_state_wait',()=>pendingPromotion);
   const startedAt=new Date();
   const [plannerDoc,kpUniverseDocs] = await Promise.all([
     timed(trace,'plan_state_read',()=>getDocument(env,token,planStatePath(uid))),
@@ -443,7 +455,7 @@ async function dailyPlan(env, uid, trace) {
       timed(trace,'concepts_list',()=>listDocuments(env, token, `users/${uid}/concepts`)),
       timed(trace,'interventions_list',()=>listDocuments(env, token, `users/${uid}/interventions`))
     ]);
-    try{await promotePlanState(env,token,uid,{knowledge,skills,concepts,interventions},startedAt,trace)}catch(error){console.warn('plan state promotion deferred',error)}
+    await settlePlanStatePromotion(env,token,uid,{knowledge,skills,concepts,interventions},startedAt,ctx);
   }
   const plan=SERVER_SKILL_PLAN.buildPlan({knowledge,skills,concepts,interventions,kpUniverse:kpUniverseDocs,targetCount:Number(CURRICULUM&&CURRICULUM.dailyPolicy&&CURRICULUM.dailyPolicy.sessionSize)||10,now:new Date()});
   const conceptState=Object.fromEntries(concepts.map(row=>[row.id,{...row.data,conceptKey:row.id}]));
@@ -451,6 +463,8 @@ async function dailyPlan(env, uid, trace) {
 }
 async function accountState(env,uid,trace){
   const token=await timed(trace,'oauth',()=>getServiceAccessToken(env)),startedAt=new Date();
+  const pendingPromotion=planStatePromotions.get(uid);
+  if(pendingPromotion)await timed(trace,'plan_state_wait',()=>pendingPromotion);
   const plannerDoc=await timed(trace,'account_state_read',()=>getDocument(env,token,planStatePath(uid)));
   let knowledge,skills,concepts,interventions;
   if(PLAN_STATE.usable(plannerDoc&&plannerDoc.data)){
@@ -483,7 +497,7 @@ async function dueKnowledge(env, uid, trace) {
   return json({ dueKpIds: due, count: due.length });
 }
 
-async function api(request, env, trace) {
+async function api(request, env, trace, ctx) {
   const url = new URL(request.url);
   if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION });
   const uid = await timed(trace,'auth',()=>verifyFirebaseIdToken(request, env));
@@ -492,17 +506,17 @@ async function api(request, env, trace) {
   if (url.pathname === '/api/practice-session' && request.method === 'POST') return submitPracticeSession(request, env, uid, trace);
   if (url.pathname === '/api/practice-state' && request.method === 'GET') return practiceState(env, uid, trace);
   if (url.pathname === '/api/account-state' && request.method === 'GET') return accountState(env, uid, trace);
-  if (url.pathname === '/api/daily-plan' && (request.method === 'GET' || request.method === 'POST')) return dailyPlan(env, uid, trace);
+  if (url.pathname === '/api/daily-plan' && (request.method === 'GET' || request.method === 'POST')) return dailyPlan(env, uid, trace, ctx);
   if (url.pathname === '/api/due-knowledge-points' && (request.method === 'GET' || request.method === 'POST')) return dueKnowledge(env, uid, trace);
   return json({ error: 'Not found' }, 404);
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     const trace=createTrace();
-    try { return withServerTiming(await api(request, env, trace),trace); }
+    try { return withServerTiming(await api(request, env, trace, ctx),trace); }
     catch (error) { console.error('learning api error', error); return withServerTiming(json({ error: error && error.message ? error.message : 'Internal server error' }, Number(error && error.status) || 500),trace); }
   }
 };

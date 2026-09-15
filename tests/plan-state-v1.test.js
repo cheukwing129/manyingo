@@ -66,7 +66,7 @@ test('worker maintains one private snapshot inside authoritative transactions',(
   assert.match(worker,/updateMask:\{fieldPaths\}/);
   assert.match(worker,/PLAN_STATE\.changedAfter/);
   assert.match(worker,/PLAN_STATE\.full/);
-  assert.match(worker,/catch\(error\)\{console\.warn\('plan state promotion deferred',error\)\}/);
+  assert.match(worker,/catch\(error=>\{console\.warn\('plan state promotion deferred',error\)/);
   assert.match(rules,/match \/planState\/\{document\}/);
   const block=rules.match(/match \/planState\/\{document\} \{([\s\S]*?)\n      \}/);
   assert.match(block[1],/request\.auth\.uid == userId/);
@@ -74,7 +74,7 @@ test('worker maintains one private snapshot inside authoritative transactions',(
 });
 
 test('steady-state daily plan replaces four collection lists with one document read',()=>{
-  const body=worker.match(/async function dailyPlan\(env, uid, trace\) \{([\s\S]*?)\n\}/)[1];
+  const body=worker.match(/async function dailyPlan\(env, uid, trace, ctx\) \{([\s\S]*?)\n\}/)[1];
   const fast=body.slice(0,body.indexOf('}else{'));
   assert.equal((fast.match(/getDocument\(/g)||[]).length,1);
   assert.equal((fast.match(/listDocuments\(/g)||[]).length,0);
@@ -92,4 +92,5 @@ test('steady-state account sync reads one private snapshot and preserves migrati
   assert.match(body,/SERVER_PRACTICE\.flattenInterventions\(interventions\)/);
   assert.match(body,/promotePlanState/);
   assert.match(worker,/url\.pathname === '\/api\/account-state'/);
+  assert.match(body,/planStatePromotions\.get\(uid\)/);
 });

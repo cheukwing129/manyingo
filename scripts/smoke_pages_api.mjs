@@ -197,7 +197,8 @@ const plan = await readJson(planResponse, 'daily plan');
 check(planResponse.ok, `daily plan failed (${planResponse.status}): ${plan.error || 'unknown error'}`);
 check(Array.isArray(plan.items), 'daily plan did not return items[]');
 check(Number.isFinite(Number(plan.totalRecommended)), 'daily plan did not return totalRecommended');
-reportTiming(planResponse, 'daily-plan', ['auth','oauth','plan_state_read','kp_list','total']);
+const coldPlanTiming=reportTiming(planResponse, 'daily-plan', ['auth','oauth','plan_state_read','kp_list','total']);
+checkTimingAbsent(coldPlanTiming,'daily-plan',['plan_state_tx_begin','plan_state_tx_read','plan_state_commit']);
 console.log(`✓ authenticated Firestore daily plan: ${plan.items.length} item(s)`);
 
 const warmPlanResponse = await api('/api/daily-plan', idToken);
