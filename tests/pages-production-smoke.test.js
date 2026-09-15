@@ -118,9 +118,9 @@ test('Pages smoke persists restores and deduplicates one real server practice se
   assert.match(source,/practiceState\.practiceIds\.includes\(practiceId\)/);
   assert.match(source,/practiceState\.interventionState\[practicePayload\.skillId\]/);
   assert.match(source,/duplicatePractice\.duplicate === true/);
-  assert.match(source,/reportTiming\(practiceResponse, 'practice-session', \['auth','oauth','kp_list','practice_tx_begin','practice_tx_reads','practice_commit','total'\]\)/);
+  assert.match(source,/reportTiming\(practiceResponse, 'practice-session', \['auth','oauth','practice_tx_begin','practice_tx_reads','practice_commit','total'\]\)/);
   assert.match(source,/reportTiming\(practiceStateResponse, 'practice-state', \['auth','oauth','interventions_list','total'\]\)/);
-  assert.match(source,/reportTiming\(duplicatePracticeResponse, 'practice-duplicate', \['auth','oauth','kp_list','practice_tx_begin','practice_tx_reads','practice_tx_rollback','total'\]\)/);
+  assert.match(source,/reportTiming\(duplicatePracticeResponse, 'practice-duplicate', \['auth','oauth','practice_tx_begin','practice_tx_reads','practice_tx_rollback','total'\]\)/);
 });
 
 test('production smoke writes cleanup manifest immediately after creating temporary uid',()=>{

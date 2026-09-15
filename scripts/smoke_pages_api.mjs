@@ -183,6 +183,7 @@ check(health.configured === true, 'Pages Worker is deployed but Firebase server 
 check(health.service === 'manjingo-learning', 'unexpected health service');
 check(health.practicePolicy === 'server-practice-v1', 'deployed practice policy is not server-authoritative v1');
 check(health.stage3CalibrationPolicy === 'stage3-calibration-v1', 'deployed Stage 3 calibration policy is missing or outdated');
+check(health.kpUniversePolicy === 'server-kp-universe-reviewed-v4', 'deployed server KP universe is missing or outdated');
 reportTiming(healthResponse, 'health', ['total']);
 console.log(`✓ health: ${health.service} / ${health.firestoreProject}`);
 
@@ -197,16 +198,16 @@ const plan = await readJson(planResponse, 'daily plan');
 check(planResponse.ok, `daily plan failed (${planResponse.status}): ${plan.error || 'unknown error'}`);
 check(Array.isArray(plan.items), 'daily plan did not return items[]');
 check(Number.isFinite(Number(plan.totalRecommended)), 'daily plan did not return totalRecommended');
-const coldPlanTiming=reportTiming(planResponse, 'daily-plan', ['auth','oauth','plan_state_read','kp_list','total']);
-checkTimingAbsent(coldPlanTiming,'daily-plan',['plan_state_tx_begin','plan_state_tx_read','plan_state_commit']);
+const coldPlanTiming=reportTiming(planResponse, 'daily-plan', ['auth','oauth','plan_state_read','total']);
+checkTimingAbsent(coldPlanTiming,'daily-plan',['kp_list','plan_state_tx_begin','plan_state_tx_read','plan_state_commit']);
 console.log(`✓ authenticated Firestore daily plan: ${plan.items.length} item(s)`);
 
 const warmPlanResponse = await api('/api/daily-plan', idToken);
 const warmPlan = await readJson(warmPlanResponse, 'warm daily plan');
 check(warmPlanResponse.ok, `warm daily plan failed (${warmPlanResponse.status}): ${warmPlan.error || 'unknown error'}`);
 check(Array.isArray(warmPlan.items), 'warm daily plan did not return items[]');
-const warmPlanTiming = reportTiming(warmPlanResponse, 'daily-plan-warm', ['auth','oauth','plan_state_read','kp_list','total']);
-checkTimingAbsent(warmPlanTiming, 'daily-plan-warm', ['knowledge_list','skills_list','concepts_list','interventions_list']);
+const warmPlanTiming = reportTiming(warmPlanResponse, 'daily-plan-warm', ['auth','oauth','plan_state_read','total']);
+checkTimingAbsent(warmPlanTiming, 'daily-plan-warm', ['kp_list','knowledge_list','skills_list','concepts_list','interventions_list']);
 console.log('✓ warm daily plan uses the private snapshot instead of four user collection scans');
 
 const practiceRoute = plan.items.find(item => item && item.skillId && item.kpId);
@@ -229,7 +230,8 @@ const practice = await readJson(practiceResponse, 'practice session');
 check(practiceResponse.ok && practice.success === true && practice.duplicate === false, `practice session failed (${practiceResponse.status}): ${practice.error || 'unknown error'}`);
 check(practice.practiceSession && practice.practiceSession.practiceId === practiceId, 'practice session did not return the persisted practice identity');
 check(practice.interventionState && practice.interventionState.skillId === practicePayload.skillId, 'practice session did not return server intervention state for the selected skill');
-reportTiming(practiceResponse, 'practice-session', ['auth','oauth','kp_list','practice_tx_begin','practice_tx_reads','practice_commit','total']);
+const practiceTiming=reportTiming(practiceResponse, 'practice-session', ['auth','oauth','practice_tx_begin','practice_tx_reads','practice_commit','total']);
+checkTimingAbsent(practiceTiming,'practice-session',['kp_list']);
 
 const practiceStateResponse = await api('/api/practice-state', idToken);
 const practiceState = await readJson(practiceStateResponse, 'practice state');
@@ -241,7 +243,8 @@ reportTiming(practiceStateResponse, 'practice-state', ['auth','oauth','intervent
 const duplicatePracticeResponse = await api('/api/practice-session', idToken, { method: 'POST', body: JSON.stringify(practicePayload) });
 const duplicatePractice = await readJson(duplicatePracticeResponse, 'duplicate practice session');
 check(duplicatePracticeResponse.ok && duplicatePractice.success === true && duplicatePractice.duplicate === true, 'practice retry was not idempotent');
-reportTiming(duplicatePracticeResponse, 'practice-duplicate', ['auth','oauth','kp_list','practice_tx_begin','practice_tx_reads','practice_tx_rollback','total']);
+const duplicatePracticeTiming=reportTiming(duplicatePracticeResponse, 'practice-duplicate', ['auth','oauth','practice_tx_begin','practice_tx_reads','practice_tx_rollback','total']);
+checkTimingAbsent(duplicatePracticeTiming,'practice-duplicate',['kp_list']);
 console.log(`✓ server-authoritative practice persisted, restored, and deduplicated for ${practicePayload.skillId}`);
 
 const dueResponse = await api('/api/due-knowledge-points', idToken);

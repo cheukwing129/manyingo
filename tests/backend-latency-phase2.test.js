@@ -14,15 +14,15 @@ test('answer transaction batches KP skill and user-state reads into one Firestor
   assert.doesNotMatch(worker,/timed\(trace,'tx_reads',\(\)=>Promise\.all/);
 });
 
-test('only reviewed static metadata is cached and caches stay bounded',()=>{
+test('reviewed KP routing is bundled and the remaining question cache stays bounded',()=>{
   assert.match(worker,/const QUESTION_CACHE_TTL_MS = 10 \* 60 \* 1000/);
-  assert.match(worker,/const STATIC_CACHE_TTL_MS = 5 \* 60 \* 1000/);
   assert.match(worker,/const QUESTION_CACHE_MAX = 400/);
   assert.match(worker,/const questionMetadataCache = new Map\(\)/);
-  assert.match(worker,/let kpUniverseCache = null/);
+  assert.match(worker,/import '\.\/server-kp-universe\.js'/);
+  assert.match(worker,/const SERVER_KP_UNIVERSE=globalThis\.ManjingoServerKpUniverse/);
   assert.match(worker,/while\(questionMetadataCache\.size>QUESTION_CACHE_MAX\)/);
   assert.match(worker,/getQuestionMetadata\(env, token, questionId\)/);
-  assert.match(worker,/getKnowledgePointUniverse\(env, token\)/);
+  assert.doesNotMatch(worker,/getKnowledgePointUniverse|kpUniverseCache|STATIC_CACHE_TTL_MS/);
   assert.doesNotMatch(worker,/knowledgeCache|conceptCache|gamificationCache|answerLogCache|skillCache/);
 });
 
@@ -41,6 +41,7 @@ test('daily plan prefers the private materialized state and safely falls back fo
   assert.match(worker,/timed\(trace,'knowledge_list',\(\)=>listDocuments\(env, token, `users\/\$\{uid\}\/knowledge`\)\)/);
   assert.match(worker,/timed\(trace,'skills_list',\(\)=>listDocuments\(env, token, `users\/\$\{uid\}\/skills`\)\)/);
   assert.match(worker,/timed\(trace,'concepts_list',\(\)=>listDocuments\(env, token, `users\/\$\{uid\}\/concepts`\)\)/);
-  assert.match(worker,/timed\(trace,'kp_list',\(\)=>getKnowledgePointUniverse\(env, token\)\)/);
+  assert.match(worker,/const kpUniverseDocs=SERVER_KP_UNIVERSE\.rows/);
+  assert.doesNotMatch(worker,/timed\(trace,'kp_list'/);
   assert.match(worker,/SERVER_SKILL_PLAN\.buildPlan/);
 });
