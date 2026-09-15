@@ -15,5 +15,5 @@ async function login(){if(busy)return;busy=true;let fb,errorMessage='';try{fb=aw
 async function logout(){if(busy)return;busy=true;try{const fb=await firebase(),manager=sync();if(manager&&typeof manager.syncNow==='function')await manager.syncNow();const state=await fb.signOutAccount();if(manager&&typeof manager.clearLocal==='function')manager.clearLocal();lastSync='';render(state);location.href=location.pathname+location.search}catch(error){render(null,'登出失敗，請稍後再試')}finally{busy=false}}
 async function install(){installStyle();if(!host())return false;try{const fb=await firebase();const state=await fb.getAccountState();render(state);void fb.onAccountChanged(next=>render(next));window.addEventListener('manjingo:account-sync-state',event=>{lastSync=event&&event.detail&&event.detail.status||'';void fb.getAccountState().then(render)})}catch(error){render(null,'目前使用本機模式')}return true}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else void install();
-window.ManjingoAccountUI={install,render,retrySync,buttonLabel,syncNeedsAttention};
+window.ManjingoAccountUI={install,render,retrySync,buttonLabel};
 })();
