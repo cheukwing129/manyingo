@@ -51,8 +51,7 @@ test('production smoke requires and prints latency breakdowns before accepting b
   assert.match(source,/checkTimingAbsent\(coldPlanTiming,'daily-plan',\['oauth','plan_state_read','plan_state_wait','kp_list','knowledge_list','skills_list','concepts_list','interventions_list','plan_state_tx_begin','plan_state_tx_read','plan_state_commit'\]\)/);
   assert.match(source,/reportTiming\(warmPlanResponse, 'daily-plan-warm', \['auth','total'\]\)/);
   assert.match(source,/checkTimingAbsent\(warmPlanTiming, 'daily-plan-warm', \['kp_list','knowledge_list','skills_list','concepts_list','interventions_list'\]\)/);
-  assert.match(source,/reportTiming\(practiceResponse, 'practice-session', \['auth','oauth','practice_tx_begin','practice_tx_reads','practice_commit','total'\]\)/);
   assert.match(source,/reportTiming\(practiceStateResponse, 'practice-state', \['auth','oauth','interventions_list','total'\]\)/);
-  assert.match(source,/reportTiming\(duplicatePracticeResponse, 'practice-duplicate', \['auth','oauth','practice_tx_begin','practice_tx_reads','practice_tx_rollback','total'\]\)/);
-  assert.match(source,/reportTiming\(submitResponse, 'submit-answer', \['auth','oauth','question_read','tx_begin','tx_reads','commit','total'\]\)/);
+  assert.match(source,/reportTiming\(submitResponse, 'submit-answer-practice', \['auth','oauth','question_read','tx_begin','tx_reads','commit','total'\]\)/);
+  assert.match(source,/reportTiming\(duplicatePracticeResponse,'submit-answer-practice-duplicate',\['auth','oauth','question_read','tx_begin','tx_reads','tx_rollback','total'\]\)/);
 });
