@@ -73,6 +73,38 @@ test('lesson error state always offers a recovery route',()=>{
   assert.match(source,/href=\"\.\/index\.html\"/);
 });
 
+test('first-time learners are distinguished from learners with no current weaknesses',()=>{
+  const previous=globalThis.ManjingoSkillResultsV1;
+  globalThis.ManjingoSkillResultsV1={build:()=>({attempted:0})};
+  assert.equal(ux.learningEvidenceCount(),0);
+  globalThis.ManjingoSkillResultsV1={build:()=>({attempted:7})};
+  assert.equal(ux.learningEvidenceCount(),7);
+  if(previous===undefined)delete globalThis.ManjingoSkillResultsV1;else globalThis.ManjingoSkillResultsV1=previous;
+  const source=read('public/ux-runtime.js');
+  assert.match(source,/完成第一輪學習後，這裡會開始整理你的弱點/);
+  assert.match(source,/先建立第一批學習證據/);
+  assert.match(source,/href=\"#homeToday\"/);
+});
+
+test('stage 3 unavailable state provides retry and return actions',()=>{
+  const source=read('public/ux-runtime.js');
+  assert.match(source,/進階題庫尚未載入/);
+  assert.match(source,/重新檢查題庫/);
+  assert.match(source,/返回學習路徑/);
+  assert.match(source,/ManjingoStage3Reading/);
+  assert.match(source,/startChallenge/);
+});
+
+test('account sync failure exposes an explicit retry action without discarding local progress',()=>{
+  const source=read('public/account-ui.js');
+  assert.match(source,/function retrySync\(\)/);
+  assert.match(source,/lastSync==='error'/);
+  assert.match(source,/重試同步/);
+  assert.match(source,/暫時無法同步，資料仍保存在本機/);
+  assert.match(source,/setAttribute\('role','status'\)/);
+  assert.match(source,/ManjingoAccountUI=\{install,render,retrySync,buttonLabel\}/);
+});
+
 test('theme runtime exposes UX loader for both homepage and lesson pages',()=>{
   assert.equal(typeof theme.loadUxRuntime,'function');
   assert.equal(typeof theme.isLessonPage,'function');
