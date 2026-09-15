@@ -228,6 +228,7 @@ async function getQuestionMetadata(env, token, questionId) {
   return value;
 }
 function updateWrite(env, path, data) { return { update: docObject(documentName(env, path), data) }; }
+function createOnlyWrite(env,path,data){return{update:docObject(documentName(env,path),data),currentDocument:{exists:false}}}
 function maskedUpdateWrite(env,path,data,fieldPaths){return{update:docObject(documentName(env,path),data),updateMask:{fieldPaths}}}
 function planStatePath(uid){return `users/${uid}/planState/current-v3`;}
 function planStateDeltaWrite(env,uid,changes,now){const delta=PLAN_STATE.delta(changes,now);return maskedUpdateWrite(env,planStatePath(uid),delta.data,delta.fieldPaths)}
@@ -420,7 +421,18 @@ async function promotePlanState(env,token,uid,collections,startedAt,trace){
     return true;
   }catch(error){await timed(trace,'plan_state_tx_rollback',()=>rollback(env,token,tx));throw error}
 }
+async function createFreshPlanState(env,token,uid,startedAt,trace){
+  const path=planStatePath(uid),tx=await timed(trace,'plan_state_tx_begin',()=>beginTransaction(env,token));
+  try{
+    const current=await timed(trace,'plan_state_tx_read',()=>getDocument(env,token,path,tx));
+    if(current){await timed(trace,'plan_state_tx_rollback',()=>rollback(env,token,tx));return false}
+    const snapshot=PLAN_STATE.full({knowledge:[],skills:[],concepts:[],interventions:[]},startedAt);
+    await timed(trace,'plan_state_commit',()=>commit(env,token,tx,[createOnlyWrite(env,path,snapshot)]));
+    return true;
+  }catch(error){await timed(trace,'plan_state_tx_rollback',()=>rollback(env,token,tx));throw error}
+}
 const planStatePromotions=new Map();
+const freshPlanBootstraps=new Map();
 async function settlePlanStatePromotion(env,token,uid,collections,startedAt,ctx){
   let task=planStatePromotions.get(uid);
   if(!task){
@@ -430,27 +442,37 @@ async function settlePlanStatePromotion(env,token,uid,collections,startedAt,ctx)
   if(ctx&&typeof ctx.waitUntil==='function'){ctx.waitUntil(task);return}
   await task;
 }
+async function settleFreshPlanBootstrap(env,uid,startedAt,ctx){
+  let task=freshPlanBootstraps.get(uid);
+  if(!task){
+    task=(async()=>createFreshPlanState(env,await getServiceAccessToken(env),uid,startedAt,createTrace()))().catch(error=>{console.warn('fresh plan bootstrap deferred',error);return false}).finally(()=>freshPlanBootstraps.delete(uid));
+    freshPlanBootstraps.set(uid,task);
+  }
+  if(ctx&&typeof ctx.waitUntil==='function'){ctx.waitUntil(task);return}
+  await task;
+}
 async function dailyPlan(env, uid, trace, ctx, identity) {
-  const token = await timed(trace,'oauth',()=>getServiceAccessToken(env));
-  const pendingPromotion=planStatePromotions.get(uid);
-  if(pendingPromotion)await timed(trace,'plan_state_wait',()=>pendingPromotion);
   const startedAt=new Date();
   const kpUniverseDocs=SERVER_KP_UNIVERSE.rows;
-  const plannerDoc=await timed(trace,'plan_state_read',()=>getDocument(env,token,planStatePath(uid)));
   let knowledge,skills,concepts,interventions;
-  if(PLAN_STATE.usable(plannerDoc&&plannerDoc.data)){
-    knowledge=PLAN_STATE.rows(plannerDoc.data,'knowledge');skills=PLAN_STATE.rows(plannerDoc.data,'skills');concepts=PLAN_STATE.rows(plannerDoc.data,'concepts');interventions=PLAN_STATE.rows(plannerDoc.data,'interventions');
-  }else if(!plannerDoc&&identity&&identity.freshAnonymous){
+  if(identity&&identity.freshAnonymous){
     knowledge=[];skills=[];concepts=[];interventions=[];
-    await settlePlanStatePromotion(env,token,uid,{knowledge,skills,concepts,interventions},startedAt,ctx);
+    await settleFreshPlanBootstrap(env,uid,startedAt,ctx);
   }else{
-    [knowledge, skills, concepts, interventions] = await Promise.all([
-      timed(trace,'knowledge_list',()=>listDocuments(env, token, `users/${uid}/knowledge`)),
-      timed(trace,'skills_list',()=>listDocuments(env, token, `users/${uid}/skills`)),
-      timed(trace,'concepts_list',()=>listDocuments(env, token, `users/${uid}/concepts`)),
-      timed(trace,'interventions_list',()=>listDocuments(env, token, `users/${uid}/interventions`))
-    ]);
-    await settlePlanStatePromotion(env,token,uid,{knowledge,skills,concepts,interventions},startedAt,ctx);
+    const token=await timed(trace,'oauth',()=>getServiceAccessToken(env)),pendingPromotion=planStatePromotions.get(uid);
+    if(pendingPromotion)await timed(trace,'plan_state_wait',()=>pendingPromotion);
+    const plannerDoc=await timed(trace,'plan_state_read',()=>getDocument(env,token,planStatePath(uid)));
+    if(PLAN_STATE.usable(plannerDoc&&plannerDoc.data)){
+      knowledge=PLAN_STATE.rows(plannerDoc.data,'knowledge');skills=PLAN_STATE.rows(plannerDoc.data,'skills');concepts=PLAN_STATE.rows(plannerDoc.data,'concepts');interventions=PLAN_STATE.rows(plannerDoc.data,'interventions');
+    }else{
+      [knowledge, skills, concepts, interventions] = await Promise.all([
+        timed(trace,'knowledge_list',()=>listDocuments(env, token, `users/${uid}/knowledge`)),
+        timed(trace,'skills_list',()=>listDocuments(env, token, `users/${uid}/skills`)),
+        timed(trace,'concepts_list',()=>listDocuments(env, token, `users/${uid}/concepts`)),
+        timed(trace,'interventions_list',()=>listDocuments(env, token, `users/${uid}/interventions`))
+      ]);
+      await settlePlanStatePromotion(env,token,uid,{knowledge,skills,concepts,interventions},startedAt,ctx);
+    }
   }
   const plan=SERVER_SKILL_PLAN.buildPlan({knowledge,skills,concepts,interventions,kpUniverse:kpUniverseDocs,targetCount:Number(CURRICULUM&&CURRICULUM.dailyPolicy&&CURRICULUM.dailyPolicy.sessionSize)||10,now:new Date()});
   const conceptState=Object.fromEntries(concepts.map(row=>[row.id,{...row.data,conceptKey:row.id}]));
@@ -494,7 +516,7 @@ async function dueKnowledge(env, uid, trace) {
 
 async function api(request, env, trace, ctx) {
   const url = new URL(request.url);
-  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION, kpUniversePolicy:SERVER_KP_UNIVERSE.VERSION, planBootstrapPolicy:'fresh-anonymous-v1' });
+  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION, kpUniversePolicy:SERVER_KP_UNIVERSE.VERSION, planBootstrapPolicy:'fresh-anonymous-zero-read-v2' });
   const identity=await timed(trace,'auth',()=>verifyFirebaseIdToken(request, env)),uid=identity.uid;
   if (url.pathname === '/api/submit-answer' && request.method === 'POST') return submitAnswer(request, env, uid, trace);
   if (url.pathname === '/api/stage3-calibration' && request.method === 'POST') return submitStage3Calibration(request,env,uid,trace);
