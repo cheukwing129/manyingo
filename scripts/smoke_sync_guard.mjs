@@ -52,4 +52,4 @@ check(stale.totalXp===24&&stale.todayXp===16&&stale.streak===2,'deployed sync gu
 learning.syncRemoteResult('kp1',{attempts:4,mastery:55,lastCorrect:false,lastAnsweredAt:'2026-09-11T01:12:00.000Z',totalXp:24,todayXp:16,streak:2});
 const newer=captured.at(-1)||{};
 check(newer.mastery===55&&newer.lastCorrect===false,'deployed sync guard blocks a genuinely newer wrong-answer update');
-console.log('✓ deployed progressive boot, launch-state UX, sync recovery, next-question prewarm, nonblocking sync guard, and daily-plan read budget are healthy');
+console.log('✓ deployed progressive homepage boot, launch-state UX, sync recovery, next-question prewarm, nonblocking sync guard, and daily-plan read budget are healthy');
