@@ -31,7 +31,7 @@ test('sync retry only reports success when syncNow confirms ok',()=>{
 test('completion can return to a fresh today plan without reloading',()=>{
   const source=read('public/launch-state-runtime.js');
   assert.match(source,/\.session-summary\.done,\.done/);
-  assert.match(source,/\[data-home-tab=\\"today\\"\]/);
+  assert.match(source,/\[data-home-tab="today"\]/);
   assert.match(source,/plan\.classList\.remove\('hidden'\)/);
   assert.match(source,/quiz\.classList\.add\('hidden'\)/);
   assert.match(source,/updateDailyCta/);
