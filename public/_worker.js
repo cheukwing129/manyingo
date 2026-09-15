@@ -327,8 +327,8 @@ async function submitAnswer(request, env, uid, trace) {
     const gamePath = `users/${uid}/gamification/state`;
     const logPath = `users/${uid}/answerLogs/${answer.answerId}`;
     const conceptPath = conceptKey ? `users/${uid}/concepts/${conceptKey}` : null;
-    const practicePath=practice?`users/${uid}/practiceSessions/${practice.practiceId}`:null,interventionPath=practice?`users/${uid}/interventions/${practice.skillId}`:null;
-    const txPaths=[kpPath,...(skillPath?[skillPath]:[]),gamePath,logPath,...(conceptPath?[conceptPath]:[]),...(practicePath?[practicePath,interventionPath]:[])];
+    const interventionPath=practice?`users/${uid}/interventions/${practice.skillId}`:null;
+    const txPaths=[kpPath,...(skillPath?[skillPath]:[]),gamePath,logPath,...(conceptPath?[conceptPath]:[]),...(interventionPath?[interventionPath]:[])];
     const begun=await timed(trace,'tx_reads',()=>beginBatchGetDocuments(env,token,txPaths));
     tx=begun.transaction;
     const txDocs=begun.documents;
@@ -338,7 +338,7 @@ async function submitAnswer(request, env, uid, trace) {
     const gameDoc=txDocs[cursor++];
     const logDoc=txDocs[cursor++];
     const conceptDoc=conceptPath?txDocs[cursor++]:null;
-    const practiceDoc=practicePath?txDocs[cursor++]:null,interventionDoc=interventionPath?txDocs[cursor++]:null;
+    const interventionDoc=interventionPath?txDocs[cursor++]:null;
     const gameExisting = gameDoc ? gameDoc.data : {};
     if (logDoc) {
       await timed(trace,'tx_rollback',()=>rollback(env, token, tx));
@@ -386,9 +386,8 @@ async function submitAnswer(request, env, uid, trace) {
     }
     let storedPractice=null,interventionUpdate=null,interventionState=null;
     if(practice){
-      storedPractice=practiceDoc?practiceDoc.data:{...practice,source:'server-native-v1',receivedAt:now};
-      if(practiceDoc)interventionUpdate=interventionDoc&&interventionDoc.data||null;
-      else interventionUpdate=SERVER_PRACTICE.buildIntervention(interventionDoc&&interventionDoc.data,practice,now);
+      storedPractice={...practice,source:'server-native-v1',receivedAt:now};
+      interventionUpdate=SERVER_PRACTICE.buildIntervention(interventionDoc&&interventionDoc.data,practice,now);
       if(interventionUpdate)interventionState={...(interventionUpdate.learningState||{}),skillId:practice.skillId,kpIds:interventionUpdate.kpIds||[],routeKpId:interventionUpdate.routeKpId||practice.routeKpId,updatedAt:interventionUpdate.updatedAt||now,source:interventionUpdate.source||'server-native-v1'};
     }
     const kpUpdate = { ...prev, ...update, nextReviewAt: update.nextReviewAt, lastAnsweredAt: update.lastAnsweredAt, updatedAt: now };
@@ -408,7 +407,7 @@ async function submitAnswer(request, env, uid, trace) {
     const plannerChanges={knowledge:{id:answer.kpId,data:kpUpdate}};
     if(skillPath&&nativeSkill)plannerChanges.skills={id:skillId,data:nativeSkill};
     if(conceptPath&&conceptUpdate)plannerChanges.concepts={id:conceptKey,data:{...conceptUpdate,lastAnsweredAt:conceptUpdate.lastAnsweredAt,updatedAt:now}};
-    if(practice&&!practiceDoc&&interventionUpdate){writes.push(updateWrite(env,practicePath,storedPractice),updateWrite(env,interventionPath,interventionUpdate));plannerChanges.interventions={id:practice.skillId,data:interventionUpdate}}
+    if(practice&&interventionUpdate){writes.push(updateWrite(env,interventionPath,interventionUpdate));plannerChanges.interventions={id:practice.skillId,data:interventionUpdate}}
     writes.push(planStateDeltaWrite(env,uid,plannerChanges,now));
     writes.push(updateWrite(env, logPath, log));
     await timed(trace,'commit',()=>commit(env, token, tx, writes));

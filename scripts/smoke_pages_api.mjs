@@ -281,12 +281,13 @@ const duplicatePracticeTiming=reportTiming(duplicatePracticeResponse,'submit-ans
 checkTimingAbsent(duplicatePracticeTiming,'submit-answer-practice-duplicate',['tx_begin']);
 console.log(`✓ answer and practice persisted, restored, and deduplicated in one transaction for ${practicePayload.skillId}`);
 
-const [knowledge, game, concept, forgedConcept, answerLog] = await Promise.all([
+const [knowledge, game, concept, forgedConcept, answerLog, duplicatePracticeDoc] = await Promise.all([
   firestoreDocument(health.firestoreProject, `users/${uid}/knowledge/${validPayload.kpId}`, idToken),
   firestoreDocument(health.firestoreProject, `users/${uid}/gamification/state`, idToken),
   firestoreDocument(health.firestoreProject, `users/${uid}/concepts/${authoritativeConceptKey}`, idToken),
   firestoreDocument(health.firestoreProject, `users/${uid}/concepts/${clientClaimedConceptKey}`, idToken),
-  firestoreDocument(health.firestoreProject, `users/${uid}/answerLogs/${answerId}`, idToken)
+  firestoreDocument(health.firestoreProject, `users/${uid}/answerLogs/${answerId}`, idToken),
+  firestoreDocument(health.firestoreProject, `users/${uid}/practiceSessions/${practiceId}`, idToken)
 ]);
 check(knowledge && Number(knowledge.mastery) === Number(submit.mastery), 'knowledge mastery was not persisted exactly');
 check(Number(knowledge.attempts) === 1 && knowledge.lastCorrect === true, 'knowledge attempt state was not persisted');
@@ -294,6 +295,7 @@ check(game && Number(game.totalXp) === 8 && Number(game.todayXp) === 8, 'gamific
 check(concept && Number(concept.attempts) === 1 && Number(concept.mastery) > 0, 'concept mastery was not persisted');
 check(forgedConcept == null, 'server wrote the client-claimed concept instead of reviewed question metadata');
 check(answerLog && answerLog.questionId === 'q004' && answerLog.isCorrect === true && answerLog.correctAnswer === '動詞（到／往）' && answerLog.clientClaimedCorrect === false && answerLog.correctnessMismatch === true && answerLog.conceptKey === authoritativeConceptKey && answerLog.clientClaimedConceptKey === clientClaimedConceptKey && answerLog.conceptAttributionMismatch === true && Number(answerLog.xpEarned) === 8, 'answer log did not preserve authoritative answer and concept attribution');
+check(duplicatePracticeDoc==null,'folded practice still created a duplicate standalone practice document');
 console.log('✓ Firestore verified knowledge, XP, concept mastery, and answerLog writes');
 
 const calibrationFixture = stage3CalibrationFixture();

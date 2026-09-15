@@ -12,7 +12,7 @@ test('answer transaction starts inside the batched KP skill and user-state read'
   assert.match(worker,/newTransaction:\{readWrite:\{\}\}/);
   assert.match(worker,/rows\.find\(row=>row&&row\.transaction\)\?\.transaction/);
   assert.match(worker,/timed\(trace,'tx_reads',\(\)=>beginBatchGetDocuments\(env,token,txPaths\)\)/);
-  assert.match(worker,/const txPaths=\[kpPath,\.\.\.\(skillPath\?\[skillPath\]:\[\]\),gamePath,logPath,\.\.\.\(conceptPath\?\[conceptPath\]:\[\]\),\.\.\.\(practicePath\?\[practicePath,interventionPath\]:\[\]\)\]/);
+  assert.match(worker,/const txPaths=\[kpPath,\.\.\.\(skillPath\?\[skillPath\]:\[\]\),gamePath,logPath,\.\.\.\(conceptPath\?\[conceptPath\]:\[\]\),\.\.\.\(interventionPath\?\[interventionPath\]:\[\]\)\]/);
   assert.doesNotMatch(worker,/timed\(trace,'tx_reads',\(\)=>Promise\.all/);
   assert.doesNotMatch(worker,/timed\(trace,'tx_begin',\(\)=>beginTransaction\(env, token\)\)/);
 });

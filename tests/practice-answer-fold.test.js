@@ -23,8 +23,8 @@ test('answer transaction validates and atomically persists attached practice',()
   const source=read('public/_worker.js');
   assert.match(source,/raw\.practiceSession\?validatePracticeSession/);
   assert.match(source,/practice summary does not match final answer route/);
-  assert.match(source,/practiceSessions\/\$\{practice\.practiceId\}/);
   assert.match(source,/SERVER_PRACTICE\.buildIntervention/);
-  assert.match(source,/writes\.push\(updateWrite\(env,practicePath,storedPractice\),updateWrite\(env,interventionPath,interventionUpdate\)\)/);
+  assert.match(source,/writes\.push\(updateWrite\(env,interventionPath,interventionUpdate\)\)/);
+  assert.doesNotMatch(source,/practicePath=practice/);
   assert.match(source,/practiceSession:existing\.practiceSession\|\|null/);
 });
