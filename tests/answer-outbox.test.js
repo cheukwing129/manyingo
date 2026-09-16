@@ -71,7 +71,7 @@ test('multi-tab answer journals survive a stale shared-list overwrite',()=>{
   assert.ok(data.has(tabA.ITEM_PREFIX+'answer_multitabA1'));
   assert.ok(data.has(tabB.ITEM_PREFIX+'answer_multitabB1'));
   data.set(tabA.KEY,JSON.stringify({version:1,items:[{answerId:'answer_multitabB1',uid:'user-a',payload:{answerId:'answer_multitabB1',kpId:'kp_two'},queuedAt:Date.now()}]}));
-  assert.deepEqual(tabA.list({uid:'user-a'}).map(item=>item.answerId).sort(),['answer_multitabA1','answer_multitabB1']);
+  assert.deepEqual(Array.from(tabA.list({uid:'user-a'}),item=>item.answerId).sort(),['answer_multitabA1','answer_multitabB1']);
 });
 
 test('firebase client queues before submit, retries on reconnect, and reconciles successful background results',()=>{
