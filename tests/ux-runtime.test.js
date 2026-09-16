@@ -36,6 +36,20 @@ test('question progress parser recognizes current and total counts',()=>{
   assert.equal(ux.questionProgress({querySelector(){return null}}),null);
 });
 
+test('observer callbacks do not rewrite unchanged DOM state',()=>{
+  let textWrites=0,disabledWrites=0;
+  const textNode={_text:'下一題',get textContent(){return this._text},set textContent(value){textWrites+=1;this._text=String(value)}};
+  const control={_disabled:true,get disabled(){return this._disabled},set disabled(value){disabledWrites+=1;this._disabled=!!value}};
+  assert.equal(ux.setTextIfChanged(textNode,'下一題'),false);
+  assert.equal(ux.setDisabledIfChanged(control,true),false);
+  assert.equal(textWrites,0,'same label must not retrigger a child-list observer');
+  assert.equal(disabledWrites,0,'same disabled state must not retrigger an attribute observer');
+  assert.equal(ux.setTextIfChanged(textNode,'完成本輪'),true);
+  assert.equal(ux.setDisabledIfChanged(control,false),true);
+  assert.equal(textWrites,1);
+  assert.equal(disabledWrites,1);
+});
+
 test('shared runtime carries keyboard and feedback affordances into lesson and stage 3 flows',()=>{
   const source=read('public/ux-runtime.js');
   assert.match(source,/lessonInput/);
@@ -51,8 +65,9 @@ test('shared runtime carries keyboard and feedback affordances into lesson and s
 
 test('answered lesson input is locked and question changes return content to view',()=>{
   const source=read('public/ux-runtime.js');
-  assert.match(source,/if\(input\)input\.disabled=true/);
-  assert.match(source,/if\(check\)check\.disabled=true/);
+  assert.match(source,/setDisabledIfChanged\(input,true\)/);
+  assert.match(source,/setDisabledIfChanged\(check,true\)/);
+  assert.match(source,/setTextIfChanged\(next,/);
   assert.match(source,/syncQuestionViewport\(app,'\.lesson-question'/);
   assert.match(source,/safeScroll\(app,'start'\)/);
   assert.match(source,/syncQuestionViewport\(host,'\.stage3-prompt'/);
