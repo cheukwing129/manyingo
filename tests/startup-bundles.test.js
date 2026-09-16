@@ -99,9 +99,11 @@ test('cloud account work yields to the first interactive render and shares login
   const accountSync = read('public/account-sync.js');
   const accountUi = read('public/account-ui.js');
   const firebase = read('public/firebase-config.js');
-  assert.match(home, /requestIdleCallback\(run,\{timeout:700\}\)/);
-  assert.match(accountUi, /requestIdleCallback\(run,\{timeout:900\}\)/);
-  assert.match(accountSync, /requestIdleCallback\(run,\{timeout:1500\}\)/);
+  assert.match(home, /setTimeout\(ready,4000\)/);
+  assert.match(home, /if\(studyActive\(\)\)\{setTimeout\(ready,1200\);return\}/);
+  assert.match(accountUi, /setTimeout\(ready,4000\)/);
+  assert.match(accountSync, /setTimeout\(ready,4000\)/);
+  assert.match(accountSync, /if\(studyActive\(\)\)\{schedule\(\);return\}/);
   assert.match(firebase, /if \(loginPromise\) return loginPromise/);
   assert.match(firebase, /if \(currentUserId && auth && auth\.currentUser\) return currentUserId/);
 });

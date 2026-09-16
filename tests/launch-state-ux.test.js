@@ -9,14 +9,16 @@ const theme=require('../public/theme-runtime.js');
 
 test('homepage stays local-first while cloud plan loads asynchronously',()=>{
   const html=read('public/index.html');
-  const renderIndex=html.lastIndexOf('render();');
-  const localIndex=html.lastIndexOf('applyLocalPlan();');
-  const revealIndex=html.lastIndexOf('revealApp();');
-  const cloudIndex=html.lastIndexOf('scheduleCloudPlanLoad();');
+  const startup=html.match(/render\(\);applyLocalPlan\(\);revealApp\(\);scheduleCloudPlanLoad\(\);/)[0];
+  const renderIndex=startup.indexOf('render();');
+  const localIndex=startup.indexOf('applyLocalPlan();');
+  const revealIndex=startup.indexOf('revealApp();');
+  const cloudIndex=startup.indexOf('scheduleCloudPlanLoad();');
   assert.ok(renderIndex>=0&&localIndex>renderIndex,'local render should be prepared first');
   assert.ok(revealIndex>localIndex,'app should reveal after local plan is ready');
   assert.ok(cloudIndex>revealIndex,'cloud plan should be scheduled after reveal');
-  assert.match(html,/requestIdleCallback\(run,\{timeout:700\}\)/);
+  assert.match(html,/setTimeout\(ready,4000\)/);
+  assert.match(html,/if\(studyActive\(\)\)\{setTimeout\(ready,1200\);return\}/);
 });
 
 test('sync retry only reports success when syncNow confirms ok',()=>{

@@ -45,11 +45,12 @@ test('homepage reuses concepts returned by daily plan and avoids a duplicate col
  assert.match(html,/syncRemoteConceptState\(remoteConcepts\)/);
  assert.match(html,/selectedAnswer:value/);
  assert.match(html,/correctAnswer:displayAnswer\(q\)/);
- const cloud=html.match(/function cloudSubmit\([\s\S]*?\nfunction createAnswerId/);
+ const cloud=html.match(/function cloudPayload\([\s\S]*?\nfunction cloudSubmit/);
  assert.ok(cloud);
  assert.doesNotMatch(cloud[0],/conceptKey:/);
  assert.doesNotMatch(cloud[0],/conceptLabel:/);
- assert.match(html,/resolveQuestionMisconceptions\(q\.kpId,q\.id,\{skipConcept:true\}\)/);
+ assert.match(html,/learning\(\)\?learning\(\)\.submit\(q\.kpId,correct/);
+ assert.match(html,/learning\(\)\.syncRemoteResult\(item\.q\.kpId,result\)/);
 });
 
 test('daily plan returns the already-read private concept projection',()=>{

@@ -7,6 +7,7 @@ const source=fs.readFileSync(path.join(__dirname,'..','public','learning-path-ui
 
 function runtime(){
   const listeners=new Map();
+  const classes=new Set();
   let weaknessRenders=0,dashboardRenders=0;
   const learning={
     getKnowledge(){return{mastery:0}},
@@ -28,11 +29,11 @@ function runtime(){
     addEventListener(name,fn){const list=listeners.get(name)||[];list.push(fn);listeners.set(name,list)},
     dispatchEvent(event){(listeners.get(event.type)||[]).forEach(fn=>fn(event));return true}
   };
-  const document={readyState:'complete',head:{appendChild(){}},getElementById(){return null},createElement(){return{}}};
+  const document={readyState:'complete',body:{classList:{contains:name=>classes.has(name),add:name=>classes.add(name),remove:name=>classes.delete(name)}},head:{appendChild(){}},getElementById(){return null},createElement(){return{}}};
   function CustomEvent(type,options){this.type=type;this.detail=options&&options.detail}
   const context={window,document,CustomEvent,Set,Array,Object,String,Number,Math,Map,encodeURIComponent};
   vm.createContext(context);vm.runInContext(source,context);
-  return{learning,window,getWeaknessRenders:()=>weaknessRenders,getDashboardRenders:()=>dashboardRenders};
+  return{learning,window,classes,getWeaknessRenders:()=>weaknessRenders,getDashboardRenders:()=>dashboardRenders};
 }
 
 test('learning state mutations emit one shared browser event and refresh all learning views',()=>{
@@ -57,6 +58,19 @@ test('cloud sync, misconception repair, gamification and practice history use th
   assert.deepEqual(sources,['syncRemoteResult','resolveQuestionMisconceptions','syncRemoteConceptState','syncGamification','recordPracticeSession']);
   assert.equal(r.getWeaknessRenders(),5);
   assert.equal(r.getDashboardRenders(),5);
+});
+
+test('study mode coalesces hidden learning view work until the learner exits',()=>{
+  const r=runtime();
+  r.classes.add('study-focus');
+  r.learning.submit('kp_virtual_yi',true);
+  r.learning.syncRemoteResult('kp_virtual_yi',{});
+  assert.equal(r.getWeaknessRenders(),0);
+  assert.equal(r.getDashboardRenders(),0);
+  r.classes.delete('study-focus');
+  r.window.dispatchEvent({type:'manjingo:study-mode-exit'});
+  assert.equal(r.getWeaknessRenders(),1,'all study mutations should collapse into one refresh');
+  assert.equal(r.getDashboardRenders(),1);
 });
 
 test('learning path UI exposes the shared event contract instead of the old path-only wrapper',()=>{

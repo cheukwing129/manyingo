@@ -24,6 +24,7 @@ const bundles = {
     'difficulty-calibration.js',
     'question-difficulty.js',
     'difficulty-observability.js',
+    'answer-outbox.js',
     'remote-sync-guard.js',
     'learning-path.js',
     'practice-effectiveness.js',
