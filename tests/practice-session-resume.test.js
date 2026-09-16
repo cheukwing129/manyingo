@@ -53,3 +53,18 @@ test('recording the completed targeted session clears the resume checkpoint',()=
   assert.equal(api.recordTargetedSession(original),false);
   assert.equal(sessions.length,1);
 });
+
+test('account local-state cleanup also removes an unfinished targeted checkpoint',()=>{
+  const sync=require('../public/account-sync.js');
+  const data=new Map();
+  global.localStorage={getItem:key=>data.has(key)?data.get(key):null,setItem:(key,value)=>data.set(key,String(value)),removeItem:key=>data.delete(key)};
+  try{
+    global.localStorage.setItem(sync.LEARNING_KEY,'{}');
+    global.localStorage.setItem(sync.ROTATION_KEY,'{}');
+    global.localStorage.setItem(sync.TARGETED_CHECKPOINT_KEY,'{"kpId":"kp1"}');
+    assert.equal(sync.clearLocal(),true);
+    assert.equal(global.localStorage.getItem(sync.LEARNING_KEY),null);
+    assert.equal(global.localStorage.getItem(sync.ROTATION_KEY),null);
+    assert.equal(global.localStorage.getItem(sync.TARGETED_CHECKPOINT_KEY),null);
+  }finally{delete global.localStorage}
+});
