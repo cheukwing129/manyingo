@@ -12,6 +12,21 @@ test('targeted lesson attaches its final answer to the local practice record',()
   assert.match(learning,/session\.finalAnswer\?\{finalAnswer:\{\.\.\.session\.finalAnswer\}\}/);
 });
 
+test('final targeted answer durably records the practice before the completion click',()=>{
+  const lesson=read('public/local-lesson.js');
+  assert.match(lesson,/function recordTargetedSession\(state\)/);
+  assert.match(lesson,/state\.sessionRecorded/);
+  const answerStart=lesson.indexOf('function answer(app,state,q,value)');
+  const localSubmit=lesson.indexOf('window.ManjingoLocalLearning.submit',answerStart);
+  const durableRecord=lesson.indexOf('recordTargetedSession(state)',localSubmit);
+  const feedback=lesson.indexOf('const concept=',localSubmit);
+  assert.ok(answerStart>=0&&localSubmit>answerStart,'answer must write local learning state');
+  assert.ok(durableRecord>localSubmit&&durableRecord<feedback,'final practice must be recorded immediately after the local answer and before feedback/completion UI');
+  const finishStart=lesson.indexOf('function finish(app,state)');
+  const finishFallback=lesson.indexOf('recordTargetedSession(state)',finishStart);
+  assert.ok(finishFallback>finishStart,'completion keeps an idempotent practice-record fallback');
+});
+
 test('account sync uses one answer request for new practice and keeps legacy fallback',()=>{
   const source=read('public/account-sync.js');
   assert.match(source,/if\(session\.finalAnswer\)/);
