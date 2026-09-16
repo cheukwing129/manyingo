@@ -28,6 +28,21 @@ test('sync retry only reports success when syncNow confirms ok',()=>{
   assert.match(source,/重試同步/);
 });
 
+test('logout preserves local progress until answer, practice and account sync are confirmed',()=>{
+  const source=read('public/account-ui.js');
+  assert.match(source,/flushAnswerOutbox\(\{force:true\}\)/);
+  assert.match(source,/flushPracticeOutbox\(\{force:true\}\)/);
+  assert.match(source,/Number\(answerResult\.pending\)>0/);
+  assert.match(source,/Number\(practiceResult\.pending\)>0/);
+  assert.match(source,/const synced=await flushBeforeLogout\(fb,manager\)/);
+  assert.match(source,/if\(!synced\)/);
+  assert.match(source,/同步未完成，已取消登出；本機進度仍保留/);
+  const guard=source.indexOf('const synced=await flushBeforeLogout(fb,manager)');
+  const signOut=source.indexOf('await fb.signOutAccount()',guard);
+  const clearLocal=source.indexOf('manager.clearLocal()',signOut);
+  assert.ok(guard>=0&&signOut>guard&&clearLocal>signOut,'local data must only clear after a confirmed pre-logout sync and sign-out');
+});
+
 test('completion can return to a fresh today plan without reloading',()=>{
   const source=read('public/launch-state-runtime.js');
   assert.match(source,/\.session-summary\.done,\.done/);
