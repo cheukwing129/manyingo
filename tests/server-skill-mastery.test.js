@@ -51,7 +51,7 @@ test('answer idempotency returns the originally committed skill result',()=>{
  assert.match(worker,/duplicate: true/);
 });
 
-test('account sync downloads one authoritative learning snapshot and feeds the local engine',()=>{
+test('account sync downloads one authoritative learning snapshot and batches it into local state',()=>{
  const firebase=read('public/firebase-config.js');
  const sync=read('public/account-sync.js');
  assert.match(firebase,/export async function fetchUserSkillState\(userId\)/);
@@ -63,8 +63,10 @@ test('account sync downloads one authoritative learning snapshot and feeds the l
  assert.match(sync,/fb\.fetchAccountLearningState\(uid\)/);
  assert.match(sync,/remotePractice=accountState&&accountState\.practiceState\|\|null/);
  assert.doesNotMatch(sync,/fb\.fetchUserSkillState\(uid\)/);
- assert.match(sync,/engine\.syncRemoteSkillState\(skillState\|\|\{\}\)/);
- assert.match(sync,/skillMastery:skillState\|\|\{\}/);
+ assert.match(sync,/local=mergeAccountState\(local,accountState,game\)/);
+ assert.match(sync,/skillMastery:source\.skillState/);
+ assert.match(sync,/conceptMastery:source\.conceptState/);
+ assert.doesNotMatch(sync,/engine\.syncRemoteSkillState/);
 });
 
 test('local learning preserves native skill mastery across later KP and gamification writes',()=>{
