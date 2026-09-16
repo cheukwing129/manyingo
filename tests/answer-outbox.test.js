@@ -4,9 +4,18 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 
-function loadOutbox(){
-  const data=new Map();
-  const localStorage={getItem:key=>data.has(key)?data.get(key):null,setItem:(key,value)=>data.set(key,String(value)),removeItem:key=>data.delete(key)};
+function makeStorage(data=new Map()){
+  return{
+    get length(){return data.size},
+    key(index){return Array.from(data.keys())[index]??null},
+    getItem:key=>data.has(key)?data.get(key):null,
+    setItem:(key,value)=>data.set(key,String(value)),
+    removeItem:key=>data.delete(key)
+  };
+}
+function loadOutbox(shared){
+  const data=shared&&shared.data||new Map();
+  const localStorage=shared&&shared.localStorage||makeStorage(data);
   const context={localStorage,Date,Math,JSON,String,Number,Array,Object,Set,Map,CustomEvent:function(type,init){this.type=type;this.detail=init&&init.detail},dispatchEvent(){},window:null,module:{exports:{}},exports:{}};
   context.window=context;
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','public','answer-outbox.js'),'utf8'),context,{filename:'answer-outbox.js'});
@@ -52,6 +61,17 @@ test('unowned offline answers bind once and never cross into a different signed-
   assert.equal(api.list({uid:'user-b',includeUnowned:false}).length,0);
   api.bindUnowned('user-b');
   assert.equal(api.list({uid:'user-b',includeUnowned:false}).length,0);
+});
+
+test('multi-tab answer journals survive a stale shared-list overwrite',()=>{
+  const data=new Map(),localStorage=makeStorage(data),shared={data,localStorage};
+  const tabA=loadOutbox(shared).api,tabB=loadOutbox(shared).api;
+  assert.equal(tabA.enqueue({answerId:'answer_multitabA1',kpId:'kp_one'},'user-a'),true);
+  assert.equal(tabB.enqueue({answerId:'answer_multitabB1',kpId:'kp_two'},'user-a'),true);
+  assert.ok(data.has(tabA.ITEM_PREFIX+'answer_multitabA1'));
+  assert.ok(data.has(tabB.ITEM_PREFIX+'answer_multitabB1'));
+  data.set(tabA.KEY,JSON.stringify({version:1,items:[{answerId:'answer_multitabB1',uid:'user-a',payload:{answerId:'answer_multitabB1',kpId:'kp_two'},queuedAt:Date.now()}]}));
+  assert.deepEqual(tabA.list({uid:'user-a'}).map(item=>item.answerId).sort(),['answer_multitabA1','answer_multitabB1']);
 });
 
 test('firebase client queues before submit, retries on reconnect, and reconciles successful background results',()=>{
