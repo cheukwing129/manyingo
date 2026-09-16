@@ -5,9 +5,18 @@ const path=require('node:path');
 const vm=require('node:vm');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 
-function loadOutbox(){
-  const data=new Map();
-  const localStorage={getItem:key=>data.has(key)?data.get(key):null,setItem:(key,value)=>data.set(key,String(value)),removeItem:key=>data.delete(key)};
+function makeStorage(data=new Map()){
+  return{
+    get length(){return data.size},
+    key(index){return Array.from(data.keys())[index]??null},
+    getItem:key=>data.has(key)?data.get(key):null,
+    setItem:(key,value)=>data.set(key,String(value)),
+    removeItem:key=>data.delete(key)
+  };
+}
+function loadOutbox(shared){
+  const data=shared&&shared.data||new Map();
+  const localStorage=shared&&shared.localStorage||makeStorage(data);
   const context={localStorage,Date,Math,JSON,String,Number,Array,Object,Set,Map,CustomEvent:function(type,init){this.type=type;this.detail=init&&init.detail},dispatchEvent(){},window:null,module:{exports:{}},exports:{}};
   context.window=context;
   vm.runInNewContext(read('public/practice-outbox.js'),context,{filename:'practice-outbox.js'});
@@ -51,6 +60,17 @@ test('unowned offline practice binds once and cannot cross into a different acco
   assert.equal(api.list({uid:'user-b',includeUnowned:false}).length,0);
   api.bindUnowned('user-b');
   assert.equal(api.list({uid:'user-b',includeUnowned:false}).length,0);
+});
+
+test('multi-tab practice journals survive a stale shared-list overwrite',()=>{
+  const data=new Map(),localStorage=makeStorage(data),shared={data,localStorage};
+  const tabA=loadOutbox(shared).api,tabB=loadOutbox(shared).api;
+  assert.equal(tabA.enqueue({practiceId:'practice_multitabA1',skillId:'fw.zhi',kpId:'kp_one'},'user-a'),true);
+  assert.equal(tabB.enqueue({practiceId:'practice_multitabB1',skillId:'fw.zhi',kpId:'kp_two'},'user-a'),true);
+  assert.ok(data.has(tabA.ITEM_PREFIX+'practice_multitabA1'));
+  assert.ok(data.has(tabB.ITEM_PREFIX+'practice_multitabB1'));
+  data.set(tabA.KEY,JSON.stringify({version:1,items:[{practiceId:'practice_multitabB1',uid:'user-a',payload:{practiceId:'practice_multitabB1',skillId:'fw.zhi',kpId:'kp_two'},queuedAt:new Date().toISOString()}]}));
+  assert.deepEqual(tabA.list({uid:'user-a'}).map(item=>item.practiceId).sort(),['practice_multitabA1','practice_multitabB1']);
 });
 
 test('practice API queues before network submit and retries on reconnect visibility and startup',()=>{
