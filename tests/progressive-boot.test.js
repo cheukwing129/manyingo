@@ -69,7 +69,7 @@ test('home shell prepares fixed first-paint UI and reveals before deferred featu
   assert.match(shell,/enhancePlayerStatus\(\);enhanceAppNav\(\)/);
   assert.match(shell,/revealHomepageShell\(\);loadStage3Reading\(\)/);
   assert.match(shell,/window\.ManjingoHomeShell=/);
-  assert.match(shell,/\ninstall\(\);\n\}\)\(\);/);
+  assert.match(shell,/typeof document\.querySelector==='function'\)install\(\)/);
 });
 
 test('production smoke verifies the progressive boot contract before API writes',()=>{
