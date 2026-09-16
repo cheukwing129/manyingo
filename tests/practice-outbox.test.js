@@ -70,7 +70,7 @@ test('multi-tab practice journals survive a stale shared-list overwrite',()=>{
   assert.ok(data.has(tabA.ITEM_PREFIX+'practice_multitabA1'));
   assert.ok(data.has(tabB.ITEM_PREFIX+'practice_multitabB1'));
   data.set(tabA.KEY,JSON.stringify({version:1,items:[{practiceId:'practice_multitabB1',uid:'user-a',payload:{practiceId:'practice_multitabB1',skillId:'fw.zhi',kpId:'kp_two'},queuedAt:new Date().toISOString()}]}));
-  assert.deepEqual(tabA.list({uid:'user-a'}).map(item=>item.practiceId).sort(),['practice_multitabA1','practice_multitabB1']);
+  assert.deepEqual(Array.from(tabA.list({uid:'user-a'}),item=>item.practiceId).sort(),['practice_multitabA1','practice_multitabB1']);
 });
 
 test('practice API queues before network submit and retries on reconnect visibility and startup',()=>{
