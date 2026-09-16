@@ -2,8 +2,5 @@ name = "manyingo"
 compatibility_date = "2026-08-26"
 pages_build_output_dir = "public"
 
-[placement]
-mode = "smart"
-
 [vars]
 FIREBASE_PROJECT_ID = "manjingo-95d9a"
