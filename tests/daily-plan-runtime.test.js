@@ -85,6 +85,9 @@ test('homepage replans remaining queue on learning-state changes without resetti
  assert.match(html,/completedQuestionIds\.add\(String\(q\.id\)\)/);
  assert.match(html,/function replanWithCandidates\(candidates,source\)/);
  assert.match(html,/function scheduleRemainingPlanRefresh\(\)/);
+ assert.match(html,/replanScheduled=true;scheduleAfterPaint\(\(\)=>\{if\(!replanScheduled\)return;replanScheduled=false;refreshRemainingLocal\(\)\}\)/);
+ assert.match(html,/function next\(\)\{if\(replanScheduled\)\{replanScheduled=false;refreshRemainingLocal\(\)\}/);
+ assert.doesNotMatch(html,/replanScheduled=true;Promise\.resolve\(\)\.then/);
  assert.match(html,/function refreshCloudRemainingPlan\(\)/);
  assert.match(html,/manjingo:learning-state-changed/);
  assert.match(html,/剩餘學習已按最新掌握度即時重排/);
