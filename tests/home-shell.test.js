@@ -86,6 +86,8 @@ test('study shell tracks question position and restores the homepage after compl
   assert.match(source,/if\(progress\.done\)\{exitStudy\(\);return\}/);
   assert.match(source,/new MutationObserver\(syncStudyProgress\)/);
   assert.match(source,/document\.body\.classList\.remove\(STUDY_CLASS\)/);
+  assert.match(source,/manjingo:study-mode-enter/);
+  assert.match(source,/manjingo:study-mode-exit/);
   assert.match(source,/已完成的進度會保留/);
 });
 

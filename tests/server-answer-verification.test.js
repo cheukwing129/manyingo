@@ -30,12 +30,12 @@ test('worker overwrites client correctness before every learning update',()=>{
 });
 
 test('browser cloud payload sends the selected answer but no correctness claim or answer key',()=>{
- const html=read('public/index.html'),cloud=html.match(/function cloudSubmit\([\s\S]*?\nfunction createAnswerId/);
+ const html=read('public/index.html'),cloud=html.match(/function cloudPayload\([\s\S]*?\nfunction cloudSubmit/);
  assert.ok(cloud);
  assert.match(cloud[0],/selectedAnswer:value/);
  assert.doesNotMatch(cloud[0],/isCorrect:/);
  assert.doesNotMatch(cloud[0],/correctAnswer:/);
- assert.match(html,/confirmedCorrect=result\.isCorrect===true/);
+ assert.match(html,/learning\(\)\.syncRemoteResult\(item\.q\.kpId,result\)/);
 });
 
 test('difficulty telemetry consumes server-confirmed correctness',()=>{

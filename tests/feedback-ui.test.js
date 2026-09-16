@@ -33,7 +33,7 @@ test('feedback enhancement is shared, accessible and reacts to answer DOM change
   assert.match(source,/new MutationObserver/);
 });
 
-test('homepage answer feedback is revealed synchronously before cloud persistence finishes',()=>{
+test('homepage answer feedback and local progress complete before cloud persistence starts',()=>{
   const source=read('public/feedback-ui.js');
   assert.match(source,/function instantAnswer\(event\)/);
   assert.match(source,/target\.closest&&target\.closest\('#quiz'\)/);
@@ -41,7 +41,12 @@ test('homepage answer feedback is revealed synchronously before cloud persistenc
   assert.match(source,/feedback\.textContent=correct\?'答對了！':'正確答案：'/);
   assert.match(source,/answerKey\(button\.textContent\)===answerKey\(question\.a\)/);
   const home=read('public/index.html');
-  assert.match(home,/showLearningFeedback\(box,q,correct,null\);try\{const result=await cloudSubmit\(q,answerId,value\)/);
+  const answer=home.match(/function answer\(box,q,value\)[\s\S]*?\nwindow\.addEventListener/)[0];
+  assert.match(answer,/learning\(\)\?learning\(\)\.submit/);
+  assert.match(answer,/showLearningFeedback\(box,q,correct,localResult\)/);
+  assert.match(answer,/queueCloudAnswer\(q,answerId,value\)/);
+  assert.ok(answer.indexOf('showLearningFeedback(box,q,correct,localResult)')<answer.indexOf('queueCloudAnswer(q,answerId,value)'));
+  assert.doesNotMatch(answer,/await cloudSubmit/);
 });
 
 test('next question becomes actionable synchronously at answer click',()=>{
@@ -74,14 +79,16 @@ test('answered study session keeps next CTA visible independently of cloud progr
   assert.ok(unlockPos>=0&&progressPos>=0,'both immediate next and optional progress UI should exist');
 });
 
-test('today task owns a synchronous nonblocking next button and stale cloud answers cannot repaint a later question',()=>{
+test('today task owns a synchronous next button and deferred cloud results do not repaint questions',()=>{
   const home=read('public/index.html');
   assert.match(home,/function answerIsCurrent\(box,answerId\)/);
-  assert.match(home,/if\(nextButton\)nextButton\.disabled=false;showLearningFeedback\(box,q,correct,null\)/);
+  assert.match(home,/if\(nextButton\)nextButton\.disabled=false;const localResult=/);
   assert.doesNotMatch(home,/nextButton\.disabled=true/);
-  assert.match(home,/if\(answerIsCurrent\(box,answerId\)\)showLearningFeedback\(box,q,confirmedCorrect,\{\.\.\.result/);
   assert.match(home,/if\(answerIsCurrent\(box,answerId\)\)showLearningFeedback\(box,q,correct,localResult\)/);
   assert.match(home,/if\(!correct&&isAnswer\)b\.classList\.add\('correct'\)/);
+  const flush=home.match(/function scheduleCloudAnswerFlush\(\)[\s\S]*?\nfunction createAnswerId/)[0];
+  assert.doesNotMatch(flush,/showLearningFeedback/);
+  assert.match(home,/window\.addEventListener\('manjingo:study-mode-exit',scheduleCloudAnswerFlush\)/);
 });
 
 test('instant feedback can be enhanced again when cloud progress replaces it',()=>{

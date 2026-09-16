@@ -1205,6 +1205,60 @@ function install(){
 return{STATE_KEY,RECENT_LIMIT,TIERS,TIER_LABELS,REASON_LABELS,SELECTION_LABELS,validTier,tierLabel,reasonLabel,selectionLabel,decisionFor,normalizeObservability,persistDecision,observeChoice,recentDecisions,evidenceText,adjustmentText,studentSummary,render,install};
 });
 ;
+/* answer-outbox.js */
+(function(root,factory){
+'use strict';
+const api=factory(root);
+if(typeof module==='object'&&module.exports)module.exports=api;
+root.ManjingoAnswerOutbox=api;
+if(root.window&&root.window!==root)root.window.ManjingoAnswerOutbox=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(root){
+'use strict';
+const KEY='manjingo_answer_outbox_v1';
+const ITEM_PREFIX='manjingo_answer_outbox_item_v2:';
+const VERSION=2;
+const BASE_RETRY_MS=5000;
+const MAX_RETRY_MS=300000;
+function storage(){return root.localStorage||(root.window&&root.window.localStorage)||null}
+function nowValue(value){const n=Number(value);return Number.isFinite(n)&&n>0?n:Date.now()}
+function answerIdOf(value){return value&&value.answerId!=null?String(value.answerId):''}
+function normalizeItem(value){
+ const raw=value&&typeof value==='object'?value:{};
+ const payload=raw.payload&&typeof raw.payload==='object'?{...raw.payload}:null;
+ const answerId=answerIdOf(payload)||String(raw.answerId||'');
+ if(!payload||!answerId)return null;
+ payload.answerId=answerId;
+ return{answerId,uid:raw.uid?String(raw.uid):null,payload,queuedAt:nowValue(raw.queuedAt),attempts:Math.max(0,Number(raw.attempts)||0),nextAttemptAt:Math.max(0,Number(raw.nextAttemptAt)||0),lastError:raw.lastError?String(raw.lastError).slice(0,160):null};
+}
+function itemKey(answerId){return ITEM_PREFIX+String(answerId||'')}
+function journalKeys(s){const keys=[];if(!s||typeof s.length!=='number'||typeof s.key!=='function')return keys;for(let i=0;i<s.length;i++){const key=s.key(i);if(typeof key==='string'&&key.startsWith(ITEM_PREFIX))keys.push(key)}return keys}
+function readLegacy(s){try{const raw=JSON.parse(s.getItem(KEY)||'{}'),source=Array.isArray(raw)?raw:Array.isArray(raw.items)?raw.items:[];return source.map(normalizeItem).filter(Boolean)}catch(_){return[]}}
+function writeItem(item){const s=storage(),value=normalizeItem(item);if(!s||!value)return false;try{s.setItem(itemKey(value.answerId),JSON.stringify(value));return true}catch(_){return false}}
+function removeLegacy(answerId){const s=storage(),id=String(answerId||'');if(!s||!id)return;try{const raw=JSON.parse(s.getItem(KEY)||'null');if(!raw)return;const source=Array.isArray(raw)?raw:Array.isArray(raw.items)?raw.items:[],items=source.map(normalizeItem).filter(item=>item&&item.answerId!==id);if(!items.length)s.removeItem(KEY);else s.setItem(KEY,JSON.stringify({version:1,items}))}catch(_){}}
+function read(){
+ const s=storage();if(!s)return[];
+ const seen=new Set(),items=[];
+ for(const key of journalKeys(s)){try{const item=normalizeItem(JSON.parse(s.getItem(key)||'null'));if(!item||seen.has(item.answerId))continue;seen.add(item.answerId);items.push(item)}catch(_){}}
+ for(const item of readLegacy(s)){if(seen.has(item.answerId))continue;seen.add(item.answerId);items.push(item);writeItem(item)}
+ return items.sort((a,b)=>a.queuedAt-b.queuedAt);
+}
+function emit(){const target=root.window||root,EventCtor=root.CustomEvent||(root.window&&root.window.CustomEvent);if(target&&typeof target.dispatchEvent==='function'&&typeof EventCtor==='function'){try{target.dispatchEvent(new EventCtor('manjingo:answer-outbox-changed',{detail:{pending:read().length}}))}catch(e){}}}
+function enqueue(payload,uid){
+ const answerId=answerIdOf(payload);if(!answerId||!payload||typeof payload!=='object')return false;
+ const items=read(),existing=items.find(item=>item.answerId===answerId)||null,next={answerId,uid:uid?String(uid):existing&&existing.uid||null,payload:{...payload,answerId},queuedAt:existing?existing.queuedAt:Date.now(),attempts:existing?existing.attempts:0,nextAttemptAt:existing?existing.nextAttemptAt:0,lastError:existing?existing.lastError:null};
+ const saved=writeItem(next);if(saved)emit();return saved;
+}
+function remove(answerId){const id=String(answerId||'');if(!id)return false;const s=storage();if(!s)return false;try{s.removeItem(itemKey(id));removeLegacy(id);emit();return true}catch(_){return false}}
+function retryDelay(attempts){const n=Math.max(1,Number(attempts)||1);return Math.min(MAX_RETRY_MS,BASE_RETRY_MS*Math.pow(2,Math.min(6,n-1)))}
+function markFailure(answerId,error,at){const id=String(answerId||''),item=read().find(value=>value.answerId===id);if(!item)return false;const attempts=item.attempts+1,when=nowValue(at),next={...item,attempts,nextAttemptAt:when+retryDelay(attempts),lastError:String(error&&error.message||error||'sync failed').slice(0,160)},saved=writeItem(next);if(saved)emit();return saved}
+function bindUnowned(uid){const id=String(uid||'');if(!id)return false;const items=read();let changed=false;for(const item of items){if(item.uid)continue;changed=true;writeItem({...item,uid:id})}if(changed)emit();return true}
+function list(options){const opts=options||{},uid=opts.uid?String(opts.uid):null,includeUnowned=opts.includeUnowned!==false,dueOnly=!!opts.dueOnly,at=nowValue(opts.now);return read().filter(item=>(!uid||item.uid===uid||(includeUnowned&&!item.uid))&&(!dueOnly||!item.nextAttemptAt||item.nextAttemptAt<=at)).map(item=>({...item,payload:{...item.payload}}))}
+function pendingCount(uid){return list(uid?{uid,includeUnowned:true}:{}).length}
+function nextDueAt(uid){const items=list(uid?{uid,includeUnowned:true}:{});if(!items.length)return null;return Math.min(...items.map(item=>item.nextAttemptAt||0))}
+function clear(){const s=storage();if(!s)return false;try{journalKeys(s).forEach(key=>s.removeItem(key));s.removeItem(KEY);emit();return true}catch(e){return false}}
+return{KEY,ITEM_PREFIX,VERSION,BASE_RETRY_MS,MAX_RETRY_MS,enqueue,remove,markFailure,bindUnowned,list,pendingCount,nextDueAt,retryDelay,clear};
+});
+;
 /* remote-sync-guard.js */
 (function(root,factory){
 'use strict';
@@ -1333,6 +1387,7 @@ const content=window.ManjingoContent,path=window.ManjingoLearningPath,results=wi
 if(!content||!path||!results)return;
 const EVENT_NAME='manjingo:learning-state-changed';
 const MUTATING_METHODS=['submit','syncRemoteResult','syncGamification','syncRemoteConceptState','resolveQuestionMisconceptions','recordPracticeSession'];
+let refreshPending=false;
 const originalGetIds=content.getKnowledgePointIds.bind(content);
 const originalSelect=content.selectQuestionsForPlan.bind(content);
 function engine(){return window.ManjingoLocalLearning}
@@ -1368,17 +1423,23 @@ function installEvents(){
  learning.__learningEventsWrapped=true;
  return true;
 }
-function refreshLearningViews(){
+function studyActive(){return !!(document.body&&document.body.classList&&document.body.classList.contains('study-focus'))}
+function refreshLearningViews(force){
+ if(force!==true&&studyActive()){refreshPending=true;return false}
+ refreshPending=false;
  render();
  const weakness=window.ManjingoWeaknessPanel;if(weakness&&typeof weakness.render==='function')weakness.render();
  const dashboard=window.ManjingoMasteryDashboard;if(dashboard&&typeof dashboard.mount==='function')dashboard.mount();
+ return true;
 }
+function flushLearningViews(){if(refreshPending)refreshLearningViews(true)}
 function install(){
  if(!document.getElementById('learningPath')){const plan=document.getElementById('plan');if(plan){const card=document.createElement('div');card.className='card';card.id='learningPath';plan.parentNode.insertBefore(card,plan)}}
  if(!document.getElementById('learningPathStyle')){const style=document.createElement('style');style.id='learningPathStyle';style.textContent='.lp-head{margin-bottom:18px}.lp-eyebrow{font-size:11px;color:var(--gray);font-weight:900;letter-spacing:.03em;margin-bottom:5px}.lp-title{font-size:22px;line-height:1.3;font-weight:950;color:var(--ink)}.lp-sub{font-size:12px;color:var(--gray);font-weight:750;margin-top:5px;line-height:1.45}.lp-route{display:grid;gap:0}.lp-stop{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;min-height:126px}.lp-rail{position:relative;display:flex;justify-content:center}.lp-rail:after{content:"";position:absolute;top:42px;bottom:0;width:4px;border-radius:99px;background:#e5e5e5}.lp-stop:last-child .lp-rail:after{display:none}.lp-orb{position:relative;z-index:1;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;border:3px solid #d8d8d8;font-size:20px;font-weight:950}.lp-stage-card{display:block;align-self:start;margin-bottom:14px;padding:13px 14px;border:2px solid #e5e5e5;border-radius:17px;text-decoration:none;color:inherit;background:#fff;transition:transform .15s ease,box-shadow .15s ease}.lp-stage-card.clickable{cursor:pointer}.lp-stage-card.clickable:active{transform:translateY(1px)}.lp-stage-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}.lp-status{font-size:10px;font-weight:950;letter-spacing:.03em;color:var(--gray)}.lp-badge{font-size:11px;font-weight:950;color:var(--ink)}.lp-stage-title{display:block;color:var(--ink);font-size:16px;margin-bottom:3px}.lp-stage-desc,.lp-stage-meta,.lp-skill-preview{display:block;font-size:11px;line-height:1.45;color:var(--gray);font-weight:700}.lp-stage-desc{color:var(--text);margin-bottom:3px}.lp-skill-preview{margin-top:5px;color:#737373}.lp-bar{height:7px;background:#e8e8e8;border-radius:99px;overflow:hidden;margin-top:9px}.lp-bar i{display:block;height:100%;background:var(--green);border-radius:99px}.lp-cta{display:block;margin-top:9px;color:#398500;font-size:12px;font-weight:950}.lp-stop.complete .lp-orb{border-color:#9bd66e;background:#eefbe5;color:#398500}.lp-stop.complete .lp-rail:after{background:#b7e694}.lp-stop.complete .lp-stage-card{border-color:#d8ebca;background:#fbfff8}.lp-stop.current .lp-orb{border-color:var(--green);background:var(--green);color:#fff;box-shadow:0 0 0 5px #e9fbdc}.lp-stop.current .lp-stage-card{border-color:var(--green);background:#f8fff2;box-shadow:0 8px 24px rgba(70,163,2,.10)}.lp-stop.current .lp-status{color:#398500}.lp-stop.current .lp-badge{color:#398500}.lp-stop.next .lp-orb{border-color:#a9c994;background:#f6fbf2}.lp-stop.next .lp-stage-card{border-style:dashed;border-color:#b9d5a7}.lp-stop.next .lp-status{color:#5f8d42}.lp-stop.locked{min-height:110px}.lp-stop.locked .lp-orb{filter:grayscale(1);opacity:.55}.lp-stop.locked .lp-stage-card{opacity:.58;background:#fafafa}.lp-stop.locked .lp-bar i,.lp-stop.next .lp-bar i{background:#bdbdbd}@media(max-width:430px){.lp-stop{grid-template-columns:40px minmax(0,1fr);gap:8px}.lp-orb{width:38px;height:38px;font-size:18px}.lp-rail:after{top:38px}.lp-stage-card{padding:12px 13px}.lp-title{font-size:20px}}';document.head.appendChild(style)}
  installEvents();render();
 }
 window.addEventListener(EVENT_NAME,refreshLearningViews);
+window.addEventListener('manjingo:study-mode-exit',flushLearningViews);
 window.ManjingoLearningEvents={eventName:EVENT_NAME,emit:emitLearningChanged,install:installEvents,refresh:refreshLearningViews};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 })();
@@ -1650,7 +1711,8 @@ const MAX_SENTENCE_HISTORY=24;
 const PRACTICE_UPLOAD_LIMIT=25;
 const PRACTICE_MIGRATION_DAYS=30;
 let modulePromise=null,practiceModulePromise=null,syncPromise=null,timer=null,installed=false,practiceHookInstalled=false;
-function scheduleStartupSync(work){const run=()=>void work();if(typeof root.requestIdleCallback==='function')root.requestIdleCallback(run,{timeout:1500});else setTimeout(run,350)}
+function studyActive(){const doc=root.document||(root.window&&root.window.document);return !!(doc&&doc.body&&doc.body.classList&&doc.body.classList.contains('study-focus'))}
+function scheduleStartupSync(work){const ready=()=>{if(studyActive()){setTimeout(ready,1200);return}const run=()=>{if(studyActive()){setTimeout(ready,1200);return}void work()};if(typeof root.requestIdleCallback==='function')root.requestIdleCallback(run,{timeout:1200});else setTimeout(run,150)};setTimeout(ready,4000)}
 function storage(){return root.localStorage||(root.window&&root.window.localStorage)||null}
 function removeStoragePrefix(s,prefix){if(!s||typeof s.key!=='function')return 0;const keys=[],length=Math.max(0,Number(s.length)||0);for(let i=0;i<length;i++){const key=s.key(i);if(typeof key==='string'&&key.startsWith(prefix))keys.push(key)}keys.forEach(key=>s.removeItem(key));return keys.length}
 function parse(key,fallback){const s=storage();if(!s)return fallback;try{const value=JSON.parse(s.getItem(key)||'null');return value&&typeof value==='object'?value:fallback}catch(e){return fallback}}
@@ -1696,7 +1758,7 @@ async function submitPracticeEntry(entry){if(!entry||!entry.skillId||!entry.kpId
 async function reconcilePracticeHistory(local,remote){let state=mergeServerPractice(local,remote),known=new Set((remote&&Array.isArray(remote.practiceIds)?remote.practiceIds:remote&&Array.isArray(remote.practiceHistory)?remote.practiceHistory.map(x=>x&&x.practiceId):[]).filter(Boolean).map(String)),cutoff=Date.now()-PRACTICE_MIGRATION_DAYS*86400000,pending=mergePracticeHistory(state.practiceHistory,[]).filter(item=>item&&item.skillId&&item.kpId&&item.practiceId&&!known.has(String(item.practiceId))&&timeValue(item.completedAt)>=cutoff).slice(0,PRACTICE_UPLOAD_LIMIT);if(!pending.length)return state;let api;try{api=await practiceApi()}catch(_){return state}for(const item of pending){try{const result=await api.submitPracticeSession(item);if(result&&result.success)known.add(String(item.practiceId))}catch(error){break}}try{const refreshed=await api.fetchPracticeState();state=mergeServerPractice(state,refreshed)}catch(_){}return state}
 function installPracticeHook(){if(practiceHookInstalled)return true;const engine=learning();if(!engine||typeof engine.recordPracticeSession!=='function')return false;const original=engine.recordPracticeSession.bind(engine);engine.recordPracticeSession=function(session){const entry=stampPracticeEntry(original(session));if(entry&&entry.skillId)void submitPracticeEntry(entry);return entry};practiceHookInstalled=true;return true}
 async function syncNow(options){if(syncPromise)return syncPromise;syncPromise=(async()=>{const silent=options&&options.silent;try{if(!silent)emit({status:'syncing'});const fb=await firebase(),uid=await fb.ensureLogin();if(!uid)return{ok:false,reason:'auth'};let local=parse(LEARNING_KEY,{}),rotation=parse(ROTATION_KEY,{}),practice=null,remotePractice=null;try{practice=await practiceApi();if(practice&&typeof practice.flushPracticeOutbox==='function')await practice.flushPracticeOutbox({force:true,uid})}catch(_){}const [snapshot,accountState,game]=await Promise.all([fb.fetchClientSyncState(uid),fb.fetchAccountLearningState(uid),fb.fetchUserGamification(uid)]);remotePractice=accountState&&accountState.practiceState||null;if(!remotePractice&&practice&&typeof practice.fetchPracticeState==='function'){try{remotePractice=await practice.fetchPracticeState()}catch(_){}}if(snapshot&&snapshot.learningState)local=mergeLearningState(local,snapshot.learningState);local=mergeAccountState(local,accountState,game);local=mergeServerPractice(local,remotePractice);if(snapshot&&snapshot.questionRotation)rotation=mergeRotation(rotation,snapshot.questionRotation);write(LEARNING_KEY,local);write(ROTATION_KEY,rotation);local=await reconcilePracticeHistory(local,remotePractice);rotation=mergeRotation(parse(ROTATION_KEY,rotation),snapshot&&snapshot.questionRotation);write(LEARNING_KEY,local);write(ROTATION_KEY,rotation);const saved=await fb.saveClientSyncState(uid,{learningState:snapshotLearningState(local),questionRotation:rotation});emit({status:saved?'synced':'local-only',uid});return{ok:!!saved,uid,learningState:local,questionRotation:rotation}}catch(error){emit({status:'error',error:String(error&&error.message||error)});return{ok:false,error}}finally{syncPromise=null}})();return syncPromise}
-function schedule(){if(timer)clearTimeout(timer);timer=setTimeout(()=>{timer=null;void syncNow({silent:true})},1800)}
+function schedule(){if(timer)clearTimeout(timer);timer=setTimeout(()=>{timer=null;if(studyActive()){schedule();return}void syncNow({silent:true})},1800)}
 function clearLocal(){const s=storage();if(!s)return false;try{s.removeItem(LEARNING_KEY);s.removeItem(ROTATION_KEY);s.removeItem(TARGETED_CHECKPOINT_KEY);removeStoragePrefix(s,TARGETED_CHECKPOINT_PREFIX);return true}catch(e){return false}}
 function install(){if(installed)return true;installed=true;installPracticeHook();const target=root.window||root;if(target&&typeof target.addEventListener==='function'){target.addEventListener('manjingo:learning-state-changed',event=>{if(event&&event.detail&&event.detail.source==='account-sync')return;schedule()});target.addEventListener('manjingo:practice-sync-complete',event=>{const detail=event&&event.detail||{};if(detail.result&&detail.result.success)applyPracticeResult(detail.payload,detail.result)});target.addEventListener('online',()=>schedule())}const doc=root.document||(root.window&&root.window.document);if(doc){const start=()=>{installPracticeHook();scheduleStartupSync(()=>syncNow({silent:true}))};if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',start);else start()}return true}
 const api={LEARNING_KEY,ROTATION_KEY,TARGETED_CHECKPOINT_KEY,TARGETED_CHECKPOINT_PREFIX,SENTENCE_HISTORY_KEY,MAX_ROTATION_PER_KP,MAX_SENTENCE_HISTORY,PRACTICE_UPLOAD_LIMIT,PRACTICE_MIGRATION_DAYS,timeValue,recordTime,newerRecord,newerSkillRecord,ensurePracticeIdentity,practiceSignature,mergePracticeHistory,mergeInterventionState,mergeLearningState,mergeRotation,mergeGame,mergeAccountState,mergeServerPractice,snapshotLearningState,applyPracticeResult,syncNow,schedule,scheduleStartupSync,clearLocal,install,installPracticeHook};
@@ -1723,7 +1785,8 @@ async function login(){if(busy)return;busy=true;let fb,errorMessage='';try{fb=aw
 async function flushBeforeLogout(fb,manager){if(!fb||typeof fb.flushAnswerOutbox!=='function'||!manager||typeof manager.syncNow!=='function')return false;const answerResult=await fb.flushAnswerOutbox({force:true});if(!answerResult||Number(answerResult.pending)>0)return false;const practiceApi=await practice();if(!practiceApi||typeof practiceApi.flushPracticeOutbox!=='function')return false;const practiceResult=await practiceApi.flushPracticeOutbox({force:true});if(!practiceResult||Number(practiceResult.pending)>0)return false;const result=await manager.syncNow();return !!(result&&result.ok===true)}
 async function logout(){if(busy)return;busy=true;let fb=null,state=null,message='';try{fb=await firebase();state=await fb.getAccountState().catch(()=>null);lastSync='syncing';render(state);const manager=sync();const synced=await flushBeforeLogout(fb,manager);if(!synced){lastSync='error';message='同步未完成，已取消登出；本機進度仍保留。請重試同步後再登出';return}state=await fb.signOutAccount();if(manager&&typeof manager.clearLocal==='function')manager.clearLocal();lastSync='';render(state);location.href=location.pathname+location.search}catch(error){lastSync='error';message='登出前同步失敗，已取消登出；本機進度仍保留。請稍後重試';if(fb)state=await fb.getAccountState().catch(()=>state)}finally{busy=false;if(message)render(state,message)}}
 async function install(){installStyle();if(!host())return false;try{const fb=await firebase();const state=await fb.getAccountState();render(state);void fb.onAccountChanged(next=>render(next));window.addEventListener('manjingo:account-sync-state',event=>{lastSync=event&&event.detail&&event.detail.status||'';void fb.getAccountState().then(render)})}catch(error){render(null,'目前使用本機模式')}return true}
-function scheduleInstall(){installStyle();render(null);const run=()=>void install();if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(run,{timeout:900});else setTimeout(run,150)}
+function studyActive(){return !!(document.body&&document.body.classList&&document.body.classList.contains('study-focus'))}
+function scheduleInstall(){installStyle();render(null);const ready=()=>{if(studyActive()){setTimeout(ready,1200);return}const run=()=>{if(studyActive()){setTimeout(ready,1200);return}void install()};if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(run,{timeout:1200});else setTimeout(run,150)};setTimeout(ready,4000)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleInstall);else scheduleInstall();
 window.ManjingoAccountUI={install,render,retrySync,buttonLabel};
 window.ManjingoAccountUI.scheduleInstall=scheduleInstall;

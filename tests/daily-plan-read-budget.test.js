@@ -29,7 +29,8 @@ test('homepage keeps local adaptive tail replanning as the no-read fallback',()=
   assert.match(homepage,/function refreshRemainingLocal\(\)/);
   assert.match(homepage,/scheduleRemainingPlanRefresh\(\)/);
   assert.match(homepage,/cloud replan unavailable; keeping local adaptive queue/);
-  assert.match(homepage,/scheduleRemainingPlanRefresh\(\);void refreshCloudRemainingPlan\(\)/,'existing cloud refresh may request, but the API boundary must defer it after a confirmed answer');
+  assert.match(homepage,/window\.addEventListener\('manjingo:learning-state-changed',scheduleRemainingPlanRefresh\)/);
+  assert.doesNotMatch(homepage,/scheduleRemainingPlanRefresh\(\);void refreshCloudRemainingPlan\(\)/,'answer delivery must not add a daily-plan read during study');
 });
 
 test('server daily plan remains authoritative on initial load while read-heavy collections are visible to audits',()=>{
