@@ -10,7 +10,7 @@ test('homepage and lesson share one UI foundation',()=>{
   assert.match(shell,/link\.href='\.\/app-ui\.css'/);
   assert.match(shell,/function install\(\)\{if\(shellInstalled\)return false;shellInstalled=true;installUiFoundation\(\);enhancePlayerStatus\(\);enhanceAppNav\(\)/);
   assert.match(shell,/revealHomepageShell\(\);loadStage3Reading\(\);return true/);
-  assert.match(shell,/\ninstall\(\);\n\}\)\(\);/);
+  assert.match(shell,/typeof document\.querySelector==='function'\)install\(\)/);
   assert.match(lesson,/rel="stylesheet" href="\.\/app-ui\.css"/);
 });
 
