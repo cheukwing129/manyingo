@@ -49,6 +49,8 @@ test('homepage parser core is much smaller than the legacy app runtime',()=>{
 
 test('secondary UI and account work stays off parser startup and yields to study input',()=>{
   for(const file of ['learning-path-ui.js','weakness-panel.js','mastery-dashboard.js','practice-effectiveness.js','account-sync.js','account-ui.js'])assert.match(source,new RegExp("'\\./"+file.replaceAll('.','\\.')+"'"));
+  assert.match(source,/function whenDomReady\(\)\{if\(document\.readyState!=='loading'\)return Promise\.resolve\(true\)/);
+  assert.match(source,/deferredRuntimePromise=whenDomReady\(\)\.then\(\(\)=>DEFERRED_APP_RUNTIME\.reduce/);
   assert.match(source,/runtimeStudyActive\(\)\|\|Date\.now\(\)-lastInteractionAt<900/);
   assert.match(source,/requestIdleCallback\(run,\{timeout:3500\}\)/);
   assert.match(source,/view!=='today'&&window\.ManjingoEnsureAppRuntime/);
