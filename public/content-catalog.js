@@ -98,5 +98,8 @@ function selectQuestionsForPlan(plan,sourceQuestions,limit){
  return queue;
 }
 window.ManjingoContent={catalogVersion:'reviewed-v1',knowledgePoints:knowledgePoints.map(x=>({...x})),questions:questions.map(x=>({...x})),getKnowledgePointIds,selectQuestionsForPlan,misconceptionConcept};
-if(typeof document!=='undefined'&&document.readyState==='loading'){document.write('<script src="./reorder-question.js"><\/script><script src="./curriculum-v1.js"><\/script><script src="./question-metadata-v1.js"><\/script><script src="./question-diversity-v1.js"><\/script><script src="./question-rotation.js"><\/script><script src="./learning-path.js"><\/script><script src="./practice-effectiveness.js"><\/script><script src="./learning-path-ui.js"><\/script><script src="./weakness-panel.js"><\/script><script src="./mastery-dashboard.js"><\/script><script src="./feedback-ui.js"><\/script><script src="./session-summary.js"><\/script><script src="./account-sync.js"><\/script><script src="./account-ui.js"><\/script>');}
+if(typeof document!=='undefined'&&document.readyState==='loading'){
+ if(window.ManjingoUseAppRuntimeBundle)document.write('<script src="./app-runtime.js"><\/script>');
+ else document.write('<script src="./reorder-question.js"><\/script><script src="./curriculum-v1.js"><\/script><script src="./question-metadata-v1.js"><\/script><script src="./question-diversity-v1.js"><\/script><script src="./question-rotation.js"><\/script><script src="./learning-path.js"><\/script><script src="./practice-effectiveness.js"><\/script><script src="./learning-path-ui.js"><\/script><script src="./weakness-panel.js"><\/script><script src="./mastery-dashboard.js"><\/script><script src="./feedback-ui.js"><\/script><script src="./session-summary.js"><\/script><script src="./account-sync.js"><\/script><script src="./account-ui.js"><\/script>');
+}
 })();
