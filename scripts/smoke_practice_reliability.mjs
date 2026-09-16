@@ -10,9 +10,10 @@ const [outboxSource,practiceApiSource,dailyRuntimeSource]=await Promise.all([
   read('/practice-api.js','practice API'),
   read('/daily-plan-runtime.js','daily plan runtime')
 ]);
+check(outboxSource.includes('manjingo_practice_outbox_item_v2:'),'deployed practice outbox is missing multi-tab journal storage');
 
 const storageData=new Map();
-const localStorage={getItem:key=>storageData.has(key)?storageData.get(key):null,setItem:(key,value)=>storageData.set(key,String(value)),removeItem:key=>storageData.delete(key)};
+const localStorage={get length(){return storageData.size},key:index=>Array.from(storageData.keys())[index]??null,getItem:key=>storageData.has(key)?storageData.get(key):null,setItem:(key,value)=>storageData.set(key,String(value)),removeItem:key=>storageData.delete(key)};
 const outboxContext={localStorage,Date,Math,JSON,String,Number,Array,Object,Set,Map,CustomEvent:function(type,init){this.type=type;this.detail=init&&init.detail},dispatchEvent(){},window:null,module:{exports:{}},exports:{}};
 outboxContext.window=outboxContext;
 vm.createContext(outboxContext);
@@ -21,6 +22,7 @@ const outbox=outboxContext.module.exports;
 check(outbox&&typeof outbox.enqueue==='function'&&typeof outbox.markFailure==='function'&&typeof outbox.bindUnowned==='function','deployed practice outbox API is missing');
 const payload={practiceId:'practice_smoke_offline_01',skillId:'fw.zhi',kpId:'kp_virtual_zhi',routeKpId:'kp_virtual_zhi',completedAt:'2026-09-12T00:00:00.000Z'};
 check(outbox.enqueue(payload,null)===true,'deployed practice outbox could not persist an offline session');
+check(storageData.has(outbox.ITEM_PREFIX+payload.practiceId),'deployed practice outbox did not create a per-session journal');
 outbox.markFailure(payload.practiceId,new Error('offline'),1700000000000);
 check(outbox.list({dueOnly:true,now:1700000004999}).length===0,'deployed practice outbox ignored retry backoff');
 check(outbox.list({dueOnly:true,now:1700000005000}).length===1,'deployed practice outbox did not release due retry work');
@@ -32,7 +34,7 @@ check(practiceApiSource.includes("box.enqueue(payload,getCurrentUserId())"),'dep
 check(practiceApiSource.includes("window.addEventListener('online',()=>void flushPracticeOutbox({force:true}))"),'deployed practice API does not retry on reconnect');
 check(practiceApiSource.includes("visibilityState==='visible'"),'deployed practice API does not retry when the app becomes visible');
 check(practiceApiSource.includes('manjingo:practice-sync-complete'),'deployed practice API does not publish background reconciliation');
-console.log('✓ deployed practice outbox persists, backs off, retries, and isolates accounts');
+console.log('✓ deployed practice outbox journals pending sessions, backs off, retries, and isolates accounts');
 
 const dailyContext={window:{}};
 vm.createContext(dailyContext);
