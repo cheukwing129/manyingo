@@ -18,6 +18,7 @@ let firebaseReadyPromise = null;
 let currentUserId = null;
 let redirectChecked = false;
 let redirectCheckPromise = null;
+let loginPromise = null;
 let outboxFlushPromise = null;
 let outboxRetryTimer = null;
 const answerInFlight = new Map();
@@ -111,7 +112,9 @@ export async function completeGoogleRedirect() {
 }
 
 export async function ensureLogin() {
-  try {
+  if (currentUserId && auth && auth.currentUser) return currentUserId;
+  if (loginPromise) return loginPromise;
+  loginPromise = (async () => { try {
     const { authModule } = await withTimeout(getFirebase(), 8000, 'Firebase SDK');
     try { await withTimeout(completeGoogleRedirect(), 8000, 'Google redirect'); } catch (error) { console.warn('Google redirect completion unavailable:', error); }
     return await withTimeout(new Promise((resolve) => {
@@ -126,14 +129,17 @@ export async function ensureLogin() {
   } catch (error) {
     console.warn('Firebase authentication unavailable:', error);
     return null;
-  }
+  } })();
+  const uid = await loginPromise;
+  if (!uid) loginPromise = null;
+  return uid;
 }
 
 export function getCurrentUserId() { return currentUserId; }
 export async function getAccountState() { await ensureLogin(); return accountSnapshot(auth && auth.currentUser); }
 export async function onAccountChanged(callback) {
   const { authModule } = await getFirebase();
-  return authModule.onAuthStateChanged(auth, user => { currentUserId = user ? user.uid : null; if(user)void flushAnswerOutbox({force:true,uid:user.uid}); callback(accountSnapshot(user)); });
+  return authModule.onAuthStateChanged(auth, user => { currentUserId = user ? user.uid : null; if(!user)loginPromise=null; if(user)void flushAnswerOutbox({force:true,uid:user.uid}); callback(accountSnapshot(user)); });
 }
 
 export async function signInWithGoogle(options = {}) {
@@ -174,6 +180,7 @@ export async function signInWithGoogle(options = {}) {
 
 export async function signOutAccount() {
   const { authModule } = await getFirebase();
+  loginPromise = null;
   await authModule.signOut(auth);
   currentUserId = null;
   const credential = await authModule.signInAnonymously(auth);

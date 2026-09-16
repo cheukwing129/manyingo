@@ -95,6 +95,6 @@ test('homepage hides placeholder zero-state until local learning hydration is re
   assert.match(html,/html\.app-booting body\{visibility:hidden\}/);
   assert.match(html,/載入學習進度…/);
   assert.match(html,/function revealApp\(\)\{document\.documentElement\.classList\.remove\('app-booting'\)\}/);
-  assert.match(html,/render\(\);applyLocalPlan\(\);revealApp\(\);void loadCloudPlan\(\);/);
-  assert.ok(html.indexOf('render();applyLocalPlan();revealApp()')<html.indexOf('void loadCloudPlan()'));
+  assert.match(html,/render\(\);applyLocalPlan\(\);revealApp\(\);scheduleCloudPlanLoad\(\);/);
+  assert.ok(html.indexOf('render();applyLocalPlan();revealApp()')<html.lastIndexOf('scheduleCloudPlanLoad()'));
 });

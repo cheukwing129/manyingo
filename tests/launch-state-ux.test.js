@@ -12,10 +12,11 @@ test('homepage stays local-first while cloud plan loads asynchronously',()=>{
   const renderIndex=html.lastIndexOf('render();');
   const localIndex=html.lastIndexOf('applyLocalPlan();');
   const revealIndex=html.lastIndexOf('revealApp();');
-  const cloudIndex=html.lastIndexOf('void loadCloudPlan();');
+  const cloudIndex=html.lastIndexOf('scheduleCloudPlanLoad();');
   assert.ok(renderIndex>=0&&localIndex>renderIndex,'local render should be prepared first');
   assert.ok(revealIndex>localIndex,'app should reveal after local plan is ready');
-  assert.ok(cloudIndex>revealIndex,'cloud plan should remain asynchronous after reveal');
+  assert.ok(cloudIndex>revealIndex,'cloud plan should be scheduled after reveal');
+  assert.match(html,/requestIdleCallback\(run,\{timeout:700\}\)/);
 });
 
 test('sync retry only reports success when syncNow confirms ok',()=>{

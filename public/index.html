@@ -32,7 +32,7 @@ html.app-booting{min-height:100%;background:#fff}html.app-booting body{visibilit
 <section class="home-view" id="homeWeakness" data-home-view="weakness" hidden><div class="card" id="weaknessPanel"></div></section>
 <section class="home-view" id="homeResults" data-home-view="results" hidden><div class="card" id="masteryDashboard"></div></section>
 <script src="./home-shell.js"></script>
-<script src="./content-catalog.js"></script>
+<script src="./catalog-runtime.js" data-includes="./content-catalog.js"></script>
 <script src="./learning-policy.js"></script>
 <script src="./local-learning.js"></script>
 <script src="./daily-plan-runtime.js"></script>
@@ -76,6 +76,7 @@ function refreshRemainingLocal(){if(!sessionActive||!planRuntime)return;const re
 function scheduleRemainingPlanRefresh(){if(!sessionActive||replanScheduled)return;replanScheduled=true;Promise.resolve().then(()=>{replanScheduled=false;refreshRemainingLocal();});}
 async function refreshCloudRemainingPlan(){if(!sessionActive||currentPlanSource!=='cloud'||!cloudQuestionPool.length||!planRuntime)return;const token=++cloudReplanToken;try{const m=await cloudModule(),remotePlan=await m.getDailyLearningPlan();if(!sessionActive||token!==cloudReplanToken)return;const reservation=planRuntime.sessionReservation(questions,index,completedQuestionIds,SESSION_TARGET),available=cloudQuestionPool.filter(q=>!reservation.excludedIds.has(String(q.id))),selected=content?content.selectQuestionsForPlan(remotePlan,available,reservation.remainingSlots):[];replanWithCandidates(selected,'cloud');}catch(e){console.warn('cloud replan unavailable; keeping local adaptive queue',e)}}
 async function loadCloudPlan(){try{const m=await cloudModule();const uid=await m.ensureLogin();if(!uid)return;const[remotePlan,remoteQuestions]=await Promise.all([m.getDailyLearningPlan(),m.fetchAllQuestions()]),remoteConcepts=remotePlan&&remotePlan.conceptState||{};if(learning()&&typeof learning().syncRemoteConceptState==='function')learning().syncRemoteConceptState(remoteConcepts);const parsed=remoteQuestions.map(parseQuestion).filter(Boolean);cloudQuestionPool=parsed;const selected=content?content.selectQuestionsForPlan(remotePlan,parsed,SESSION_TARGET):[];if(selected.length){currentPlanSource='cloud';if(sessionActive)replanWithCandidates(selected,'cloud');else{questions=selected;showPlan(selected,'cloud',false)}}const game=await m.fetchUserGamification(uid);if(game&&learning()){learning().syncGamification(game);render()}}catch(e){console.warn('cloud unavailable; using local learning engine',e)}}
+function scheduleCloudPlanLoad(){const run=()=>void loadCloudPlan();if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(run,{timeout:700});else setTimeout(run,50)}
 function finish(){sessionActive=false;completedQuestionIds.clear();cloudReplanToken+=1;invalidatePreparedQuestion();document.getElementById('quiz').innerHTML='<div class="done">🎉 今日學習完成！<br><span class="small">你的學習進度已保存在這部裝置。下次會按掌握度重新安排。</span></div>';document.getElementById('status').textContent='📱 今日學習完成';applyLocalPlan();}
 function next(){const current=questions[index];if(current)completedQuestionIds.add(String(current.id));index++;if(index>=questions.length)return finish();renderQuestion();}
 function renderQuestion(){const q=questions[index],box=document.getElementById('quiz');box.dataset.answered='';box.dataset.answerId='';const fragment=takePreparedQuestion(index)||buildQuestionFragment(q,index,questions.length);if(fragment)box.replaceChildren(fragment);else box.innerHTML='<div class="feedback wrong">這題資料不完整，已跳過。</div><button class="action" id="next" type="button">下一題</button>';updateQueueSummary(questions.slice(index));const nextButton=box.querySelector('#next');if(nextButton&&!nextButton.onclick)nextButton.onclick=next;schedulePreparedQuestion(index+1);}
@@ -85,7 +86,7 @@ async function answer(box,q,value){if(box.dataset.answered)return;box.dataset.an
 window.addEventListener('manjingo:learning-state-changed',scheduleRemainingPlanRefresh);
 document.getElementById('start').onclick=function(){const shell=window.ManjingoHomeShell;if(shell)shell.showView('today');document.getElementById('plan').classList.add('hidden');document.getElementById('quiz').classList.remove('hidden');index=0;sessionActive=true;completedQuestionIds.clear();invalidatePreparedQuestion();if(!questions.length)questions=buildLocalPlan().questions;if(!questions.length){finish();return}renderQuestion();if(shell)shell.focusQuiz()};
 function revealApp(){document.documentElement.classList.remove('app-booting')}
-render();applyLocalPlan();revealApp();void loadCloudPlan();
+render();applyLocalPlan();revealApp();scheduleCloudPlanLoad();
 })();
 </script>
 </body>
