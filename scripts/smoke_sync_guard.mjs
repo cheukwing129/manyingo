@@ -23,7 +23,7 @@ check(themeSource.includes("classList.remove('app-booting')"),'deployed theme ru
 check(themeSource.includes('正在準備今日學習…')&&themeSource.includes('準備中…'),'deployed progressive boot is missing honest pending UI');
 check(themeSource.includes('./ux-runtime.js')&&themeSource.includes('./launch-state-runtime.js'),'deployed theme runtime does not load the beta UX coordination runtimes');
 check(uxSource.includes('enhanceEmptyLearningStates')&&uxSource.includes('enhanceStage3Recovery'),'deployed shared UX runtime is missing first-use or Stage 3 recovery states');
-check(uxSource.includes("if(input)input.disabled=true")&&uxSource.includes('lesson-ux-ready'),'deployed shared UX runtime is missing answered-input locking or lesson mobile continuity');
+check(uxSource.includes('setDisabledIfChanged(input,true)')&&uxSource.includes("classList.add('lesson-ux-ready')"),'deployed shared UX runtime is missing answered-input locking or lesson mobile continuity');
 check(launchSource.includes('ManjingoLaunchState')&&launchSource.includes('restoreTodayPlanFromCompletion'),'deployed launch state runtime cannot restore the today plan after completion');
 check(launchSource.includes('manjingo:account-sync-state')&&launchSource.includes('manjingo:answer-sync-complete'),'deployed launch state runtime does not refresh learning views after cloud reconciliation');
 check(accountSource.includes("result&&result.ok===true"),'deployed account UI can report sync success without explicit confirmation');
