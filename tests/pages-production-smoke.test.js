@@ -28,9 +28,12 @@ test('Pages smoke verifies deployed learner difficulty guidance instant feedback
   assert.match(source,/feedbackSource\.includes\('function unlockNextSoon\(scope\)'\)/);
   assert.match(source,/feedbackSource\.includes\('next\.disabled=false'\)/);
   assert.match(source,/homepageSource\.includes\('function answerIsCurrent\(box,answerId\)'\)/);
-  assert.match(source,/homepageSource\.includes\('if\(nextButton\)nextButton\.disabled=false;showLearningFeedback/);
-  assert.match(source,/!homepageSource\.includes\('nextButton\.disabled=true'\)/);
-  assert.match(source,/homepageSource\.includes\('if\(answerIsCurrent\(box,answerId\)\)showLearningFeedback/);
+  assert.match(source,/const answerStart=homepageSource\.indexOf\('function answer\(box,q,value\)'\)/);
+  assert.match(source,/const unlockIndex=todayAnswerSource\.indexOf\('if\(nextButton\)nextButton\.disabled=false'\)/);
+  assert.match(source,/const feedbackIndex=todayAnswerSource\.indexOf\('if\(answerIsCurrent\(box,answerId\)\)showLearningFeedback/);
+  assert.match(source,/const queueIndex=todayAnswerSource\.indexOf\('queueCloudAnswer\(q,answerId,value\)'\)/);
+  assert.match(source,/unlockIndex>=0&&feedbackIndex>unlockIndex&&queueIndex>feedbackIndex/);
+  assert.match(source,/!todayAnswerSource\.includes\('await cloudSubmit'\)/);
   assert.match(source,/indexOf\('difficulty-calibration\.js'\) < rotationSource\.indexOf\('question-difficulty\.js'\)/);
   assert.match(source,/indexOf\('question-difficulty\.js'\) < rotationSource\.indexOf\('difficulty-observability\.js'\)/);
   const calibrationCheck=source.indexOf("readTextAsset('/difficulty-calibration.js'");
