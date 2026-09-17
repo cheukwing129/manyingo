@@ -53,6 +53,13 @@ test('production smoke verifies stale background responses cannot roll learning 
   assert.match(source,/newer\.mastery===55/);
 });
 
+test('production sync smoke verifies current shared UX runtime contracts',()=>{
+  const source=read('scripts/smoke_sync_guard.mjs');
+  assert.match(source,/setDisabledIfChanged\(input,true\)/);
+  assert.match(source,/classList\.add\('lesson-ux-ready'\)/);
+  assert.doesNotMatch(source,/if\(input\)input\.disabled=true/);
+});
+
 test('production smoke verifies deployed answer outbox persistence retry and account isolation',()=>{
   const source=read('scripts/smoke_answer_outbox.mjs');
   assert.match(source,/read\('\/answer-outbox\.js'/);
