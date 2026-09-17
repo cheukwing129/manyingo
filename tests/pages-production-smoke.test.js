@@ -153,7 +153,15 @@ test('production smoke runs after content synchronization, skips irrelevant comm
   assert.match(workflow,/ENABLE_PAGES_SMOKE == 'true'/);
   assert.match(workflow,/practice-outbox\.js/);
   assert.match(workflow,/seq 1 18/);
-  assert.match(workflow,/npm run smoke:pages/);
+  assert.match(workflow,/node scripts\/smoke_sync_guard\.mjs/);
+  assert.match(workflow,/node scripts\/smoke_answer_outbox\.mjs/);
+  assert.match(workflow,/node scripts\/smoke_practice_reliability\.mjs/);
+  assert.match(workflow,/node scripts\/smoke_pages_api\.mjs/);
+  const syncGuard=workflow.indexOf('run: node scripts/smoke_sync_guard.mjs');
+  const answerOutbox=workflow.indexOf('run: node scripts/smoke_answer_outbox.mjs');
+  const practiceReliability=workflow.indexOf('run: node scripts/smoke_practice_reliability.mjs');
+  const learningApi=workflow.indexOf('run: node scripts/smoke_pages_api.mjs');
+  assert.ok(syncGuard>=0 && answerOutbox>syncGuard && practiceReliability>answerOutbox && learningApi>practiceReliability,'production smoke stages must stay isolated and ordered');
   assert.match(workflow,/MANJINGO_BASE_URL/);
   assert.match(workflow,/Install Firebase Admin cleanup runtime/);
   assert.match(workflow,/FIREBASE_SERVICE_ACCOUNT_MANJINGO/);
