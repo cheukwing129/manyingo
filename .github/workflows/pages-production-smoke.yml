@@ -105,9 +105,18 @@ jobs:
       - name: Smoke test deployed Stage 3 learning path UI
         if: steps.production_scope.outputs.needs_smoke == 'true'
         run: npm run smoke:stage3
-      - name: Smoke test production Pages learning API with a real write
+      - name: Smoke test deployed sync guard and homepage contracts
         if: steps.production_scope.outputs.needs_smoke == 'true'
-        run: npm run smoke:pages
+        run: node scripts/smoke_sync_guard.mjs
+      - name: Smoke test deployed answer outbox
+        if: steps.production_scope.outputs.needs_smoke == 'true'
+        run: node scripts/smoke_answer_outbox.mjs
+      - name: Smoke test deployed practice reliability
+        if: steps.production_scope.outputs.needs_smoke == 'true'
+        run: node scripts/smoke_practice_reliability.mjs
+      - name: Smoke test production learning API with a real write
+        if: steps.production_scope.outputs.needs_smoke == 'true'
+        run: node scripts/smoke_pages_api.mjs
       - name: Cleanup temporary smoke user and learning data
         if: always() && steps.production_scope.outputs.needs_smoke == 'true'
         env:
