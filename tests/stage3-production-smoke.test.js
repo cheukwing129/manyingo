@@ -35,14 +35,17 @@ test('Stage 3 production smoke validates deployed pack runtime diagnostics rotat
   assert.match(source,/summary\.total === 6 && summary\.correct === 4 && summary\.rows\.length === 3/);
 });
 
-test('Stage 3 smoke stays separate and runs before the existing Pages write smoke',()=>{
+test('Stage 3 smoke stays separate and runs before the isolated production smoke stages',()=>{
   const pkg=JSON.parse(read('package.json'));
   const workflow=read('.github/workflows/pages-production-smoke.yml');
   assert.equal(pkg.scripts['smoke:stage3'],'node scripts/smoke_stage3_ui.mjs');
   assert.equal(pkg.scripts['smoke:pages'],'node scripts/smoke_sync_guard.mjs && node scripts/smoke_answer_outbox.mjs && node scripts/smoke_practice_reliability.mjs && node scripts/smoke_pages_api.mjs');
   const stage3=workflow.indexOf('run: npm run smoke:stage3');
-  const pages=workflow.indexOf('run: npm run smoke:pages');
-  assert.ok(stage3>=0 && pages>stage3);
+  const syncGuard=workflow.indexOf('run: node scripts/smoke_sync_guard.mjs');
+  const answerOutbox=workflow.indexOf('run: node scripts/smoke_answer_outbox.mjs');
+  const practiceReliability=workflow.indexOf('run: node scripts/smoke_practice_reliability.mjs');
+  const learningApi=workflow.indexOf('run: node scripts/smoke_pages_api.mjs');
+  assert.ok(stage3>=0 && syncGuard>stage3 && answerOutbox>syncGuard && practiceReliability>answerOutbox && learningApi>practiceReliability);
 });
 
 test('Pages deployment wait includes Stage 3 diagnostics runtime and expanded question pack',()=>{
