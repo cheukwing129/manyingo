@@ -172,9 +172,15 @@ check(feedbackSource.includes("feedback.textContent=correct?'答對了！':'正�
 check(feedbackSource.includes('function unlockNextSoon(scope)'), 'deployed feedback UI is missing nonblocking next-question handling');
 check(feedbackSource.includes('next.disabled=false'), 'deployed feedback UI still blocks the next question on cloud persistence');
 check(homepageSource.includes('function answerIsCurrent(box,answerId)'), 'deployed today task is missing stale-answer race protection');
-check(homepageSource.includes('if(nextButton)nextButton.disabled=false;showLearningFeedback(box,q,correct,null);try{const result=await cloudSubmit'), 'deployed today task still waits for cloud persistence before enabling next');
-check(!homepageSource.includes('nextButton.disabled=true'), 'deployed today task re-locks next while cloud persistence is pending');
-check(homepageSource.includes('if(answerIsCurrent(box,answerId))showLearningFeedback(box,q,correct,'), 'deployed today task can repaint a later question from a stale cloud response');
+const answerStart=homepageSource.indexOf('function answer(box,q,value)');
+const answerEnd=homepageSource.indexOf("window.addEventListener('manjingo:learning-state-changed'",answerStart);
+const todayAnswerSource=answerStart>=0&&answerEnd>answerStart?homepageSource.slice(answerStart,answerEnd):'';
+const unlockIndex=todayAnswerSource.indexOf('if(nextButton)nextButton.disabled=false');
+const feedbackIndex=todayAnswerSource.indexOf('if(answerIsCurrent(box,answerId))showLearningFeedback(box,q,correct,');
+const queueIndex=todayAnswerSource.indexOf('queueCloudAnswer(q,answerId,value)');
+check(unlockIndex>=0&&feedbackIndex>unlockIndex&&queueIndex>feedbackIndex, 'deployed today task still waits for cloud persistence before enabling next');
+check(!todayAnswerSource.includes('await cloudSubmit')&&!todayAnswerSource.includes('nextButton.disabled=true'), 'deployed today task re-locks next or waits for cloud persistence');
+check(feedbackIndex>=0, 'deployed today task can repaint a later question from a stale cloud response');
 console.log('✓ deployed instant answer feedback and nonblocking next question in weakness and today flows');
 
 const healthResponse = await api('/api/health');
