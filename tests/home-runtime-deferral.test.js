@@ -27,6 +27,13 @@ function loadDeferralShell(){
   return{shell:window.ManjingoHomeShell,window,document,writes,listeners};
 }
 
+function startHandlerSource(home){
+  const start=home.indexOf("document.getElementById('start').onclick=async function()");
+  const end=home.indexOf('function revealApp()',start);
+  assert.ok(start>=0&&end>start,'start handler missing');
+  return home.slice(start,end);
+}
+
 function loadStudyPlanShell(options={}){
   const appended=[],scripts=[],failed=new Set(),failOnceSrc=options.failOnceSrc||null;
   const document={
@@ -155,7 +162,7 @@ test('study plan runtime retries a failed script instead of accepting its stale 
   assert.equal(appended.filter(src=>src==='./curriculum-v1.js').length,1,'successful stage peers should stay deduplicated');
   assert.equal(appended.filter(src=>src==='./skill-first-plan.js').length,1,'later stages should run once after retry succeeds');
   assert.match(source,/typeof script\.remove==='function'\)script\.remove\(\)/);
-  assert.match(source,/studyPlanRuntimePromise=null;console\.warn\('study plan runtime unavailable'/);
+  assert.match(source,/studyPlanRuntimePromise=null;studyPlanRuntimeReadyAt=0;console\.warn\('study plan runtime unavailable'/);
 });
 
 test('study feedback runtime stays lazy and resets summary before the first question',()=>{
@@ -178,7 +185,7 @@ test('study feedback runtime stays lazy and resets summary before the first ques
   assert.ok(prewarmStart>=0&&ensureStart>prewarmStart,'prewarm and ensure study functions should be ordered');
   assert.doesNotMatch(source.slice(prewarmStart,ensureStart),/resetStudySessionSummary/,'intent prewarm must not snapshot the session early');
   const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
-  const start=home.match(/document\.getElementById\('start'\)\.onclick=async function\(\)\{[\s\S]*?\};/)[0];
+  const start=startHandlerSource(home);
   assert.match(start,/shell\.prewarmStudyRuntime\(\)\.catch\(\(\)=>false\)/);
   assert.match(start,/shell\.ensureStudyPlanRuntime\(\)\.catch\(\(\)=>false\)/);
   assert.doesNotMatch(start,/shell\.ensureStudyRuntime\(/,'Start must reset the summary only after the final plan is rebuilt');
@@ -195,11 +202,43 @@ test('start intent prewarms study runtime without starting a session',()=>{
   const install=source.slice(installStart,styleStart);
   assert.match(install,/addEventListener\('pointerenter',prewarm/);
   assert.match(install,/addEventListener\('focus',prewarm\)/);
-  assert.match(install,/addEventListener\('pointerdown',prewarm/);
+  assert.match(install,/addEventListener\('pointerdown',pointerdown/);
+  assert.match(install,/lastStudyPointerDownAt=perfNow\(\);lastStudyPointerDownState=studyPlanRuntimeState\(\);prewarm\(\)/);
   assert.match(install,/Promise\.all\(\[prewarmStudyRuntime\(\),prewarmStudyPlanRuntime\(\)\]\)\.catch/);
   assert.doesNotMatch(install,/ensureStudyRuntime\(/);
   assert.doesNotMatch(install,/resetStudySessionSummary/);
   assert.match(source,/enhanceTodayPlan\(\);installStudyRuntimePrewarm\(\);/);
+});
+
+test('study plan timing state distinguishes cold warming and ready without network telemetry',async()=>{
+  const{shell}=loadStudyPlanShell();
+  assert.equal(shell.studyPlanRuntimeState(),'cold');
+  const promise=shell.prewarmStudyPlanRuntime();
+  assert.equal(shell.studyPlanRuntimeState(),'warming');
+  await promise;
+  assert.equal(shell.studyPlanRuntimeState(),'ready');
+  const timing=shell.studyStartTimingSnapshot();
+  assert.equal(timing.runtimeState,'ready');
+  assert.ok(Number(timing.studyPlanReadyAt)>0);
+  const timingSlice=source.slice(source.indexOf('function perfNow()'),source.indexOf('function whenDomReady()'));
+  assert.doesNotMatch(timingSlice,/fetch\(|sendBeacon|localStorage|sessionStorage|cloudModule|import\(/);
+});
+
+test('study start metrics stay local and record touch and render milestones',()=>{
+  const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  const helper=home.match(/function publishStudyStartMetrics\([\s\S]*?\nfunction localDate/);
+  assert.ok(helper,'study start metrics helper missing');
+  for(const field of ['prewarmStateAtClick','pointerDownState','pointerDownToStudyPlanReadyMs','pointerDownToFirstQuestionMs','clickToStudyPlanReadyMs','clickToAllRuntimeReadyMs','clickToFirstQuestionMs','clickToFocusMs','planSource'])assert.match(helper[0],new RegExp(field));
+  assert.match(helper[0],/window\.ManjingoStudyStartMetrics=metrics/);
+  assert.match(helper[0],/manjingo:study-start-metrics/);
+  assert.doesNotMatch(helper[0],/fetch\(|sendBeacon|localStorage|sessionStorage|cloudModule|import\(/);
+  const start=startHandlerSource(home);
+  assert.match(start,/clickAt=perfNow\(\)/);
+  assert.match(start,/studyStartTimingSnapshot\(\)/);
+  assert.ok(start.indexOf('await Promise.all([studyRuntime,studyPlanRuntime])')<start.indexOf('const allRuntimeReadyAt=perfNow()'));
+  assert.ok(start.indexOf('renderQuestion()')<start.indexOf('const firstQuestionRenderedAt=perfNow()'));
+  assert.ok(start.indexOf('shell.focusQuiz()')<start.indexOf('const focusCompletedAt=perfNow()'));
+  assert.ok(start.indexOf('const focusCompletedAt=perfNow()')<start.indexOf('publishStudyStartMetrics('));
 });
 
 test('start plan rebuild refreshes adaptive local questions without downgrading a cached cloud plan',()=>{
@@ -219,7 +258,7 @@ test('start plan rebuild refreshes adaptive local questions without downgrading 
 
 test('start intent prewarm is an optimization while click awaits cold study-plan loading',()=>{
   const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
-  const start=home.match(/document\.getElementById\('start'\)\.onclick=async function\(\)\{[\s\S]*?\};/)[0];
+  const start=startHandlerSource(home);
   assert.match(start,/startButton\.textContent='正在準備…'/,'touch click should paint immediate preparation feedback');
   assert.match(start,/shell\.ensureStudyPlanRuntime\(\)\.catch\(\(\)=>false\)/,'cold touch must await study-plan runtime even without hover');
   assert.match(start,/await Promise\.all\(\[studyRuntime,studyPlanRuntime\]\)/);
