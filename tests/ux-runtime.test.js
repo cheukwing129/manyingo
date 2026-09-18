@@ -96,7 +96,8 @@ test('mobile guardrails stack narrow dashboard and weakness actions instead of s
 
 test('lesson error state always offers a recovery route',()=>{
   const source=read('public/ux-runtime.js');
-  assert.match(source,/找不到這個知識點/);
+  assert.match(source,/找不到這項學習內容/);
+  assert.doesNotMatch(source,/找不到這個知識點/);
   assert.match(source,/返回首頁/);
   assert.match(source,/href=\"\.\/index\.html\"/);
 });
