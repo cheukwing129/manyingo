@@ -58,12 +58,20 @@ test('secondary UI and account work stays off parser startup and yields to study
 });
 
 test('secondary home views lazy-load only their required runtime groups',()=>{
-  assert.match(source,/const VIEW_RUNTIME_COMMON=\['\.\/curriculum-v1\.js','\.\/skill-evidence-v1\.js','\.\/skill-mastery-v1\.js','\.\/skill-results-v1\.js','\.\/practice-effectiveness\.js'\]/);
+  assert.match(source,/const VIEW_RUNTIME_COMMON=\['\.\/curriculum-v1\.js','\.\/skill-evidence-v1\.js','\.\/skill-mastery-v1\.js','\.\/skill-first-plan\.js','\.\/skill-results-v1\.js','\.\/practice-effectiveness\.js'\]/);
   assert.match(source,/path:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/learning-path\.js','\.\/learning-path-ui\.js'\]/);
   assert.match(source,/weakness:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/weakness-panel\.js'\]/);
   assert.match(source,/results:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/mastery-dashboard\.js'\]/);
   assert.match(source,/function ensureViewRuntime\(view\)/);
   assert.match(source,/window\.ManjingoEnsureViewRuntime=ensureViewRuntime/);
+});
+
+test('secondary views install skill-first selection before practice effectiveness',()=>{
+  const common=source.match(/const VIEW_RUNTIME_COMMON=\[(.*?)\];/s);
+  assert.ok(common,'view runtime common list missing');
+  const skillFirst=common[1].indexOf('./skill-first-plan.js');
+  const practice=common[1].indexOf('./practice-effectiveness.js');
+  assert.ok(skillFirst>=0&&practice>skillFirst,'skill-first-plan must load before practice-effectiveness in every secondary view');
 });
 
 test('secondary view UI stays out of automatic background runtime',()=>{

@@ -85,6 +85,31 @@ test('cross-device merge treats a newer difficulty observation as newer state wh
  assert.equal(accountSync.recordTime(local),new Date('2026-09-11T00:10:00.000Z').getTime());
 });
 
+test('observability re-wraps a replaced rotation chooser without duplicating UI listeners',()=>{
+ const memory=new Map([['manjingo_progress_cache',JSON.stringify({knowledge:{kp1:{mastery:50}}})]]);
+ const localStorage={getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,String(value))};
+ let listenerCount=0,firstCalls=0,secondCalls=0;
+ const rotation={choose(list){firstCalls+=1;return list[0]||null}};
+ const window={ManjingoQuestionRotation:rotation,localStorage,setTimeout,clearTimeout,addEventListener(name){if(name==='manjingo:difficulty-observed')listenerCount+=1},dispatchEvent(){}};
+ const context={window,localStorage,console,Map,Set,Array,Object,Number,String,Math,Date,JSON,setTimeout,clearTimeout};
+ vm.createContext(context);
+ vm.runInContext(source('public/difficulty-observability.js'),context);
+ const api=context.window.ManjingoDifficultyObservability,firstWrapper=rotation.choose;
+ assert.equal(firstWrapper.__difficultyObservabilityWrapper,true);
+ assert.equal(listenerCount,1);
+ firstWrapper([{id:'q1',kpId:'kp1',difficultyTier:'application'}],[]);
+ assert.equal(firstCalls,1);
+ rotation.choose=function(list){secondCalls+=1;return list[0]||null};
+ assert.equal(api.install(),true,'reinstall should wrap the replacement chooser');
+ assert.notEqual(rotation.choose,firstWrapper);
+ assert.equal(rotation.choose.__difficultyObservabilityWrapper,true);
+ rotation.choose([{id:'q2',kpId:'kp1',difficultyTier:'application'}],[]);
+ assert.equal(secondCalls,1);
+ assert.equal(listenerCount,1,'UI listener must remain single-install');
+ assert.equal(api.install(),false,'already wrapped chooser should not be wrapped again');
+ assert.equal(listenerCount,1);
+});
+
 test('browser runtime integrates difficulty explanations inside learning results',()=>{
  const rotation=source('public/question-rotation.js'),observability=source('public/difficulty-observability.js');
  const difficultyPos=rotation.indexOf('question-difficulty.js'),observabilityPos=rotation.indexOf('difficulty-observability.js');
