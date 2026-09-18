@@ -36,7 +36,7 @@ test('home shell opens result tab for mastery dashboard return links',()=>{
   assert.match(source,/\[data-home-tab\]/);
 });
 
-test('homepage compacts XP streak and daily goal into one player status strip',()=>{
+test('homepage presents XP as streak progress rather than a second daily completion goal',()=>{
   const source=read('public/home-shell.js');
   assert.match(source,/function enhancePlayerStatus\(\)/);
   assert.match(source,/card\.classList\.add\('player-status'\)/);
@@ -46,8 +46,11 @@ test('homepage compacts XP streak and daily goal into one player status strip',(
   assert.match(source,/card\.appendChild\(streak\)/);
   assert.match(source,/details\.appendChild\(levelBar\)/);
   assert.match(source,/detailCard\.remove\(\)/);
-  assert.match(source,/今日目標/);
+  assert.match(source,/今日 XP · 連續紀錄/);
   assert.match(source,/等級進度/);
+  const html=read('public/index.html');
+  assert.match(html,/今日 XP · 連續紀錄/);
+  assert.doesNotMatch(html,/今日目標/);
 });
 
 test('primary sections become a mobile app bottom navigation with icons and safe-area spacing',()=>{

@@ -27,6 +27,19 @@ test('daily XP parser supports homepage progress text',()=>{
   assert.deepEqual(ux.parseDaily('準備中'),{current:0,target:0});
 });
 
+test('daily task completion is derived from the finished quiz rather than XP',()=>{
+  const incomplete={getElementById(id){return id==='quiz'?{querySelector(){return null}}:null}};
+  const complete={getElementById(id){return id==='quiz'?{querySelector(selector){return selector==='.session-summary.done,.done'?{}:null}}:null}};
+  assert.equal(ux.dailyTaskComplete(incomplete),false);
+  assert.equal(ux.dailyTaskComplete(complete),true);
+  const source=read('public/ux-runtime.js');
+  assert.match(source,/streakGoalComplete=state\.target>0&&state\.current>=state\.target/);
+  assert.match(source,/taskComplete=dailyTaskComplete\(d\)/);
+  assert.match(source,/start\.textContent=taskComplete\?'再練一輪':started\?'繼續今日學習':'開始學習'/);
+  assert.match(source,/streak-goal-complete/);
+  assert.doesNotMatch(source,/start\.textContent=complete\?'再練一輪'/);
+});
+
 test('question progress parser recognizes current and total counts',()=>{
   const quiz={querySelector(selector){
     if(selector!=='.category')return null;
