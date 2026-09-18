@@ -5,12 +5,12 @@ const path=require('node:path');
 const summary=require('../public/session-summary.js');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 
-test('daily session summary sends learners with mistakes to weakness diagnosis',()=>{
- const data=summary.model({page:'home',answered:10,correct:8,xp:64,masteryDelta:12,resolved:['kp_virtual_yi'],unlockedStages:[]});
+test('daily session summary keeps initial mistakes in results instead of calling them confirmed weaknesses',()=>{
+ const data=summary.model({page:'home',answered:10,correct:8,xp:64,masteryDelta:12,resolved:['kp_virtual_yi'],unlockedStages:[],persistentWeakness:false});
  assert.equal(data.wrong,2);
- assert.equal(data.action.href,'./index.html#weaknessPanel');
- assert.equal(data.action.label,'查看弱點診斷');
- const html=summary.markup({page:'home',answered:10,correct:8,xp:64,masteryDelta:12,resolved:['kp_virtual_yi'],unlockedStages:[]});
+ assert.equal(data.action.href,'#masteryDashboard');
+ assert.equal(data.action.label,'查看學習成果');
+ const html=summary.markup({page:'home',answered:10,correct:8,xp:64,masteryDelta:12,resolved:['kp_virtual_yi'],unlockedStages:[],persistentWeakness:false});
  assert.match(html,/session-summary done/);
  assert.match(html,/8 \/ 10/);
  assert.match(html,/\+64/);
@@ -18,12 +18,36 @@ test('daily session summary sends learners with mistakes to weakness diagnosis',
  assert.match(html,/已修正：kp_virtual_yi/);
 });
 
+test('persistent wrong evidence takes priority and routes to learning focus',()=>{
+ const data=summary.model({page:'home',answered:10,correct:8,xp:64,masteryDelta:4,resolved:[],unlockedStages:['句式'],persistentWeakness:true});
+ assert.equal(data.action.href,'#weaknessPanel');
+ assert.equal(data.action.label,'查看學習重點');
+});
+
 test('perfect daily session prioritizes newly unlocked learning path content',()=>{
  const data=summary.model({page:'home',answered:10,correct:10,xp:80,masteryDelta:20,resolved:[],unlockedStages:['句式']});
  assert.equal(data.wrong,0);
- assert.equal(data.action.href,'./index.html#learningPath');
+ assert.equal(data.action.href,'#learningPath');
  assert.equal(data.action.label,'看看新解鎖內容');
  assert.match(summary.markup({page:'home',answered:10,correct:10,xp:80,masteryDelta:20,resolved:[],unlockedStages:['句式']}),/新解鎖：句式/);
+});
+
+test('persistent signal detector only escalates repeated evidence from wrong items',()=>{
+ const previous=global.ManjingoLocalLearning;
+ global.ManjingoLocalLearning={
+  getKnowledge(id){return id==='early'?{attempts:1,wrongCount:1,misconceptions:{m:{count:1}}}:{attempts:3,wrongCount:2,misconceptions:{m:{count:2}}}},
+  getRemediationStatus(){return{needsRemediation:false}}
+ };
+ assert.equal(summary.persistentWrongSignal(['early']),false);
+ assert.equal(summary.persistentWrongSignal(['persistent']),true);
+ global.ManjingoLocalLearning=previous;
+});
+
+test('home completion actions stay hash-only while lesson completion keeps an index route',()=>{
+ const home=summary.model({page:'home',answered:10,correct:10,unlockedStages:[],persistentWeakness:false});
+ assert.equal(home.action.href,'#masteryDashboard');
+ const lesson=summary.model({page:'lesson',targeted:true,answered:5,correct:5,unlockedStages:[]});
+ assert.equal(lesson.action.href,'./index.html#masteryDashboard');
 });
 
 test('targeted remedial and reteach lesson completion return to learning results',()=>{
