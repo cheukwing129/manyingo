@@ -66,6 +66,15 @@ test('secondary home views lazy-load only their required runtime groups',()=>{
   assert.match(source,/window\.ManjingoEnsureViewRuntime=ensureViewRuntime/);
 });
 
+test('secondary view UI stays out of automatic background runtime',()=>{
+  const match=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
+  assert.ok(match,'deferred runtime list missing');
+  for(const file of ['learning-path-ui.js','weakness-panel.js','mastery-dashboard.js'])assert.doesNotMatch(match[1],new RegExp(file.replaceAll('.','\\.')));
+  assert.match(source,/path:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/learning-path\.js','\.\/learning-path-ui\.js'\]/);
+  assert.match(source,/weakness:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/weakness-panel\.js'\]/);
+  assert.match(source,/results:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/mastery-dashboard\.js'\]/);
+});
+
 test('view lazy loading deduplicates scripts before the full idle runtime completes',()=>{
   assert.match(source,/const deferredScriptPromises=new Map\(\),viewRuntimePromises=new Map\(\)/);
   assert.match(source,/function deferredScriptPresent\(src\)/);
