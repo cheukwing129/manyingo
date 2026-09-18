@@ -115,19 +115,20 @@ test('runtime already covered by view or study loaders stays out of automatic ba
   const common=source.match(/const VIEW_RUNTIME_COMMON=\[(.*?)\];/s);
   const study=source.match(/const STUDY_RUNTIME=\[(.*?)\];/s);
   assert.ok(deferred&&common&&study,'runtime groups missing');
-  for(const file of ['learning-path.js','skill-results-v1.js'])assert.doesNotMatch(deferred[1],new RegExp(file.replaceAll('.','\\.')));
+  for(const file of ['learning-path.js','skill-results-v1.js','skill-evidence-v1.js'])assert.doesNotMatch(deferred[1],new RegExp(file.replaceAll('.','\\.')));
   assert.match(common[1],/\.\/skill-results-v1\.js/);
+  assert.match(common[1],/\.\/skill-evidence-v1\.js/);
   assert.match(study[1],/\.\/learning-path\.js/);
   assert.match(source,/path:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/learning-path\.js','\.\/learning-path-ui\.js'\]/);
 });
 
-test('study plan loader stages dependencies without moving runtime out of background yet',()=>{
+test('study plan loader stages adaptive dependencies without moving them out of background yet',()=>{
   assert.match(source,/const STUDY_PLAN_RUNTIME_STAGES=\[\s*\['\.\/curriculum-v1\.js','\.\/skill-mastery-v1\.js','\.\/question-pack-adaptive-01\.js','\.\/question-pack-adaptive-02\.js','\.\/question-pack-adaptive-03\.js','\.\/difficulty-calibration\.js'\],\s*\['\.\/skill-first-plan\.js','\.\/question-difficulty\.js'\],\s*\['\.\/practice-effectiveness\.js','\.\/difficulty-observability\.js'\]\s*\];/s);
   const deferred=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
   assert.ok(deferred,'deferred runtime list missing');
   for(const file of ['curriculum-v1.js','skill-mastery-v1.js','skill-first-plan.js','question-pack-adaptive-01.js','question-pack-adaptive-02.js','question-pack-adaptive-03.js','difficulty-calibration.js','question-difficulty.js','difficulty-observability.js','practice-effectiveness.js'])assert.match(deferred[1],new RegExp(file.replaceAll('.','\\.')));
   const stages=source.slice(source.indexOf('const STUDY_PLAN_RUNTIME_STAGES='),source.indexOf('const DEFERRED_APP_RUNTIME='));
-  assert.doesNotMatch(stages,/skill-evidence-v1\.js/,'skill evidence remains a view-only migration candidate');
+  assert.doesNotMatch(stages,/skill-evidence-v1\.js/,'skill evidence must stay view-only and outside study-plan runtime');
   assert.match(source,/function loadRuntimeStage\(files\)\{return Promise\.all\(\(files\|\|\[\]\)\.map\(src=>loadDeferredScript\(src\)\)\)\}/);
   assert.match(source,/function loadRuntimeStages\(stages\)\{return \(stages\|\|\[\]\)\.reduce\(\(promise,files\)=>promise\.then\(\(\)=>loadRuntimeStage\(files\)\),Promise\.resolve\(\)\)\}/);
 });
