@@ -122,11 +122,12 @@ test('runtime already covered by view or study loaders stays out of automatic ba
   assert.match(source,/path:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/learning-path\.js','\.\/learning-path-ui\.js'\]/);
 });
 
-test('study plan loader stages adaptive dependencies without moving them out of background yet',()=>{
+test('adaptive study-plan dependencies stay out of automatic background runtime',()=>{
   assert.match(source,/const STUDY_PLAN_RUNTIME_STAGES=\[\s*\['\.\/curriculum-v1\.js','\.\/skill-mastery-v1\.js','\.\/question-pack-adaptive-01\.js','\.\/question-pack-adaptive-02\.js','\.\/question-pack-adaptive-03\.js','\.\/difficulty-calibration\.js'\],\s*\['\.\/skill-first-plan\.js','\.\/question-difficulty\.js'\],\s*\['\.\/practice-effectiveness\.js','\.\/difficulty-observability\.js'\]\s*\];/s);
   const deferred=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
   assert.ok(deferred,'deferred runtime list missing');
-  for(const file of ['curriculum-v1.js','skill-mastery-v1.js','skill-first-plan.js','question-pack-adaptive-01.js','question-pack-adaptive-02.js','question-pack-adaptive-03.js','difficulty-calibration.js','question-difficulty.js','difficulty-observability.js','practice-effectiveness.js'])assert.match(deferred[1],new RegExp(file.replaceAll('.','\\.')));
+  for(const file of ['curriculum-v1.js','skill-mastery-v1.js','skill-first-plan.js','question-pack-adaptive-01.js','question-pack-adaptive-02.js','question-pack-adaptive-03.js','difficulty-calibration.js','question-difficulty.js','difficulty-observability.js','practice-effectiveness.js'])assert.doesNotMatch(deferred[1],new RegExp(file.replaceAll('.','\\.')));
+  for(const file of ['remote-sync-guard.js','account-sync.js','account-ui.js'])assert.match(deferred[1],new RegExp(file.replaceAll('.','\\.')));
   const stages=source.slice(source.indexOf('const STUDY_PLAN_RUNTIME_STAGES='),source.indexOf('const DEFERRED_APP_RUNTIME='));
   assert.doesNotMatch(stages,/skill-evidence-v1\.js/,'skill evidence must stay view-only and outside study-plan runtime');
   assert.match(source,/function loadRuntimeStage\(files\)\{return Promise\.all\(\(files\|\|\[\]\)\.map\(src=>loadDeferredScript\(src\)\)\)\}/);
@@ -178,8 +179,12 @@ test('study feedback runtime stays lazy and resets summary before the first ques
   assert.doesNotMatch(source.slice(prewarmStart,ensureStart),/resetStudySessionSummary/,'intent prewarm must not snapshot the session early');
   const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
   const start=home.match(/document\.getElementById\('start'\)\.onclick=async function\(\)\{[\s\S]*?\};/)[0];
-  assert.match(start,/await shell\.ensureStudyRuntime\(\)\.catch\(\(\)=>false\)/);
-  assert.ok(start.indexOf('await shell.ensureStudyRuntime()')<start.indexOf('renderQuestion()'),'study runtime must be ready before the first question renders');
+  assert.match(start,/shell\.prewarmStudyRuntime\(\)\.catch\(\(\)=>false\)/);
+  assert.match(start,/shell\.ensureStudyPlanRuntime\(\)\.catch\(\(\)=>false\)/);
+  assert.doesNotMatch(start,/shell\.ensureStudyRuntime\(/,'Start must reset the summary only after the final plan is rebuilt');
+  assert.ok(start.indexOf('await Promise.all([studyRuntime,studyPlanRuntime])')<start.indexOf('rebuildStartPlan()'),'both study runtimes must be ready before plan rebuild');
+  assert.ok(start.indexOf('rebuildStartPlan()')<start.indexOf('shell.resetStudySessionSummary()'),'final plan must be chosen before the session snapshot resets');
+  assert.ok(start.indexOf('shell.resetStudySessionSummary()')<start.indexOf('renderQuestion()'),'session snapshot must reset before the first question renders');
   assert.ok(start.indexOf('renderQuestion()')<start.indexOf('shell.focusQuiz()'),'first question should render before study focus begins');
 });
 
@@ -191,11 +196,34 @@ test('start intent prewarms study runtime without starting a session',()=>{
   assert.match(install,/addEventListener\('pointerenter',prewarm/);
   assert.match(install,/addEventListener\('focus',prewarm\)/);
   assert.match(install,/addEventListener\('pointerdown',prewarm/);
-  assert.match(install,/prewarmStudyRuntime\(\)\.catch/);
+  assert.match(install,/Promise\.all\(\[prewarmStudyRuntime\(\),prewarmStudyPlanRuntime\(\)\]\)\.catch/);
   assert.doesNotMatch(install,/ensureStudyRuntime\(/);
-  assert.doesNotMatch(install,/prewarmStudyPlanRuntime\(/,'study-plan loader is infrastructure only in this PR');
   assert.doesNotMatch(install,/resetStudySessionSummary/);
   assert.match(source,/enhanceTodayPlan\(\);installStudyRuntimePrewarm\(\);/);
+});
+
+test('start plan rebuild refreshes adaptive local questions without downgrading a cached cloud plan',()=>{
+  const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  assert.match(home,/let localQuestions=content\?content\.questions\.slice\(\):\[\]/);
+  assert.match(home,/latestRemotePlan=null/);
+  assert.match(home,/latestRemotePlan=remotePlan\|\|null/);
+  const rebuild=home.match(/function rebuildStartPlan\(\)\{[\s\S]*?\nfunction applyLocalPlan/);
+  assert.ok(rebuild,'start-plan rebuild helper missing');
+  assert.match(rebuild[0],/refreshLocalQuestionPool\(\)/);
+  assert.match(rebuild[0],/currentPlanSource==='cloud'&&latestRemotePlan&&cloudQuestionPool\.length/);
+  assert.match(rebuild[0],/content\.selectQuestionsForPlan\(latestRemotePlan,cloudQuestionPool,SESSION_TARGET\)/);
+  assert.match(rebuild[0],/if\(selected\.length\)questions=selected;return'cloud'/,'an existing cloud plan must return before local fallback even if reselection is empty');
+  assert.ok(rebuild[0].indexOf("return'cloud'")<rebuild[0].indexOf('buildLocalPlan(SESSION_TARGET)'),'cloud preservation must precede local fallback');
+  assert.doesNotMatch(rebuild[0],/cloudModule|getDailyLearningPlan|fetchAllQuestions|ensureLogin/,'Start rebuild must never issue a cloud request');
+});
+
+test('start intent prewarm is an optimization while click awaits cold study-plan loading',()=>{
+  const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  const start=home.match(/document\.getElementById\('start'\)\.onclick=async function\(\)\{[\s\S]*?\};/)[0];
+  assert.match(start,/startButton\.textContent='正在準備…'/,'touch click should paint immediate preparation feedback');
+  assert.match(start,/shell\.ensureStudyPlanRuntime\(\)\.catch\(\(\)=>false\)/,'cold touch must await study-plan runtime even without hover');
+  assert.match(start,/await Promise\.all\(\[studyRuntime,studyPlanRuntime\]\)/);
+  assert.doesNotMatch(start,/cloudModule|getDailyLearningPlan|fetchAllQuestions|ensureLogin/);
 });
 
 test('view lazy loading deduplicates scripts before the full idle runtime completes',()=>{
