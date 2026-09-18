@@ -16,7 +16,7 @@ const STUDY_PLAN_RUNTIME_STAGES=[
  ['./skill-first-plan.js','./question-difficulty.js'],
  ['./practice-effectiveness.js','./difficulty-observability.js']
 ];
-const DEFERRED_APP_RUNTIME=['./curriculum-v1.js','./skill-evidence-v1.js','./skill-mastery-v1.js','./skill-first-plan.js','./question-pack-adaptive-01.js','./question-pack-adaptive-02.js','./question-pack-adaptive-03.js','./difficulty-calibration.js','./question-difficulty.js','./difficulty-observability.js','./remote-sync-guard.js','./practice-effectiveness.js','./account-sync.js','./account-ui.js'];
+const DEFERRED_APP_RUNTIME=['./curriculum-v1.js','./skill-mastery-v1.js','./skill-first-plan.js','./question-pack-adaptive-01.js','./question-pack-adaptive-02.js','./question-pack-adaptive-03.js','./difficulty-calibration.js','./question-difficulty.js','./difficulty-observability.js','./remote-sync-guard.js','./practice-effectiveness.js','./account-sync.js','./account-ui.js'];
 let quizObserver=null,planObserver=null,shellInstalled=false,deferredRuntimePromise=null,studyRuntimePromise=null,studyPlanRuntimePromise=null,deferredRuntimeScheduled=false,domReadyPromise=null,lastInteractionAt=0;
 const deferredScriptPromises=new Map(),viewRuntimePromises=new Map();
 function installUiFoundation(){if(document.getElementById('appUiFoundation'))return false;const link=document.createElement('link');link.id='appUiFoundation';link.rel='stylesheet';link.href='./app-ui.css';document.head.appendChild(link);return true}
