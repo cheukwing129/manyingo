@@ -195,11 +195,43 @@ test('start intent prewarms study runtime without starting a session',()=>{
   const install=source.slice(installStart,styleStart);
   assert.match(install,/addEventListener\('pointerenter',prewarm/);
   assert.match(install,/addEventListener\('focus',prewarm\)/);
-  assert.match(install,/addEventListener\('pointerdown',prewarm/);
+  assert.match(install,/addEventListener\('pointerdown',pointerdown/);
+  assert.match(install,/lastStudyPointerDownAt=perfNow\(\);lastStudyPointerDownState=studyPlanRuntimeState\(\);prewarm\(\)/);
   assert.match(install,/Promise\.all\(\[prewarmStudyRuntime\(\),prewarmStudyPlanRuntime\(\)\]\)\.catch/);
   assert.doesNotMatch(install,/ensureStudyRuntime\(/);
   assert.doesNotMatch(install,/resetStudySessionSummary/);
   assert.match(source,/enhanceTodayPlan\(\);installStudyRuntimePrewarm\(\);/);
+});
+
+test('study plan timing state distinguishes cold warming and ready without network telemetry',async()=>{
+  const{shell}=loadStudyPlanShell();
+  assert.equal(shell.studyPlanRuntimeState(),'cold');
+  const promise=shell.prewarmStudyPlanRuntime();
+  assert.equal(shell.studyPlanRuntimeState(),'warming');
+  await promise;
+  assert.equal(shell.studyPlanRuntimeState(),'ready');
+  const timing=shell.studyStartTimingSnapshot();
+  assert.equal(timing.runtimeState,'ready');
+  assert.ok(Number(timing.studyPlanReadyAt)>0);
+  const timingSlice=source.slice(source.indexOf('function perfNow()'),source.indexOf('function whenDomReady()'));
+  assert.doesNotMatch(timingSlice,/fetch\(|sendBeacon|localStorage|sessionStorage|cloudModule|import\(/);
+});
+
+test('study start metrics stay local and record touch and render milestones',()=>{
+  const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  const helper=home.match(/function publishStudyStartMetrics\([\s\S]*?\nfunction localDate/);
+  assert.ok(helper,'study start metrics helper missing');
+  for(const field of ['prewarmStateAtClick','pointerDownState','pointerDownToStudyPlanReadyMs','pointerDownToFirstQuestionMs','clickToStudyPlanReadyMs','clickToAllRuntimeReadyMs','clickToFirstQuestionMs','clickToFocusMs','planSource'])assert.match(helper[0],new RegExp(field));
+  assert.match(helper[0],/window\.ManjingoStudyStartMetrics=metrics/);
+  assert.match(helper[0],/manjingo:study-start-metrics/);
+  assert.doesNotMatch(helper[0],/fetch\(|sendBeacon|localStorage|sessionStorage|cloudModule|import\(/);
+  const start=home.match(/document\.getElementById\('start'\)\.onclick=async function\(\)\{[\s\S]*?\};/)[0];
+  assert.match(start,/clickAt=perfNow\(\)/);
+  assert.match(start,/studyStartTimingSnapshot\(\)/);
+  assert.ok(start.indexOf('await Promise.all([studyRuntime,studyPlanRuntime])')<start.indexOf('const allRuntimeReadyAt=perfNow()'));
+  assert.ok(start.indexOf('renderQuestion()')<start.indexOf('const firstQuestionRenderedAt=perfNow()'));
+  assert.ok(start.indexOf('shell.focusQuiz()')<start.indexOf('const focusCompletedAt=perfNow()'));
+  assert.ok(start.indexOf('const focusCompletedAt=perfNow()')<start.indexOf('publishStudyStartMetrics('));
 });
 
 test('start plan rebuild refreshes adaptive local questions without downgrading a cached cloud plan',()=>{
