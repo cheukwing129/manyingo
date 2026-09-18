@@ -85,15 +85,34 @@ test('study feedback runtime stays lazy and resets summary before the first ques
     assert.match(study[1],new RegExp(file.replaceAll('.','\\.')));
     assert.doesNotMatch(deferred[1],new RegExp(file.replaceAll('.','\\.')));
   }
-  assert.match(source,/function ensureStudyRuntime\(\)/);
+  assert.match(source,/function prewarmStudyRuntime\(\)/);
   assert.match(source,/loadRuntimeSequence\(STUDY_RUNTIME\)/);
-  assert.match(source,/return studyRuntimePromise\.then\(\(\)=>\{resetStudySessionSummary\(\);return true\}\)/);
+  assert.match(source,/function ensureStudyRuntime\(\)\{return prewarmStudyRuntime\(\)\.then\(\(\)=>\{resetStudySessionSummary\(\);return true\}\)\}/);
+  assert.match(source,/window\.ManjingoPrewarmStudyRuntime=prewarmStudyRuntime/);
   assert.match(source,/window\.ManjingoEnsureStudyRuntime=ensureStudyRuntime/);
+  const prewarmStart=source.indexOf('function prewarmStudyRuntime()');
+  const ensureStart=source.indexOf('function ensureStudyRuntime()');
+  assert.ok(prewarmStart>=0&&ensureStart>prewarmStart,'prewarm and ensure study functions should be ordered');
+  assert.doesNotMatch(source.slice(prewarmStart,ensureStart),/resetStudySessionSummary/,'intent prewarm must not snapshot the session early');
   const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
   const start=home.match(/document\.getElementById\('start'\)\.onclick=async function\(\)\{[\s\S]*?\};/)[0];
   assert.match(start,/await shell\.ensureStudyRuntime\(\)\.catch\(\(\)=>false\)/);
   assert.ok(start.indexOf('await shell.ensureStudyRuntime()')<start.indexOf('renderQuestion()'),'study runtime must be ready before the first question renders');
   assert.ok(start.indexOf('renderQuestion()')<start.indexOf('shell.focusQuiz()'),'first question should render before study focus begins');
+});
+
+test('start intent prewarms study runtime without starting a session',()=>{
+  const installStart=source.indexOf('function installStudyRuntimePrewarm()');
+  const styleStart=source.indexOf('function installStudyStyle()');
+  assert.ok(installStart>=0&&styleStart>installStart,'study prewarm installer should exist before study styling');
+  const install=source.slice(installStart,styleStart);
+  assert.match(install,/addEventListener\('pointerenter',prewarm/);
+  assert.match(install,/addEventListener\('focus',prewarm\)/);
+  assert.match(install,/addEventListener\('pointerdown',prewarm/);
+  assert.match(install,/prewarmStudyRuntime\(\)\.catch/);
+  assert.doesNotMatch(install,/ensureStudyRuntime\(/);
+  assert.doesNotMatch(install,/resetStudySessionSummary/);
+  assert.match(source,/enhanceTodayPlan\(\);installStudyRuntimePrewarm\(\);/);
 });
 
 test('view lazy loading deduplicates scripts before the full idle runtime completes',()=>{
