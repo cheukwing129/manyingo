@@ -53,7 +53,7 @@ test('secondary UI and account work stays off parser startup and yields to study
   assert.match(source,/deferredRuntimePromise=whenDomReady\(\)\.then\(\(\)=>loadRuntimeSequence\(DEFERRED_APP_RUNTIME\)\)/);
   assert.match(source,/runtimeStudyActive\(\)\|\|Date\.now\(\)-lastInteractionAt<900/);
   assert.match(source,/requestIdleCallback\(run,\{timeout:3500\}\)/);
-  assert.match(source,/view!=='today'&&window\.ManjingoEnsureViewRuntime/);
+  assert.match(source,/if\(view!=='today'\)void requestViewRuntime\(view\)\.catch/);
   assert.match(source,/window\.ManjingoStartupRuntimeBundled=true/);
 });
 
