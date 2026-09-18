@@ -14,8 +14,17 @@ test('daily session summary keeps initial mistakes in results instead of calling
  assert.match(html,/session-summary done/);
  assert.match(html,/8 \/ 10/);
  assert.match(html,/\+64/);
- assert.match(html,/掌握度淨變化/);
+ assert.match(html,/有進步/);
+ assert.match(html,/本輪進步/);
+ assert.doesNotMatch(html,/掌握度淨變化/);
  assert.match(html,/已修正：kp_virtual_yi/);
+});
+
+test('session progress metric translates internal mastery delta into learner-facing states',()=>{
+ assert.deepEqual(summary.progressSignal(12),{value:'有進步',label:'本輪進步'});
+ assert.deepEqual(summary.progressSignal(0),{value:'已更新',label:'學習紀錄'});
+ assert.deepEqual(summary.progressSignal(-4),{value:'已調整',label:'複習安排'});
+ assert.doesNotMatch(summary.markup({page:'home',answered:10,correct:7,xp:48,masteryDelta:-4,unlockedStages:[],persistentWeakness:false}),/−4|掌握度淨變化/);
 });
 
 test('persistent wrong evidence takes priority and routes to learning focus',()=>{
