@@ -27,6 +27,33 @@ function loadDeferralShell(){
   return{shell:window.ManjingoHomeShell,window,document,writes,listeners};
 }
 
+function loadStudyPlanShell(options={}){
+  const appended=[],scripts=[],failed=new Set(),failOnceSrc=options.failOnceSrc||null;
+  const document={
+    readyState:'complete',
+    scripts,
+    body:{classList:{contains(){return false}}},
+    head:{appendChild(script){
+      appended.push(script.src);scripts.push(script);
+      setTimeout(()=>{
+        if(failOnceSrc===script.src&&!failed.has(script.src)){failed.add(script.src);if(script._listeners.error)script._listeners.error();return}
+        if(script._listeners.load)script._listeners.load();
+      },0);
+    }},
+    createElement(tag){
+      if(tag!=='script')return{};
+      return{src:'',async:true,_listeners:{},setAttribute(){},getAttribute(name){return name==='src'?this.src:null},addEventListener(name,fn){this._listeners[name]=fn},remove(){const index=scripts.indexOf(this);if(index>=0)scripts.splice(index,1)}};
+    },
+    addEventListener(){}
+  };
+  const window={document,addEventListener(){},dispatchEvent(){}};
+  const context={window,document,location:{hash:'',pathname:'/',search:''},console,Promise,Date,setTimeout,clearTimeout,CustomEvent:function(){}};
+  context.globalThis=context;
+  vm.createContext(context);
+  vm.runInContext(source,context,{filename:'home-shell.js'});
+  return{shell:window.ManjingoHomeShell,window,document,appended};
+}
+
 test('homepage replaces parser-blocking app runtime with a small reviewed core',()=>{
   const{shell,window,document,writes}=loadDeferralShell();
   assert.equal(shell.installStartupRuntimeDeferral(),true);
@@ -94,6 +121,41 @@ test('runtime already covered by view or study loaders stays out of automatic ba
   assert.match(source,/path:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/learning-path\.js','\.\/learning-path-ui\.js'\]/);
 });
 
+test('study plan loader stages dependencies without moving runtime out of background yet',()=>{
+  assert.match(source,/const STUDY_PLAN_RUNTIME_STAGES=\[\s*\['\.\/curriculum-v1\.js','\.\/skill-mastery-v1\.js','\.\/question-pack-adaptive-01\.js','\.\/question-pack-adaptive-02\.js','\.\/question-pack-adaptive-03\.js','\.\/difficulty-calibration\.js'\],\s*\['\.\/skill-first-plan\.js','\.\/question-difficulty\.js'\],\s*\['\.\/practice-effectiveness\.js','\.\/difficulty-observability\.js'\]\s*\];/s);
+  const deferred=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
+  assert.ok(deferred,'deferred runtime list missing');
+  for(const file of ['curriculum-v1.js','skill-mastery-v1.js','skill-first-plan.js','question-pack-adaptive-01.js','question-pack-adaptive-02.js','question-pack-adaptive-03.js','difficulty-calibration.js','question-difficulty.js','difficulty-observability.js','practice-effectiveness.js'])assert.match(deferred[1],new RegExp(file.replaceAll('.','\\.')));
+  const stages=source.slice(source.indexOf('const STUDY_PLAN_RUNTIME_STAGES='),source.indexOf('const DEFERRED_APP_RUNTIME='));
+  assert.doesNotMatch(stages,/skill-evidence-v1\.js/,'skill evidence remains a view-only migration candidate');
+  assert.match(source,/function loadRuntimeStage\(files\)\{return Promise\.all\(\(files\|\|\[\]\)\.map\(src=>loadDeferredScript\(src\)\)\)\}/);
+  assert.match(source,/function loadRuntimeStages\(stages\)\{return \(stages\|\|\[\]\)\.reduce\(\(promise,files\)=>promise\.then\(\(\)=>loadRuntimeStage\(files\)\),Promise\.resolve\(\)\)\}/);
+});
+
+test('study plan runtime deduplicates concurrent prewarm and preserves stage order',async()=>{
+  const{shell,appended}=loadStudyPlanShell();
+  const first=shell.prewarmStudyPlanRuntime(),second=shell.prewarmStudyPlanRuntime();
+  assert.equal(first,second,'concurrent prewarm must reuse one promise');
+  await first;
+  const stage1=['./curriculum-v1.js','./skill-mastery-v1.js','./question-pack-adaptive-01.js','./question-pack-adaptive-02.js','./question-pack-adaptive-03.js','./difficulty-calibration.js'];
+  const stage2=['./skill-first-plan.js','./question-difficulty.js'];
+  const stage3=['./practice-effectiveness.js','./difficulty-observability.js'];
+  assert.deepEqual(appended,[...stage1,...stage2,...stage3]);
+  await shell.ensureStudyPlanRuntime();
+  assert.deepEqual(appended,[...stage1,...stage2,...stage3],'ensure must reuse the completed prewarm');
+});
+
+test('study plan runtime retries a failed script instead of accepting its stale node',async()=>{
+  const failedSrc='./difficulty-calibration.js',{shell,appended}=loadStudyPlanShell({failOnceSrc:failedSrc});
+  await assert.rejects(shell.prewarmStudyPlanRuntime(),/Unable to load \.\/difficulty-calibration\.js/);
+  await shell.prewarmStudyPlanRuntime();
+  assert.equal(appended.filter(src=>src===failedSrc).length,2,'failed script must be requested again');
+  assert.equal(appended.filter(src=>src==='./curriculum-v1.js').length,1,'successful stage peers should stay deduplicated');
+  assert.equal(appended.filter(src=>src==='./skill-first-plan.js').length,1,'later stages should run once after retry succeeds');
+  assert.match(source,/typeof script\.remove==='function'\)script\.remove\(\)/);
+  assert.match(source,/studyPlanRuntimePromise=null;console\.warn\('study plan runtime unavailable'/);
+});
+
 test('study feedback runtime stays lazy and resets summary before the first question',()=>{
   const study=source.match(/const STUDY_RUNTIME=\[(.*?)\];/s);
   const deferred=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
@@ -130,6 +192,7 @@ test('start intent prewarms study runtime without starting a session',()=>{
   assert.match(install,/addEventListener\('pointerdown',prewarm/);
   assert.match(install,/prewarmStudyRuntime\(\)\.catch/);
   assert.doesNotMatch(install,/ensureStudyRuntime\(/);
+  assert.doesNotMatch(install,/prewarmStudyPlanRuntime\(/,'study-plan loader is infrastructure only in this PR');
   assert.doesNotMatch(install,/resetStudySessionSummary/);
   assert.match(source,/enhanceTodayPlan\(\);installStudyRuntimePrewarm\(\);/);
 });
