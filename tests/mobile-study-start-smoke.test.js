@@ -18,7 +18,8 @@ test('mobile study-start smoke uses runner Chrome without adding browser depende
   assert.match(script,/Network\.setCacheDisabled/);
   assert.match(script,/Network\.clearBrowserCache/);
   assert.match(script,/window\.ManjingoStudyStartMetrics\|\|null/);
-  assert.match(script,/pointerDownState==='cold'/);
+  assert.match(script,/pointerDownState==='cold'\|\|metrics\.pointerDownState==='warming'/);
+  assert.match(script,/pointerDownState!=='ready'/);
   assert.match(script,/pointerDownToFirstQuestionMs<=budgetMs/);
   assert.equal(pkg.scripts['smoke:study-start-mobile'],'node scripts/smoke_study_start_mobile.mjs');
   const deps={...(pkg.dependencies||{}),...(pkg.devDependencies||{})};
@@ -32,6 +33,12 @@ test('production smoke waits for the diagnostic asset and runs mobile cold-start
   assert.match(workflow,/Smoke test mobile cold study start/);
   assert.match(workflow,/npm run smoke:study-start-mobile/);
   assert.ok(workflow.indexOf('Wait for Pages reliability assets after main')<workflow.indexOf('Smoke test mobile cold study start'));
+});
+
+test('mobile smoke accepts synthesized pointerenter warming but never pre-ready state',()=>{
+  const script=read('scripts/smoke_study_start_mobile.mjs');
+  assert.match(script,/expected first-touch pointerdown state to be cold\/warming/);
+  assert.match(script,/first touch unexpectedly found study-plan runtime already ready/);
 });
 
 test('mobile smoke keeps a generous hard budget and logs the measured metrics',()=>{

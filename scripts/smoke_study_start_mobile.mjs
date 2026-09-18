@@ -87,7 +87,8 @@ try{
   await new Promise(resolve=>setTimeout(resolve,45));
   await cdp.call('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   const metrics=await waitFor(cdp,'window.ManjingoStudyStartMetrics||null','study start metrics',15000);
-  check(metrics.pointerDownState==='cold',`expected cold pointerdown state, got ${metrics.pointerDownState}`);
+  check(metrics.pointerDownState==='cold'||metrics.pointerDownState==='warming',`expected first-touch pointerdown state to be cold/warming, got ${metrics.pointerDownState}`);
+  check(metrics.pointerDownState!=='ready','first touch unexpectedly found study-plan runtime already ready');
   check(Number.isFinite(metrics.pointerDownToFirstQuestionMs),'pointerdown-to-first-question metric missing');
   check(Number.isFinite(metrics.clickToFirstQuestionMs),'click-to-first-question metric missing');
   check(metrics.pointerDownToFirstQuestionMs<=budgetMs,`mobile cold study start ${metrics.pointerDownToFirstQuestionMs} ms exceeds ${budgetMs} ms budget`);
