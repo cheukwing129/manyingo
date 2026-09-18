@@ -29,5 +29,7 @@ test('detached prepared controls resolve the live quiz host after activation',()
   assert.match(home,/function liveQuiz\(\)\{return document\.getElementById\('quiz'\)\}/);
   assert.match(home,/const box=liveQuiz\(\);if\(box\)answer\(box,q,value\)/);
   assert.match(home,/const box=liveQuiz\(\);if\(box\)answer\(box,q,x\)/);
-  assert.match(home,/invalidatePreparedQuestion\(\);if\(!questions\.length\)/);
+  assert.match(home,/invalidatePreparedQuestion\(\);if\(!questions\.length&&currentPlanSource!=='cloud'\)/);
+  const start=home.match(/document\.getElementById\('start'\)\.onclick=async function\(\)\{[\s\S]*?\};/)[0];
+  assert.ok(start.indexOf('rebuildStartPlan()')<start.indexOf('invalidatePreparedQuestion()'),'final start plan must be selected before detached prepared DOM is invalidated');
 });
