@@ -33,6 +33,16 @@ test('feedback enhancement is shared, accessible and reacts to answer DOM change
   assert.match(source,/new MutationObserver/);
 });
 
+test('learner-facing answer feedback uses skill language instead of internal knowledge-point wording',()=>{
+  const source=read('public/feedback-ui.js');
+  const home=read('public/index.html');
+  assert.match(source,/這項技能會優先安排複習/);
+  assert.match(source,/提高這項技能的複習優先度/);
+  assert.match(home,/這項技能會優先複習/);
+  assert.doesNotMatch(source,/這個知識點/);
+  assert.doesNotMatch(home,/這個知識點/);
+});
+
 test('homepage answer feedback and local progress complete before cloud persistence starts',()=>{
   const source=read('public/feedback-ui.js');
   assert.match(source,/function instantAnswer\(event\)/);
