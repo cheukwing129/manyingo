@@ -73,3 +73,15 @@ test('view lazy loading deduplicates scripts before the full idle runtime comple
   assert.match(source,/if\(deferredScriptPresent\(src\)\)/);
   assert.match(source,/function loadRuntimeSequence\(files\)/);
 });
+
+
+test('first lazy home view shows a temporary accessible loading state',()=>{
+  assert.match(source,/function viewHost\(view\)/);
+  assert.match(source,/function showViewLoading\(view\)/);
+  assert.match(source,/home-view-loading/);
+  assert.match(source,/role="status" aria-live="polite">正在載入…/);
+  assert.match(source,/function clearViewLoading\(view\)/);
+  assert.match(source,/function requestViewRuntime\(view\)/);
+  assert.match(source,/showViewLoading\(key\);return window\.ManjingoEnsureViewRuntime\(key\)\.then\(result=>\{clearViewLoading\(key\)/);
+  assert.match(source,/if\(view!=='today'\)void requestViewRuntime\(view\)\.catch/);
+});
