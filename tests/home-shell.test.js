@@ -65,6 +65,19 @@ test('primary sections become a mobile app bottom navigation with icons and safe
   assert.match(source,/showView\(view\);scrollViewTop\(view\)/);
 });
 
+test('quiz start waits for study UX and snapshots the session before rendering the first question',()=>{
+  const html=read('public/index.html');
+  const start=html.match(/document\.getElementById\('start'\)\.onclick=async function\(\)\{[\s\S]*?\};/);
+  assert.ok(start,'async start handler missing');
+  const block=start[0];
+  assert.match(block,/await shell\.ensureStudyUxRuntime\(\)\.catch\(\(\)=>false\)/);
+  assert.match(block,/summary\.reset\(\{page:'home'\}\)/);
+  assert.match(block,/start\.dataset\.studyStarting==='1'/);
+  assert.match(block,/start\.disabled=true/);
+  assert.ok(block.indexOf("summary.reset({page:'home'})")<block.indexOf('renderQuestion()'));
+  assert.ok(block.indexOf('await shell.ensureStudyUxRuntime()')<block.indexOf('renderQuestion()'));
+});
+
 test('starting a quiz enters a distraction-free study shell with progress and exit controls',()=>{
   const source=read('public/home-shell.js');
   assert.match(source,/const STUDY_CLASS='study-focus'/);
