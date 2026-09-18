@@ -30,6 +30,8 @@ test('detached prepared controls resolve the live quiz host after activation',()
   assert.match(home,/const box=liveQuiz\(\);if\(box\)answer\(box,q,value\)/);
   assert.match(home,/const box=liveQuiz\(\);if\(box\)answer\(box,q,x\)/);
   assert.match(home,/invalidatePreparedQuestion\(\);if\(!questions\.length&&currentPlanSource!=='cloud'\)/);
-  const start=home.match(/document\.getElementById\('start'\)\.onclick=async function\(\)\{[\s\S]*?\};/)[0];
+  const startAt=home.indexOf("document.getElementById('start').onclick=async function()"),endAt=home.indexOf('function revealApp()',startAt);
+  assert.ok(startAt>=0&&endAt>startAt,'start handler missing');
+  const start=home.slice(startAt,endAt);
   assert.ok(start.indexOf('rebuildStartPlan()')<start.indexOf('invalidatePreparedQuestion()'),'final start plan must be selected before detached prepared DOM is invalidated');
 });
