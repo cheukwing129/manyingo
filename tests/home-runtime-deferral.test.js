@@ -75,6 +75,27 @@ test('secondary view UI stays out of automatic background runtime',()=>{
   assert.match(source,/results:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/mastery-dashboard\.js'\]/);
 });
 
+test('study feedback runtime stays lazy and resets summary before the first question',()=>{
+  const study=source.match(/const STUDY_RUNTIME=\[(.*?)\];/s);
+  const deferred=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
+  assert.ok(study,'study runtime list missing');
+  assert.ok(deferred,'deferred runtime list missing');
+  assert.match(study[1],/\.\/learning-path\.js/);
+  for(const file of ['mascot-runtime.js','feedback-ui.js','session-summary.js']){
+    assert.match(study[1],new RegExp(file.replaceAll('.','\\.')));
+    assert.doesNotMatch(deferred[1],new RegExp(file.replaceAll('.','\\.')));
+  }
+  assert.match(source,/function ensureStudyRuntime\(\)/);
+  assert.match(source,/loadRuntimeSequence\(STUDY_RUNTIME\)/);
+  assert.match(source,/return studyRuntimePromise\.then\(\(\)=>\{resetStudySessionSummary\(\);return true\}\)/);
+  assert.match(source,/window\.ManjingoEnsureStudyRuntime=ensureStudyRuntime/);
+  const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  const start=home.match(/document\.getElementById\('start'\)\.onclick=async function\(\)\{[\s\S]*?\};/)[0];
+  assert.match(start,/await shell\.ensureStudyRuntime\(\)\.catch\(\(\)=>false\)/);
+  assert.ok(start.indexOf('await shell.ensureStudyRuntime()')<start.indexOf('renderQuestion()'),'study runtime must be ready before the first question renders');
+  assert.ok(start.indexOf('renderQuestion()')<start.indexOf('shell.focusQuiz()'),'first question should render before study focus begins');
+});
+
 test('view lazy loading deduplicates scripts before the full idle runtime completes',()=>{
   assert.match(source,/const deferredScriptPromises=new Map\(\),viewRuntimePromises=new Map\(\)/);
   assert.match(source,/function deferredScriptPresent\(src\)/);
