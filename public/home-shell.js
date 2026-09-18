@@ -4,7 +4,7 @@ const VIEWS={today:'homeToday',path:'homePath',weakness:'homeWeakness',results:'
 const NAV_ITEMS={today:{icon:'🏠',label:'今日'},path:{icon:'🗺️',label:'路徑'},weakness:{icon:'🎯',label:'弱點'},results:{icon:'📈',label:'成果'}};
 const STUDY_CLASS='study-focus';
 const STARTUP_RUNTIME_CORE=['./reorder-question.js','./question-metadata-v1.js','./question-diversity-v1.js','./question-rotation.js','./answer-outbox.js'];
-const VIEW_RUNTIME_COMMON=['./curriculum-v1.js','./skill-evidence-v1.js','./skill-mastery-v1.js','./skill-results-v1.js','./practice-effectiveness.js'];
+const VIEW_RUNTIME_COMMON=['./curriculum-v1.js','./skill-evidence-v1.js','./skill-mastery-v1.js','./skill-first-plan.js','./skill-results-v1.js','./practice-effectiveness.js'];
 const VIEW_RUNTIME={
  path:[...VIEW_RUNTIME_COMMON,'./learning-path.js','./learning-path-ui.js'],
  weakness:[...VIEW_RUNTIME_COMMON,'./weakness-panel.js'],
