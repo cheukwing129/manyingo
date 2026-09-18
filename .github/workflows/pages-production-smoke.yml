@@ -81,7 +81,8 @@ jobs:
                curl -fsS "$MANJINGO_BASE_URL/question-pack-settext-language-01.js" | grep -q 'stl1q036' && \
                curl -fsS "$MANJINGO_BASE_URL/question-pack-settext-language-02.js" | grep -q 'stl2q024' && \
                curl -fsS "$MANJINGO_BASE_URL/content-catalog.js" | grep -q 'question-pack-settext-language-02.js' && \
-               curl -fsS "$MANJINGO_BASE_URL/home-shell.js" | grep -q 'stage3-reading.js'; then
+               curl -fsS "$MANJINGO_BASE_URL/home-shell.js" | grep -q 'stage3-reading.js' && \
+               curl -fsS "$MANJINGO_BASE_URL/?perf=1" | grep -q 'studyPerfPanel'; then
               echo "Pages reliability, beta UX recovery/sync, Stage 3 diagnostics/calibration, and prescribed-text assets are available."
               exit 0
             fi
@@ -108,6 +109,9 @@ jobs:
       - name: Smoke test deployed sync guard and homepage contracts
         if: steps.production_scope.outputs.needs_smoke == 'true'
         run: node scripts/smoke_sync_guard.mjs
+      - name: Smoke test mobile cold study start
+        if: steps.production_scope.outputs.needs_smoke == 'true'
+        run: npm run smoke:study-start-mobile
       - name: Smoke test deployed answer outbox
         if: steps.production_scope.outputs.needs_smoke == 'true'
         run: node scripts/smoke_answer_outbox.mjs

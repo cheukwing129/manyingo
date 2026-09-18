@@ -14,6 +14,7 @@
     "test": "node scripts/build_server_kp_universe.cjs --check && node scripts/build_server_question_index.cjs --check && node scripts/build_startup_bundles.cjs --check && node scripts/validate_mascot_art.cjs && node scripts/check_mascot_happy_p1.cjs && node scripts/check_mascot_encouraging_p2.cjs && node scripts/check_mascot_thinking_p3.cjs && node scripts/check_mascot_determined_p4.cjs && node scripts/check_mascot_celebrate_p5.cjs && node --test functions/*.test.js tests/*.test.js",
     "smoke:stage3": "node scripts/smoke_stage3_ui.mjs",
     "smoke:pages": "node scripts/smoke_sync_guard.mjs && node scripts/smoke_answer_outbox.mjs && node scripts/smoke_practice_reliability.mjs && node scripts/smoke_pages_api.mjs",
+    "smoke:study-start-mobile": "node scripts/smoke_study_start_mobile.mjs",
     "deploy": "wrangler pages deploy public"
   },
   "devDependencies": {
