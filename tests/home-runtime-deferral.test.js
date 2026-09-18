@@ -75,6 +75,17 @@ test('secondary view UI stays out of automatic background runtime',()=>{
   assert.match(source,/results:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/mastery-dashboard\.js'\]/);
 });
 
+test('runtime already covered by view or study loaders stays out of automatic background',()=>{
+  const deferred=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
+  const common=source.match(/const VIEW_RUNTIME_COMMON=\[(.*?)\];/s);
+  const study=source.match(/const STUDY_RUNTIME=\[(.*?)\];/s);
+  assert.ok(deferred&&common&&study,'runtime groups missing');
+  for(const file of ['learning-path.js','skill-results-v1.js'])assert.doesNotMatch(deferred[1],new RegExp(file.replaceAll('.','\\.')));
+  assert.match(common[1],/\.\/skill-results-v1\.js/);
+  assert.match(study[1],/\.\/learning-path\.js/);
+  assert.match(source,/path:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/learning-path\.js','\.\/learning-path-ui\.js'\]/);
+});
+
 test('study feedback runtime stays lazy and resets summary before the first question',()=>{
   const study=source.match(/const STUDY_RUNTIME=\[(.*?)\];/s);
   const deferred=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
