@@ -241,6 +241,23 @@ test('study start metrics stay local and record touch and render milestones',()=
   assert.ok(start.indexOf('const focusCompletedAt=perfNow()')<start.indexOf('publishStudyStartMetrics('));
 });
 
+test('study start diagnostic panel is opt-in and local-only',()=>{
+  const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+  const helper=home.match(/function studyPerfMode\(\)[\s\S]*?\nfunction publishStudyStartMetrics/);
+  assert.ok(helper,'diagnostic helper missing');
+  assert.match(helper[0],/new URLSearchParams\(location\.search\)\.get\('perf'\)==='1'/);
+  assert.match(helper[0],/id='studyPerfPanel'|panel\.id='studyPerfPanel'/);
+  assert.match(helper[0],/手指→第一題/);
+  assert.match(helper[0],/click→第一題/);
+  assert.match(helper[0],/click→runtime ready/);
+  assert.match(helper[0],/計劃來源/);
+  assert.match(helper[0],/pointer-events:none/);
+  assert.doesNotMatch(helper[0],/fetch\(|sendBeacon|localStorage|sessionStorage|cloudModule|import\(/);
+  const publish=home.match(/function publishStudyStartMetrics\([\s\S]*?\nfunction localDate/);
+  assert.ok(publish,'study start metrics publisher missing');
+  assert.match(publish[0],/window\.ManjingoStudyStartMetrics=metrics;renderStudyPerfPanel\(metrics\)/);
+});
+
 test('start plan rebuild refreshes adaptive local questions without downgrading a cached cloud plan',()=>{
   const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
   assert.match(home,/let localQuestions=content\?content\.questions\.slice\(\):\[\]/);
