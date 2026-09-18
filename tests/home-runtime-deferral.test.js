@@ -50,9 +50,26 @@ test('homepage parser core is much smaller than the legacy app runtime',()=>{
 test('secondary UI and account work stays off parser startup and yields to study input',()=>{
   for(const file of ['learning-path-ui.js','weakness-panel.js','mastery-dashboard.js','practice-effectiveness.js','account-sync.js','account-ui.js'])assert.match(source,new RegExp("'\\./"+file.replaceAll('.','\\.')+"'"));
   assert.match(source,/function whenDomReady\(\)\{if\(document\.readyState!=='loading'\)return Promise\.resolve\(true\)/);
-  assert.match(source,/deferredRuntimePromise=whenDomReady\(\)\.then\(\(\)=>DEFERRED_APP_RUNTIME\.reduce/);
+  assert.match(source,/deferredRuntimePromise=whenDomReady\(\)\.then\(\(\)=>loadRuntimeSequence\(DEFERRED_APP_RUNTIME\)\)/);
   assert.match(source,/runtimeStudyActive\(\)\|\|Date\.now\(\)-lastInteractionAt<900/);
   assert.match(source,/requestIdleCallback\(run,\{timeout:3500\}\)/);
-  assert.match(source,/view!=='today'&&window\.ManjingoEnsureAppRuntime/);
+  assert.match(source,/view!=='today'&&window\.ManjingoEnsureViewRuntime/);
   assert.match(source,/window\.ManjingoStartupRuntimeBundled=true/);
+});
+
+test('secondary home views lazy-load only their required runtime groups',()=>{
+  assert.match(source,/const VIEW_RUNTIME_COMMON=\['\.\/curriculum-v1\.js','\.\/skill-evidence-v1\.js','\.\/skill-mastery-v1\.js','\.\/skill-results-v1\.js','\.\/practice-effectiveness\.js'\]/);
+  assert.match(source,/path:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/learning-path\.js','\.\/learning-path-ui\.js'\]/);
+  assert.match(source,/weakness:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/weakness-panel\.js'\]/);
+  assert.match(source,/results:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/mastery-dashboard\.js'\]/);
+  assert.match(source,/function ensureViewRuntime\(view\)/);
+  assert.match(source,/window\.ManjingoEnsureViewRuntime=ensureViewRuntime/);
+});
+
+test('view lazy loading deduplicates scripts before the full idle runtime completes',()=>{
+  assert.match(source,/const deferredScriptPromises=new Map\(\),viewRuntimePromises=new Map\(\)/);
+  assert.match(source,/function deferredScriptPresent\(src\)/);
+  assert.match(source,/if\(deferredScriptPromises\.has\(src\)\)return deferredScriptPromises\.get\(src\)/);
+  assert.match(source,/if\(deferredScriptPresent\(src\)\)/);
+  assert.match(source,/function loadRuntimeSequence\(files\)/);
 });
