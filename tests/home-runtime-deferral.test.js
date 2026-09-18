@@ -75,6 +75,19 @@ test('secondary view UI stays out of automatic background runtime',()=>{
   assert.match(source,/results:\[\.\.\.VIEW_RUNTIME_COMMON,'\.\/mastery-dashboard\.js'\]/);
 });
 
+test('study UX stays out of idle background and preloads before quiz start',()=>{
+  assert.match(source,/const STUDY_UX_RUNTIME=\['\.\/session-summary\.js','\.\/feedback-ui\.js'\]/);
+  const match=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
+  assert.ok(match,'deferred runtime list missing');
+  for(const file of ['session-summary.js','feedback-ui.js','mascot-runtime.js'])assert.doesNotMatch(match[1],new RegExp(file.replaceAll('.','\\.')));
+  assert.match(source,/function ensureStudyUxRuntime\(\)/);
+  assert.match(source,/loadRuntimeSequence\(STUDY_UX_RUNTIME\)/);
+  assert.match(source,/window\.ManjingoEnsureStudyUxRuntime=ensureStudyUxRuntime/);
+  assert.match(source,/function installStudyUxPrefetch\(\)/);
+  assert.match(source,/\['pointerdown','focus','keydown'\]\.forEach/);
+  assert.match(source,/start\.addEventListener\(name,prefetchStudyUxRuntime\)/);
+});
+
 test('view lazy loading deduplicates scripts before the full idle runtime completes',()=>{
   assert.match(source,/const deferredScriptPromises=new Map\(\),viewRuntimePromises=new Map\(\)/);
   assert.match(source,/function deferredScriptPresent\(src\)/);
