@@ -20,6 +20,38 @@ test('advanced-mode worker parses as an ES module and preserves static asset del
  assert.equal(await response.text(),'asset');
 });
 
+test('Firebase Auth helper is transparently proxied to firebaseapp.com',async()=>{
+ const mod=await loadWorker();
+ const originalFetch=globalThis.fetch;
+ let seenRequest=null,seenOptions=null,assetCalled=false;
+ globalThis.fetch=async(request,options)=>{
+  seenRequest=request;
+  seenOptions=options;
+  return new Response(null,{status:307,headers:{location:'https://manjingo-95d9a.firebaseapp.com/__/auth/handler?step=2','x-upstream':'firebase'}});
+ };
+ try{
+  const request=new Request('https://manyingo.pages.dev/__/auth/handler?apiKey=test&mode=redirect',{
+   method:'POST',
+   headers:{'content-type':'application/x-www-form-urlencoded','x-proxy-test':'yes'},
+   body:'state=abc'
+  });
+  const response=await mod.default.fetch(request,{ASSETS:{fetch(){assetCalled=true;return new Response('asset')}}});
+  assert.equal(assetCalled,false);
+  assert.equal(new URL(seenRequest.url).origin,'https://manjingo-95d9a.firebaseapp.com');
+  assert.equal(new URL(seenRequest.url).pathname,'/__/auth/handler');
+  assert.equal(new URL(seenRequest.url).search,'?apiKey=test&mode=redirect');
+  assert.equal(seenRequest.method,'POST');
+  assert.equal(seenRequest.headers.get('x-proxy-test'),'yes');
+  assert.equal(await seenRequest.text(),'state=abc');
+  assert.equal(seenOptions.redirect,'manual');
+  assert.equal(response.status,307);
+  assert.equal(response.headers.get('x-upstream'),'firebase');
+  assert.equal(response.headers.get('location'),'https://manyingo.pages.dev/__/auth/handler?step=2');
+ }finally{
+  globalThis.fetch=originalFetch;
+ }
+});
+
 test('learning API rejects unauthenticated requests before Firestore access',async()=>{
  const mod=await loadWorker();
  const response=await mod.default.fetch(new Request('https://manjingo.pages.dev/api/daily-plan'),{});
