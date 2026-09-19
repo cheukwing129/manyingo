@@ -549,6 +549,22 @@ async function dueKnowledge(env, uid, trace) {
   return json({ dueKpIds: due, count: due.length });
 }
 
+const FIREBASE_AUTH_PROXY_ORIGIN='https://manjingo-95d9a.firebaseapp.com';
+
+async function proxyFirebaseAuth(request) {
+  const incoming=new URL(request.url);
+  const target=new URL(incoming.pathname+incoming.search,FIREBASE_AUTH_PROXY_ORIGIN);
+  const upstream=await fetch(new Request(target.toString(),request),{redirect:'manual'});
+  const location=upstream.headers.get('location');
+  if(!location)return upstream;
+  let next;
+  try{next=new URL(location,FIREBASE_AUTH_PROXY_ORIGIN)}catch(_){return upstream}
+  if(next.origin!==FIREBASE_AUTH_PROXY_ORIGIN||!next.pathname.startsWith('/__/auth/'))return upstream;
+  const headers=new Headers(upstream.headers);
+  headers.set('location',new URL(next.pathname+next.search+next.hash,incoming.origin).toString());
+  return new Response(upstream.body,{status:upstream.status,statusText:upstream.statusText,headers});
+}
+
 async function api(request, env, trace, ctx) {
   const url = new URL(request.url);
   if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION, kpUniversePolicy:SERVER_KP_UNIVERSE.VERSION, questionIndexPolicy:SERVER_QUESTION_INDEX.version, questionIndexCount:SERVER_QUESTION_INDEX.count, planBootstrapPolicy:'fresh-anonymous-zero-read-v2' });
@@ -566,6 +582,7 @@ async function api(request, env, trace, ctx) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/__/auth/')) return proxyFirebaseAuth(request);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     const trace=createTrace();
     try { return withServerTiming(await api(request, env, trace, ctx),trace); }
