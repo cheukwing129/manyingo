@@ -91,5 +91,6 @@ test('homepage replans remaining queue on learning-state changes without resetti
  assert.match(html,/function refreshCloudRemainingPlan\(\)/);
  assert.match(html,/manjingo:learning-state-changed/);
  assert.match(html,/剩餘學習已按最新掌握度即時重排/);
- assert.match(html,/id="queueSummary"/);
+ assert.doesNotMatch(html,/id="queueSummary"/);
+ assert.match(html,/showPlan\(merged\.remaining,currentPlanSource,true\);schedulePreparedQuestion\(index\+1\)/);
 });
