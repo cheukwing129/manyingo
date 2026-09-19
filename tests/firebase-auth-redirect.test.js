@@ -29,3 +29,10 @@ test('account UI surfaces redirect failure while the user remains a guest',()=>{
   assert.match(source,/render\(state,redirectMessage\(fb,state\)\)/);
   assert.match(source,/onAccountChanged\(next=>render\(next,redirectMessage\(fb,next\)\)\)/);
 });
+
+
+test('Firebase Auth uses the app origin after the reverse proxy is available',()=>{
+  const source=read('public/firebase-config.js');
+  assert.match(source,/authDomain:\s*"manyingo\.pages\.dev"/);
+  assert.doesNotMatch(source,/authDomain:\s*"manjingo-95d9a\.firebaseapp\.com"/);
+});
