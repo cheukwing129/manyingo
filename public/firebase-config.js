@@ -18,7 +18,10 @@ let firebaseReadyPromise = null;
 let currentUserId = null;
 let redirectChecked = false;
 let redirectCheckPromise = null;
+let redirectFailure = null;
 let loginPromise = null;
+const GOOGLE_REDIRECT_PENDING_KEY = 'manyingo_google_redirect_pending_v1';
+const GOOGLE_REDIRECT_PENDING_TTL_MS = 15 * 60 * 1000;
 let outboxFlushPromise = null;
 let outboxRetryTimer = null;
 const answerInFlight = new Map();
@@ -72,6 +75,37 @@ function preferRedirectFlow() {
   try { return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches && window.innerWidth < 820; }
   catch (_) { return false; }
 }
+function redirectSessionStorage() {
+  try { return typeof sessionStorage !== 'undefined' ? sessionStorage : null; }
+  catch (_) { return null; }
+}
+function hasFreshGoogleRedirectPending() {
+  const store=redirectSessionStorage();
+  if(!store)return false;
+  try {
+    const startedAt=Number(store.getItem(GOOGLE_REDIRECT_PENDING_KEY))||0;
+    if(!startedAt)return false;
+    if(Date.now()-startedAt>GOOGLE_REDIRECT_PENDING_TTL_MS){store.removeItem(GOOGLE_REDIRECT_PENDING_KEY);return false;}
+    return true;
+  } catch (_) { return false; }
+}
+function markGoogleRedirectPending() {
+  redirectFailure=null;
+  const store=redirectSessionStorage();
+  if(!store)return false;
+  try { store.setItem(GOOGLE_REDIRECT_PENDING_KEY,String(Date.now())); return true; }
+  catch (_) { return false; }
+}
+function clearGoogleRedirectPending() {
+  const store=redirectSessionStorage();
+  if(!store)return false;
+  try { store.removeItem(GOOGLE_REDIRECT_PENDING_KEY); return true; }
+  catch (_) { return false; }
+}
+function redirectFailureFrom(error, fallbackCode='auth/redirect-completion-failed') {
+  return { code:String(error&&error.code||fallbackCode), message:'Google 登入未完成，請重試' };
+}
+export function getGoogleRedirectIssue() { return redirectFailure ? { ...redirectFailure } : null; }
 function markDailyPlanDeferred(userId) {
   const uid=String(userId||'');
   if(uid)dailyPlanDeferredUsers.add(uid);
@@ -88,12 +122,26 @@ export async function completeGoogleRedirect() {
   if (redirectCheckPromise) return redirectCheckPromise;
   redirectCheckPromise = (async () => {
     const { authModule } = await getFirebase();
+    const pending=hasFreshGoogleRedirectPending();
     try {
       const result = await authModule.getRedirectResult(auth);
       redirectChecked = true;
-      if (result && result.user) currentUserId = result.user.uid;
-      else if (auth.currentUser) currentUserId = auth.currentUser.uid;
-      return accountSnapshot(auth.currentUser);
+      if (result && result.user) {
+        currentUserId = result.user.uid;
+        redirectFailure=null;
+        clearGoogleRedirectPending();
+      } else if (auth.currentUser) {
+        currentUserId = auth.currentUser.uid;
+      }
+      const snapshot=accountSnapshot(auth.currentUser);
+      if(pending&&!snapshot.google){
+        redirectFailure=redirectFailureFrom(null,'auth/redirect-result-missing');
+        clearGoogleRedirectPending();
+      } else if(pending&&snapshot.google) {
+        redirectFailure=null;
+        clearGoogleRedirectPending();
+      }
+      return snapshot;
     } catch (error) {
       if (isCredentialConflict(error)) {
         const credential = credentialFromGoogleError(authModule, error);
@@ -101,10 +149,14 @@ export async function completeGoogleRedirect() {
           const result = await authModule.signInWithCredential(auth, credential);
           currentUserId = result.user.uid;
           redirectChecked = true;
+          redirectFailure=null;
+          clearGoogleRedirectPending();
           return accountSnapshot(result.user);
         }
       }
       redirectChecked = true;
+      redirectFailure=redirectFailureFrom(error);
+      clearGoogleRedirectPending();
       throw error;
     }
   })().finally(() => { redirectCheckPromise = null; });
@@ -152,9 +204,15 @@ export async function signInWithGoogle(options = {}) {
   provider.setCustomParameters({ prompt:'select_account' });
   const useRedirect = options.redirect === true || (options.redirect !== false && preferRedirectFlow());
   if (useRedirect) {
-    if (current.isAnonymous) await authModule.linkWithRedirect(current, provider);
-    else await authModule.signInWithRedirect(auth, provider);
-    return { ...accountSnapshot(current), linked:false, redirecting:true };
+    markGoogleRedirectPending();
+    try {
+      if (current.isAnonymous) await authModule.linkWithRedirect(current, provider);
+      else await authModule.signInWithRedirect(auth, provider);
+      return { ...accountSnapshot(current), linked:false, redirecting:true };
+    } catch (error) {
+      clearGoogleRedirectPending();
+      throw error;
+    }
   }
   try {
     const result = current.isAnonymous ? await authModule.linkWithPopup(current, provider) : await authModule.signInWithPopup(auth, provider);
@@ -170,9 +228,15 @@ export async function signInWithGoogle(options = {}) {
       return { ...accountSnapshot(result.user), linked:false, mergedExisting:true, redirecting:false };
     }
     if (String(error&&error.code||'') === 'auth/popup-blocked') {
-      if (current.isAnonymous) await authModule.linkWithRedirect(current, provider);
-      else await authModule.signInWithRedirect(auth, provider);
-      return { ...accountSnapshot(current), linked:false, redirecting:true };
+      markGoogleRedirectPending();
+      try {
+        if (current.isAnonymous) await authModule.linkWithRedirect(current, provider);
+        else await authModule.signInWithRedirect(auth, provider);
+        return { ...accountSnapshot(current), linked:false, redirecting:true };
+      } catch (redirectError) {
+        clearGoogleRedirectPending();
+        throw redirectError;
+      }
     }
     throw error;
   }
