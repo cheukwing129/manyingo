@@ -8,8 +8,8 @@ const wrangler=fs.readFileSync(path.join(root,'wrangler.toml'),'utf8');
 const routes=JSON.parse(fs.readFileSync(path.join(root,'public','_routes.json'),'utf8'));
 const worker=fs.readFileSync(path.join(root,'public','_worker.js'),'utf8');
 
-test('Pages invokes the advanced-mode worker only for API routes',()=>{
-  assert.deepEqual(routes,{version:1,include:['/api/*'],exclude:[]});
+test('Pages invokes the advanced-mode worker only for API and Firebase Auth helper routes',()=>{
+  assert.deepEqual(routes,{version:1,include:['/api/*','/__/auth/*'],exclude:[]});
   assert.doesNotMatch(wrangler,/\[placement\][\s\S]*mode = "smart"/);
 });
 
