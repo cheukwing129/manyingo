@@ -5,7 +5,7 @@ import './answer-outbox.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCGhpSFHy3MDf75fhAJtrHTQJoa18SjqAM",
-  authDomain: "manjingo-95d9a.firebaseapp.com",
+  authDomain: "manyingo.pages.dev",
   projectId: "manjingo-95d9a",
   storageBucket: "manjingo-95d9a.firebasestorage.app",
   messagingSenderId: "653860419855",
