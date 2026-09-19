@@ -123,4 +123,5 @@ test('session summary is loaded after answer feedback and preserves homepage com
  assert.match(css,/Learning session completion/);
  assert.match(css,/\.session-summary-metrics/);
  assert.match(css,/\.session-summary-impact/);
+ assert.match(css,/\.session-summary-action\{display:flex;align-items:center;justify-content:center;width:100%;margin-top:18px!important/);
 });
