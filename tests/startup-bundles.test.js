@@ -101,7 +101,8 @@ test('cloud account work yields to the first interactive render and shares login
   const firebase = read('public/firebase-config.js');
   assert.match(home, /setTimeout\(ready,4000\)/);
   assert.match(home, /if\(studyActive\(\)\)\{setTimeout\(ready,1200\);return\}/);
-  assert.match(accountUi, /setTimeout\(ready,4000\)/);
+  assert.match(accountUi, /setTimeout\(ready,pendingRedirect\?0:4000\)/);
+  assert.match(accountUi, /const pendingRedirect=hasPendingGoogleRedirect\(\)/);
   assert.match(accountSync, /setTimeout\(ready,4000\)/);
   assert.match(accountSync, /if\(studyActive\(\)\)\{schedule\(\);return\}/);
   assert.match(firebase, /if \(loginPromise\) return loginPromise/);
