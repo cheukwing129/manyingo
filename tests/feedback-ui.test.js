@@ -90,9 +90,11 @@ test('deferred unlock remains a safe fallback after the answer handler marks the
 test('answered study session keeps next CTA visible independently of cloud progress details',()=>{
   const source=read('public/feedback-ui.js');
   assert.match(source,/instantNextStyle/);
-  assert.match(source,/body\.study-focus #quiz\[data-answered="1"\]>#next\{position:fixed/);
+  assert.match(source,/body\.study-focus #quiz\[data-answered="1"\]>#next,#lessonApp\[data-answered="1"\] #lessonNext\{position:fixed/);
   assert.match(source,/bottom:max\(14px,env\(safe-area-inset-bottom,14px\)\)/);
   assert.match(source,/#quiz\[data-answered="1"\]\{padding-bottom:90px!important\}/);
+  assert.match(source,/#lessonApp\[data-answered="1"\] #lessonNext\{position:fixed/);
+  assert.match(source,/#lessonApp\[data-answered="1"\] \.lesson-content\{padding-bottom:90px!important\}/);
   const progressPos=source.indexOf("summary=build('summary','', '查看學習進度')");
   const unlockPos=source.indexOf('unlockNextNow(scope)');
   assert.ok(unlockPos>=0&&progressPos>=0,'both immediate next and optional progress UI should exist');

@@ -10,7 +10,7 @@ function installMascotStyle(){
 }
 function installFastNextStyle(){
  if(typeof document==='undefined'||document.getElementById('instantNextStyle'))return false;
- const style=document.createElement('style');style.id='instantNextStyle';style.textContent='body.study-focus #quiz[data-answered="1"]{padding-bottom:90px!important}body.study-focus #quiz[data-answered="1"]>#next{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom,14px));transform:translateX(-50%);z-index:70;width:min(calc(100% - 28px),600px);margin:0!important;box-shadow:0 8px 24px rgba(0,4,55,.18)}body.study-focus #quiz[data-answered="1"]>#next:disabled{display:none}@media(min-width:700px){body.study-focus #quiz[data-answered="1"]>#next{bottom:18px}}';document.head.appendChild(style);return true
+ const style=document.createElement('style');style.id='instantNextStyle';style.textContent='body.study-focus #quiz[data-answered="1"]{padding-bottom:90px!important}body.study-focus #quiz[data-answered="1"]>#next,#lessonApp[data-answered="1"] #lessonNext{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom,14px));transform:translateX(-50%);z-index:70;width:min(calc(100% - 28px),600px);margin:0!important;box-shadow:0 8px 24px rgba(0,4,55,.18)}body.study-focus #quiz[data-answered="1"]>#next:disabled,#lessonApp[data-answered="1"] #lessonNext:disabled{display:none}#lessonApp[data-answered="1"] .lesson-content{padding-bottom:90px!important}@media(min-width:700px){body.study-focus #quiz[data-answered="1"]>#next,#lessonApp[data-answered="1"] #lessonNext{bottom:18px}}';document.head.appendChild(style);return true
 }
 function questionForScope(scope){
  const content=window.ManjingoContent;if(!content||!Array.isArray(content.questions)||!scope||!scope.querySelector)return null;
