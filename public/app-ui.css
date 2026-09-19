@@ -150,7 +150,7 @@ body .feedback-ui.wrong,#lessonApp .feedback-ui.wrong{border-color:#ffc5c5}
 .session-summary-impact{text-align:left;padding:12px 13px;border-radius:14px;background:#f7fff1;border:1px solid #dcedd0}
 .session-summary-impact>strong{display:block;color:var(--ui-green-dark);font-size:11px;margin-bottom:4px}
 .session-summary-impact p{margin:3px 0;color:var(--ui-text);font-size:12px;font-weight:750;line-height:1.5}
-.session-summary-action{margin-top:14px!important;text-decoration:none}
+.session-summary-action{display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;margin-top:14px!important;text-decoration:none}
 #lessonApp .session-summary{max-width:520px;margin:0 auto}
 
 /* Lesson consistency */
