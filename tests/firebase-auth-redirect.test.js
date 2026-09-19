@@ -36,3 +36,13 @@ test('Firebase Auth uses the app origin after the reverse proxy is available',()
   assert.match(source,/authDomain:\s*"manyingo\.pages\.dev"/);
   assert.doesNotMatch(source,/authDomain:\s*"manjingo-95d9a\.firebaseapp\.com"/);
 });
+
+
+test('pending Google redirect bypasses the normal 4 second account UI delay',()=>{
+  const source=read('public/account-ui.js');
+  assert.match(source,/function hasPendingGoogleRedirect\(\)/);
+  assert.match(source,/manyingo_google_redirect_pending_v1/);
+  assert.match(source,/const pendingRedirect=hasPendingGoogleRedirect\(\)/);
+  assert.match(source,/setTimeout\(ready,pendingRedirect\?0:4000\)/);
+  assert.match(source,/if\(pendingRedirect\)\{setTimeout\(run,0\);return\}/);
+});
