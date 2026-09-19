@@ -33,6 +33,15 @@ test('feedback enhancement is shared, accessible and reacts to answer DOM change
   assert.match(source,/new MutationObserver/);
 });
 
+test('correct answers collapse teaching detail while wrong answers stay expanded',()=>{
+  const source=read('public/feedback-ui.js');
+  assert.match(source,/isCorrect\?build\('details','feedback-teaching feedback-teaching-collapsed'\):build\('div','feedback-teaching'\)/);
+  assert.match(source,/if\(isCorrect\)teaching\.appendChild\(build\('summary','', '查看解說'\)\)/);
+  const css=read('public/app-ui.css');
+  assert.match(css,/\.feedback-teaching>summary/);
+  assert.match(css,/\.feedback-teaching\[open\]>summary:after/);
+});
+
 test('learner-facing answer feedback uses skill language instead of internal knowledge-point wording',()=>{
   const source=read('public/feedback-ui.js');
   const home=read('public/index.html');
