@@ -59,17 +59,32 @@ test('home completion actions stay hash-only while lesson completion keeps an in
  assert.equal(lesson.action.href,'./index.html#masteryDashboard');
 });
 
-test('targeted remedial and reteach lesson completion return to learning results',()=>{
+test('lesson completion routes intervention outcomes instead of always returning to results',()=>{
  const targeted=summary.model({page:'lesson',targeted:true,remedial:false,reteach:false,kpId:'kp_virtual_yi',kpLabel:'以',answered:5,correct:4,xp:32,masteryDelta:9,unlockedStages:[]});
  assert.equal(targeted.title,'弱點補強完成');
  assert.equal(targeted.action.href,'./index.html#masteryDashboard');
  assert.match(summary.markup({page:'lesson',targeted:true,kpId:'kp_virtual_yi',kpLabel:'以',answered:5,correct:4,xp:32,masteryDelta:9,unlockedStages:[]}),/「以」掌握度提升 9/);
- const remedial=summary.model({page:'lesson',targeted:true,remedial:true,answered:2,correct:2,xp:16,masteryDelta:4,unlockedStages:[]});
+ const remedial=summary.model({page:'lesson',targeted:true,remedial:true,answered:2,correct:2,xp:16,masteryDelta:4,unlockedStages:[],interventionOutcome:{key:'remedial-effective',stable:true,needsAttention:false}});
  assert.equal(remedial.title,'補救驗證完成');
+ assert.equal(remedial.action.href,'./index.html#masteryDashboard');
  assert.equal(remedial.action.label,'查看學習成果');
- const reteach=summary.model({page:'lesson',targeted:true,reteach:true,answered:3,correct:2,xp:16,masteryDelta:3,unlockedStages:[]});
+ const reteach=summary.model({page:'lesson',targeted:true,reteach:true,answered:3,correct:2,xp:16,masteryDelta:3,unlockedStages:[],interventionOutcome:{key:'observe',stable:false,needsAttention:true}});
  assert.equal(reteach.title,'概念重教完成');
- assert.equal(reteach.action.href,'./index.html#masteryDashboard');
+ assert.equal(reteach.action.href,'./index.html#weaknessPanel');
+ assert.equal(reteach.action.label,'查看學習重點');
+});
+
+test('lesson intervention outcome reuses the installed practice-effectiveness learning state',()=>{
+ const previous=global.ManjingoLocalLearning;
+ global.ManjingoLocalLearning={
+  getSkillRemediationStatus(){return{learningState:{key:'reteach-effective',label:'概念重教有效',priority:0}}}
+ };
+ assert.deepEqual(summary.lessonInterventionOutcome('kp_virtual_yi','fw.yi'),{key:'reteach-effective',stable:true,needsAttention:false,label:'概念重教有效'});
+ global.ManjingoLocalLearning={
+  getSkillRemediationStatus(){return{learningState:{key:'reteach',label:'需要概念重教',priority:4},needsConceptReteach:true}}
+ };
+ assert.deepEqual(summary.lessonInterventionOutcome('kp_virtual_yi','fw.yi'),{key:'reteach',stable:false,needsAttention:true,label:'需要概念重教'});
+ global.ManjingoLocalLearning=previous;
 });
 
 test('session summary counts provisional XP once and accepts delayed confirmed XP without duplicating the answer',()=>{
