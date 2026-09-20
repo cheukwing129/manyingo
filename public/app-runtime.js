@@ -159,7 +159,9 @@ const SOURCE_TEXT_OVERRIDES={
  lpq045:'loushiming',
  lpq064:'longzhongdui',
  lpq065:'shizhongshanji',
- lpq047:'hongmenyan'
+ lpq047:'hongmenyan',
+ ad1q022:'lianpo-linxiangru',
+ ad1q033:'caogui'
 };
 
 const SOURCE_SENTENCE_GROUPS={
@@ -184,7 +186,11 @@ const SOURCE_SENTENCE_GROUPS={
  p2q071:'sentence:loushiming:helouzhiyou',
  p2q072:'sentence:loushiming:helouzhiyou',
  lpq045:'sentence:loushiming:helouzhiyou',
- p3q030:'sentence:loushiming:helouzhiyou'
+ p3q030:'sentence:loushiming:helouzhiyou',
+ p3q025:'sentence:lianpo-linxiangru:tu-jian-qi',
+ lpq036:'sentence:lianpo-linxiangru:tu-jian-qi',
+ ad1q022:'sentence:lianpo-linxiangru:tu-jian-qi',
+ ad1q033:'sentence:caogui:heyi-zhan'
 };
 
 const DSE_SET_TEXT_IDS=new Set([
