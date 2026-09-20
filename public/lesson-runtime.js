@@ -163,6 +163,7 @@ const SOURCE_TEXT_OVERRIDES={
  p3q045:'shengyouhuan',
  p3q046:'yuwosuoyu',
  lpq061:'yuwosuoyu',
+ lpq055:'shengyouhuan',
  ad1q022:'lianpo-linxiangru',
  ad1q033:'caogui',
  ad3q002:'yueyanglou'
@@ -216,10 +217,18 @@ const SOURCE_KINDS=new Set(['set-text','classical-canon','historical','construct
 const DIFFICULTY_TIERS=new Set(['foundation','application','transfer']);
 const SOURCE_SCOPES=new Set(['sentence','passage','concept','cross-source']);
 const SOURCE_SCOPE_OVERRIDES={
+ p2q012:'passage',
+ p2q023:'passage',
+ p2q038:'passage',
+ p2q044:'passage',
+ p2q056:'passage',
+ p2q091:'passage',
  p3q004:'cross-source',
  p3q012:'cross-source',
  lpq041:'cross-source',
+ lpq055:'passage',
  cap1q011:'cross-source',
+ cap1q018:'passage',
  ad1q003:'cross-source',
  ad1q006:'cross-source',
  ad1q009:'cross-source',
