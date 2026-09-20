@@ -37,6 +37,7 @@ test('cross-sentence prompts retain passage-level provenance',()=>{
   const question=byId.get(id);
   assert.equal(question.sourceScope,'passage',id);
   assert.equal(question.sourceSentenceId,null,id);
+  assert.notEqual(question.sourceTextId,'CROSS',id);
  }
  assert.equal(byId.get('lpq055').sourceTextId,'shengyouhuan');
 });
