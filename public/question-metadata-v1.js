@@ -97,7 +97,9 @@ const SOURCE_TEXT_OVERRIDES={
  lpq045:'loushiming',
  lpq064:'longzhongdui',
  lpq065:'shizhongshanji',
- lpq047:'hongmenyan'
+ lpq047:'hongmenyan',
+ ad1q022:'lianpo-linxiangru',
+ ad1q033:'caogui'
 };
 
 const SOURCE_SENTENCE_GROUPS={
