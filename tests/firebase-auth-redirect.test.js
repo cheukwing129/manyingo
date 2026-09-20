@@ -38,11 +38,21 @@ test('Firebase Auth uses the app origin after the reverse proxy is available',()
 });
 
 
-test('pending Google redirect bypasses the normal 4 second account UI delay',()=>{
+test('account auth prewarms on the first idle slot while redirects stay immediate',()=>{
   const source=read('public/account-ui.js');
   assert.match(source,/function hasPendingGoogleRedirect\(\)/);
   assert.match(source,/manyingo_google_redirect_pending_v1/);
   assert.match(source,/const pendingRedirect=hasPendingGoogleRedirect\(\)/);
-  assert.match(source,/setTimeout\(ready,pendingRedirect\?0:4000\)/);
   assert.match(source,/if\(pendingRedirect\)\{setTimeout\(run,0\);return\}/);
+  assert.match(source,/requestIdleCallback\(run,\{timeout:1200\}\)/);
+  assert.match(source,/else setTimeout\(run,150\)\};ready\(\)\}/);
+  assert.doesNotMatch(source,/pendingRedirect\?0:4000/);
+});
+
+test('Google login paints busy feedback before Firebase initialization',()=>{
+  const source=read('public/account-ui.js');
+  const start=source.indexOf('async function login()'),end=source.indexOf('async function flushBeforeLogout',start),login=source.slice(start,end);
+  assert.ok(start>=0&&end>start,'login flow should exist');
+  assert.ok(login.indexOf('busy=true;render(null)')>=0,'login should repaint the button immediately');
+  assert.ok(login.indexOf('busy=true;render(null)')<login.indexOf('fb=await firebase()'),'busy feedback must appear before Firebase work');
 });
