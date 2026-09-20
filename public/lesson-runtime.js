@@ -202,6 +202,7 @@ const LEGACY_SET_TEXT_IDS=new Set([
 const SET_TEXT_IDS=new Set([...DSE_SET_TEXT_IDS,...LEGACY_SET_TEXT_IDS,...DSE_SET_TEXT_ALIASES.keys()]);
 const CORE_ACTIONS=new Set(['retain','refactor','merge']);
 const SOURCE_KINDS=new Set(['set-text','classical-canon','historical','constructed','mixed']);
+const DIFFICULTY_TIERS=new Set(['foundation','application','transfer']);
 
 function canonicalDseSetTextId(value){const id=String(value||'');return DSE_SET_TEXT_ALIASES.get(id)||id;}
 function isDseSetTextId(value){return DSE_SET_TEXT_IDS.has(canonicalDseSetTextId(value));}
@@ -255,6 +256,11 @@ function inferSourceKind(question){
   return isDseSetTextId(sourceTextId)||LEGACY_SET_TEXT_IDS.has(sourceTextId)?'set-text':'classical-canon';
 }
 
+function resolvedDifficultyTier(question){
+  const explicit=String(question&&question.difficultyTier||'');
+  return DIFFICULTY_TIERS.has(explicit)?explicit:'application';
+}
+
 function defaultTransferLevel(question,mode){
   const explicit=Number(question&&question.transferLevel);
   if(Number.isInteger(explicit)&&explicit>=0)return explicit;
@@ -289,7 +295,8 @@ function classify(question){
     legacyTextId:String(question&&question.textId||'')||null,
     sourceSentenceId:inferSourceSentenceId(question),
     sourceKind:inferSourceKind(question),
-    transferLevel:defaultTransferLevel(question,mode)
+    transferLevel:defaultTransferLevel(question,mode),
+    difficultyTier:resolvedDifficultyTier(question)
   };
 }
 
@@ -318,12 +325,14 @@ return{
   LEGACY_SET_TEXT_IDS,
   SET_TEXT_IDS,
   SOURCE_KINDS,
+  DIFFICULTY_TIERS,
   canonicalDseSetTextId,
   isDseSetTextId,
   normalizeSentence,
   quotedSegments,
   inferSourceSentenceId,
   resolvedSourceTextId,
+  resolvedDifficultyTier,
   classify,
   annotate,
   annotateAll,
