@@ -21,6 +21,19 @@ test('homepage stays local-first while cloud plan loads asynchronously',()=>{
   assert.match(html,/if\(studyActive\(\)\)\{setTimeout\(ready,1200\);return\}/);
 });
 
+test('Google login opens before account sync and only syncs after non-redirect completion',()=>{
+  const source=read('public/account-ui.js');
+  const loginStart=source.indexOf('async function login()');
+  const loginEnd=source.indexOf('async function flushBeforeLogout',loginStart);
+  assert.ok(loginStart>=0&&loginEnd>loginStart,'login flow should exist');
+  const login=source.slice(loginStart,loginEnd);
+  const signIn=login.indexOf('await fb.signInWithGoogle()');
+  const syncCall=login.indexOf('await manager.syncNow()');
+  assert.ok(signIn>=0,'Google sign-in should be invoked');
+  assert.ok(syncCall>signIn,'account sync must not block before Google sign-in');
+  assert.match(login,/if\(result&&result\.redirecting\)return;[\s\S]*await manager\.syncNow\(\)/);
+});
+
 test('sync retry only reports success when syncNow confirms ok',()=>{
   const source=read('public/account-ui.js');
   assert.match(source,/result&&result\.ok===true/);
