@@ -98,6 +98,9 @@ const SOURCE_TEXT_OVERRIDES={
  lpq064:'longzhongdui',
  lpq065:'shizhongshanji',
  lpq047:'hongmenyan',
+ p3q045:'shengyouhuan',
+ p3q046:'yuwosuoyu',
+ lpq061:'yuwosuoyu',
  ad1q022:'lianpo-linxiangru',
  ad1q033:'caogui'
 };
@@ -147,6 +150,20 @@ const SET_TEXT_IDS=new Set([...DSE_SET_TEXT_IDS,...LEGACY_SET_TEXT_IDS,...DSE_SE
 const CORE_ACTIONS=new Set(['retain','refactor','merge']);
 const SOURCE_KINDS=new Set(['set-text','classical-canon','historical','constructed','mixed']);
 const DIFFICULTY_TIERS=new Set(['foundation','application','transfer']);
+const SOURCE_SCOPES=new Set(['sentence','passage','concept','cross-source']);
+const SOURCE_SCOPE_OVERRIDES={
+ p3q004:'cross-source',
+ p3q012:'cross-source',
+ lpq041:'cross-source',
+ cap1q011:'cross-source',
+ ad1q021:'cross-source',
+ ad1q024:'cross-source',
+ ad1q030:'cross-source',
+ ad2q002:'cross-source',
+ ad2q004:'cross-source',
+ ad2q020:'cross-source',
+ ad2q023:'cross-source'
+};
 
 function canonicalDseSetTextId(value){const id=String(value||'');return DSE_SET_TEXT_ALIASES.get(id)||id;}
 function isDseSetTextId(value){return DSE_SET_TEXT_IDS.has(canonicalDseSetTextId(value));}
@@ -178,6 +195,7 @@ function inferSourceSentenceId(question){
   if(explicit)return explicit;
   const id=String(question&&question.id||'');
   if(SOURCE_SENTENCE_GROUPS[id])return SOURCE_SENTENCE_GROUPS[id];
+  if(SOURCE_SCOPE_OVERRIDES[id]==='cross-source')return null;
   const segments=quotedSegments(question&&question.q);
   if(!segments.length)return null;
   const longest=segments.slice().sort((a,b)=>normalizeSentence(b).length-normalizeSentence(a).length)[0];
@@ -190,6 +208,17 @@ function resolvedSourceTextId(question){
   if(explicit)return explicit;
   const id=String(question&&question.id||'');
   return SOURCE_TEXT_OVERRIDES[id]||String(question&&question.textId||'')||null;
+}
+
+function resolvedSourceScope(question){
+  const explicit=String(question&&question.sourceScope||'');
+  if(SOURCE_SCOPES.has(explicit))return explicit;
+  const id=String(question&&question.id||'');
+  if(SOURCE_SCOPE_OVERRIDES[id])return SOURCE_SCOPE_OVERRIDES[id];
+  if(inferSourceSentenceId(question))return'sentence';
+  const sourceTextId=resolvedSourceTextId(question);
+  if((question&&(question.passageId||question.passageText))||(sourceTextId&&sourceTextId!=='CROSS'))return'passage';
+  return'concept';
 }
 
 function inferSourceKind(question){
@@ -238,6 +267,7 @@ function classify(question){
     sourceTextId:resolvedSourceTextId(question),
     legacyTextId:String(question&&question.textId||'')||null,
     sourceSentenceId:inferSourceSentenceId(question),
+    sourceScope:resolvedSourceScope(question),
     sourceKind:inferSourceKind(question),
     transferLevel:defaultTransferLevel(question,mode),
     difficultyTier:resolvedDifficultyTier(question)
@@ -249,14 +279,15 @@ function annotateAll(questions){return(Array.isArray(questions)?questions:[]).ma
 function normalCoreQuestions(questions){return annotateAll(questions).filter(q=>q.normalCore)}
 
 function audit(questions){
-  const annotated=annotateAll(questions),byMode={},bySkill={},bySourceText={};
+  const annotated=annotateAll(questions),byMode={},bySkill={},bySourceText={},bySourceScope={};
   for(const q of annotated){
     byMode[q.curriculumMode]=(byMode[q.curriculumMode]||0)+1;
     const source=q.sourceTextId||'UNKNOWN';
     bySourceText[source]=(bySourceText[source]||0)+1;
+    bySourceScope[q.sourceScope]=(bySourceScope[q.sourceScope]||0)+1;
     for(const skillId of q.skillIds)bySkill[skillId]=(bySkill[skillId]||0)+1;
   }
-  return{total:annotated.length,byMode,bySkill,bySourceText};
+  return{total:annotated.length,byMode,bySkill,bySourceText,bySourceScope};
 }
 
 return{
@@ -270,12 +301,15 @@ return{
   SET_TEXT_IDS,
   SOURCE_KINDS,
   DIFFICULTY_TIERS,
+  SOURCE_SCOPES,
+  SOURCE_SCOPE_OVERRIDES,
   canonicalDseSetTextId,
   isDseSetTextId,
   normalizeSentence,
   quotedSegments,
   inferSourceSentenceId,
   resolvedSourceTextId,
+  resolvedSourceScope,
   resolvedDifficultyTier,
   classify,
   annotate,
