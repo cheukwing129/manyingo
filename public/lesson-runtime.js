@@ -164,7 +164,8 @@ const SOURCE_TEXT_OVERRIDES={
  p3q046:'yuwosuoyu',
  lpq061:'yuwosuoyu',
  ad1q022:'lianpo-linxiangru',
- ad1q033:'caogui'
+ ad1q033:'caogui',
+ ad3q002:'yueyanglou'
 };
 
 const SOURCE_SENTENCE_GROUPS={
@@ -177,6 +178,7 @@ const SOURCE_SENTENCE_GROUPS={
  cap1q005:'sentence:yueyanglou:xianyou-houle',
  cap1q006:'sentence:yueyanglou:xianyou-houle',
  lpq053:'sentence:yueyanglou:xianyou-houle',
+ ad3q002:'sentence:yueyanglou:xianyou-houle',
  q006:'sentence:yueyanglou:wei-siren-wushuiyugui',
  q010:'sentence:yueyanglou:wei-siren-wushuiyugui',
  cap1q013:'sentence:yueyanglou:wei-siren-wushuiyugui',
@@ -218,13 +220,43 @@ const SOURCE_SCOPE_OVERRIDES={
  p3q012:'cross-source',
  lpq041:'cross-source',
  cap1q011:'cross-source',
+ ad1q003:'cross-source',
+ ad1q006:'cross-source',
+ ad1q009:'cross-source',
+ ad1q012:'cross-source',
+ ad1q018:'cross-source',
  ad1q021:'cross-source',
  ad1q024:'cross-source',
+ ad1q027:'cross-source',
  ad1q030:'cross-source',
+ ad2q001:'cross-source',
  ad2q002:'cross-source',
+ ad2q003:'cross-source',
  ad2q004:'cross-source',
+ ad2q006:'cross-source',
+ ad2q007:'cross-source',
+ ad2q008:'cross-source',
+ ad2q009:'cross-source',
+ ad2q010:'cross-source',
+ ad2q011:'cross-source',
+ ad2q012:'cross-source',
+ ad2q013:'cross-source',
+ ad2q014:'cross-source',
+ ad2q015:'cross-source',
+ ad2q016:'cross-source',
+ ad2q019:'cross-source',
  ad2q020:'cross-source',
- ad2q023:'cross-source'
+ ad2q021:'cross-source',
+ ad2q023:'cross-source',
+ ad2q024:'cross-source',
+ ad2q025:'concept',
+ ad2q026:'cross-source',
+ ad2q027:'cross-source',
+ ad3q001:'cross-source',
+ ad3q003:'cross-source',
+ ad3q004:'cross-source',
+ ad3q005:'cross-source',
+ ad3q006:'cross-source'
 };
 
 function canonicalDseSetTextId(value){const id=String(value||'');return DSE_SET_TEXT_ALIASES.get(id)||id;}
@@ -257,7 +289,7 @@ function inferSourceSentenceId(question){
   if(explicit)return explicit;
   const id=String(question&&question.id||'');
   if(SOURCE_SENTENCE_GROUPS[id])return SOURCE_SENTENCE_GROUPS[id];
-  if(SOURCE_SCOPE_OVERRIDES[id]==='cross-source')return null;
+  if(SOURCE_SCOPE_OVERRIDES[id]&&SOURCE_SCOPE_OVERRIDES[id]!=='sentence')return null;
   const segments=quotedSegments(question&&question.q);
   if(!segments.length)return null;
   const longest=segments.slice().sort((a,b)=>normalizeSentence(b).length-normalizeSentence(a).length)[0];
