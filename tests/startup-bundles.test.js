@@ -104,7 +104,8 @@ test('cloud account work yields to the first interactive render and shares login
   assert.match(accountUi, /const pendingRedirect=hasPendingGoogleRedirect\(\)/);
   assert.match(accountUi, /requestIdleCallback\(run,\{timeout:1200\}\)/);
   assert.doesNotMatch(accountUi, /pendingRedirect\?0:4000/);
-  assert.match(accountSync, /setTimeout\(ready,4000\)/);
+  assert.match(accountSync, /function startupDelay\(\)\{const runtime=root\.window\|\|root;return runtime&&runtime\.ManjingoHomeRuntimeDeferral\?0:4000\}/);
+  assert.match(accountSync, /setTimeout\(ready,startupDelay\(\)\)/);
   assert.match(accountSync, /if\(studyActive\(\)\)\{schedule\(\);return\}/);
   assert.match(firebase, /if \(loginPromise\) return loginPromise/);
   assert.match(firebase, /if \(currentUserId && auth && auth\.currentUser\) return currentUserId/);
