@@ -17,7 +17,8 @@ const PRACTICE_UPLOAD_LIMIT=25;
 const PRACTICE_MIGRATION_DAYS=30;
 let modulePromise=null,practiceModulePromise=null,syncPromise=null,timer=null,installed=false,practiceHookInstalled=false;
 function studyActive(){const doc=root.document||(root.window&&root.window.document);return !!(doc&&doc.body&&doc.body.classList&&doc.body.classList.contains('study-focus'))}
-function scheduleStartupSync(work){const ready=()=>{if(studyActive()){setTimeout(ready,1200);return}const run=()=>{if(studyActive()){setTimeout(ready,1200);return}void work()};if(typeof root.requestIdleCallback==='function')root.requestIdleCallback(run,{timeout:1200});else setTimeout(run,150)};setTimeout(ready,4000)}
+function startupDelay(){const runtime=root.window||root;return runtime&&runtime.ManjingoHomeRuntimeDeferral?0:4000}
+function scheduleStartupSync(work){const ready=()=>{if(studyActive()){setTimeout(ready,1200);return}const run=()=>{if(studyActive()){setTimeout(ready,1200);return}void work()};if(typeof root.requestIdleCallback==='function')root.requestIdleCallback(run,{timeout:1200});else setTimeout(run,150)};setTimeout(ready,startupDelay())}
 function storage(){return root.localStorage||(root.window&&root.window.localStorage)||null}
 function removeStoragePrefix(s,prefix){if(!s||typeof s.key!=='function')return 0;const keys=[],length=Math.max(0,Number(s.length)||0);for(let i=0;i<length;i++){const key=s.key(i);if(typeof key==='string'&&key.startsWith(prefix))keys.push(key)}keys.forEach(key=>s.removeItem(key));return keys.length}
 function parse(key,fallback){const s=storage();if(!s)return fallback;try{const value=JSON.parse(s.getItem(key)||'null');return value&&typeof value==='object'?value:fallback}catch(e){return fallback}}
