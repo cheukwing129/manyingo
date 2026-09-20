@@ -184,7 +184,11 @@ const SOURCE_SENTENCE_GROUPS={
  p2q071:'sentence:loushiming:helouzhiyou',
  p2q072:'sentence:loushiming:helouzhiyou',
  lpq045:'sentence:loushiming:helouzhiyou',
- p3q030:'sentence:loushiming:helouzhiyou'
+ p3q030:'sentence:loushiming:helouzhiyou',
+ p3q025:'sentence:lianpo-linxiangru:tu-jian-qi',
+ lpq036:'sentence:lianpo-linxiangru:tu-jian-qi',
+ ad1q022:'sentence:lianpo-linxiangru:tu-jian-qi',
+ ad1q033:'sentence:caogui:heyi-zhan'
 };
 
 const DSE_SET_TEXT_IDS=new Set([
