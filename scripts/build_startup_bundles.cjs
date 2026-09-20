@@ -8,6 +8,19 @@ const publicDir = path.join(root, 'public');
 
 const bundles = {
   'catalog-runtime.js': ['question-packs-core.js', 'content-catalog.js'],
+  'lesson-runtime.js': [
+    'reorder-question.js',
+    'curriculum-v1.js',
+    'question-metadata-v1.js',
+    'question-rotation.js',
+    'skill-evidence-v1.js',
+    'skill-mastery-v1.js',
+    'skill-results-v1.js',
+    'learning-path.js',
+    'practice-effectiveness.js',
+    'mascot-runtime.js',
+    'session-summary.js'
+  ],
   'app-runtime.js': [
     'reorder-question.js',
     'curriculum-v1.js',
