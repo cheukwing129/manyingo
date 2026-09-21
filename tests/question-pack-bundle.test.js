@@ -27,10 +27,10 @@ test('browser bundle exposes every reviewed pack before the catalog assembles qu
   vm.createContext(context);
   vm.runInContext(read('public/question-packs-core.js'), context);
   vm.runInContext(read('public/content-catalog.js'), context);
-  assert.equal(context.window.ManjingoContent.questions.length, 569);
-  assert.ok(context.window.ManjingoContent.questions.some(question => question.id === 'fq012'));
+  assert.equal(context.window.ManjingoContent.questions.length, 589);
+  assert.ok(context.window.ManjingoContent.questions.some(question => question.id === 'fq022'));
   assert.ok(context.window.ManjingoContent.questions.some(question => question.id === 'rq016'));
-  assert.ok(context.window.ManjingoContent.questions.some(question => question.id === 'toq012'));
+  assert.ok(context.window.ManjingoContent.questions.some(question => question.id === 'toq022'));
 });
 
 test('production smoke waits for and verifies the deployed bundle', () => {
