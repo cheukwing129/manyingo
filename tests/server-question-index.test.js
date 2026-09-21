@@ -87,6 +87,19 @@ test('adaptive sentence-pattern prompts retain their identifiable source texts',
  assert.deepEqual(Array.from(unresolved),['ad1q013','ad1q026']);
 });
 
+test('transfer 為 evidence is distinct from prescribed-text foundation practice',()=>{
+ const catalog=loadReviewedCatalog(root),byId=new Map(catalog.questions.map(question=>[question.id,question]));
+ const transfer=byId.get('tr3q006'),foundation=byId.get('stl2q007');
+ assert.equal(transfer.sourceTextId,'mengzi-lianghuiwang-shang');
+ assert.equal(transfer.sourceSentenceId,'sentence:mengzi-lianghuiwang-shang:shi-buwei-fei-buneng');
+ assert.equal(transfer.difficultyTier,'transfer');
+ assert.equal(transfer.a,'做／實行');
+ assert.notEqual(transfer.q,foundation.q);
+ const stems=new Map();
+ for(const question of catalog.questions){const stem=String(question.q||'').replace(/\s+/g,'').trim();if(stem)stems.set(stem,(stems.get(stem)||0)+1);}
+ assert.equal(Array.from(stems.values()).filter(count=>count>1).length,8);
+});
+
 test('worker prefers bundled reviewed metadata and retains Firestore fallback',()=>{
  const worker=fs.readFileSync(path.join(root,'public','_worker.js'),'utf8');
  assert.match(worker,/import '\.\/server-question-index\.js'/);
