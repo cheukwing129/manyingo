@@ -95,9 +95,20 @@ test('transfer 為 evidence is distinct from prescribed-text foundation practice
  assert.equal(transfer.difficultyTier,'transfer');
  assert.equal(transfer.a,'做／實行');
  assert.notEqual(transfer.q,foundation.q);
+});
+
+test('application ellipsis evidence is distinct from foundation practice',()=>{
+ const catalog=loadReviewedCatalog(root),byId=new Map(catalog.questions.map(question=>[question.id,question]));
+ const application=byId.get('lpq042'),foundation=byId.get('p3q038');
+ assert.equal(application.sourceTextId,'chenshe-shijia');
+ assert.equal(application.sourceSentenceId,'sentence:chenshe-shijia:fusu-yishuojian-shangshi-wai-jiangbing');
+ assert.equal(application.difficultyTier,'application');
+ assert.deepEqual(Array.from(application.skillIds),['syn.ellipsis-subject','syn.ellipsis-object']);
+ assert.equal(application.a,'扶蘇');
+ assert.notEqual(application.q,foundation.q);
  const stems=new Map();
  for(const question of catalog.questions){const stem=String(question.q||'').replace(/\s+/g,'').trim();if(stem)stems.set(stem,(stems.get(stem)||0)+1);}
- assert.equal(Array.from(stems.values()).filter(count=>count>1).length,8);
+ assert.equal(Array.from(stems.values()).filter(count=>count>1).length,7);
 });
 
 test('worker prefers bundled reviewed metadata and retains Firestore fallback',()=>{
