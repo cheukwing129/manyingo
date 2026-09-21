@@ -21,13 +21,13 @@ class FakeNode{
 }
 function fakeDocument(){const doc={head:new FakeNode('head'),createElement(tag){const node=new FakeNode(tag);node.ownerDocument=doc;return node},getElementById(){return null}};doc.head.ownerDocument=doc;return doc}
 
-test('translation-order pack has twelve balanced source-aware production questions',()=>{
+test('translation-order pack has twenty-two balanced source-aware production questions',()=>{
  const questions=pack().questions;
- assert.equal(questions.length,12);
- assert.equal(new Set(questions.map(q=>q.sourceTextId)).size,11);
- assert.equal(new Set(questions.map(q=>q.sourceSentenceId)).size,12);
+ assert.equal(questions.length,22);
+ assert.equal(new Set(questions.map(q=>q.sourceTextId)).size,17);
+ assert.equal(new Set(questions.map(q=>q.sourceSentenceId)).size,22);
  const tiers=questions.reduce((counts,q)=>(counts[q.difficultyTier]=(counts[q.difficultyTier]||0)+1,counts),{});
- assert.deepEqual(tiers,{foundation:4,application:4,transfer:4});
+ assert.deepEqual(tiers,{foundation:7,application:7,transfer:8});
  for(const q of questions){
   assert.equal(q.type,'reorder',q.id);
   assert.equal(q.reorderMode,'select-and-order',q.id);
@@ -43,6 +43,15 @@ test('translation-order pack has twelve balanced source-aware production questio
   assert.ok(q.skillIds.includes('trans.reorder'),q.id);
   for(const skillId of q.skillIds)assert.ok(curriculum.skill(skillId),`${q.id}: ${skillId}`);
  }
+});
+
+test('second translation-order batch adds exactly ten questions with three reviewed distractors each',()=>{
+ const questions=pack().questions.filter(q=>/^toq0(?:1[3-9]|2[0-2])$/.test(q.id));
+ assert.equal(questions.length,10);
+ assert.equal(new Set(questions.map(q=>q.sourceTextId)).size,10);
+ assert.equal(new Set(questions.map(q=>q.sourceSentenceId)).size,10);
+ assert.deepEqual(questions.reduce((counts,q)=>(counts[q.difficultyTier]=(counts[q.difficultyTier]||0)+1,counts),{}),{foundation:3,application:3,transfer:4});
+ for(const q of questions)assert.equal(q.fragments.length-q.requiredCount,3,`${q.id}: exactly three distractors`);
 });
 
 test('client and server accept the ordered subset while rejecting distractors and malformed submissions',()=>{

@@ -80,7 +80,7 @@ test('app runtime installs the full reviewed catalog without nested script write
   writes.length = 0;
   vm.runInContext(read('public/app-runtime.js'), context);
   assert.deepEqual(writes, []);
-  assert.equal(window.ManjingoContent.questions.length, 639);
+  assert.equal(window.ManjingoContent.questions.length, 659);
   assert.ok(window.ManjingoQuestionRotation);
   assert.ok(window.ManjingoSkillResultsV1);
 });

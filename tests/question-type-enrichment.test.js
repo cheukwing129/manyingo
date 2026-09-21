@@ -12,13 +12,13 @@ const sourceQuotation=text=>Array.from(String(text||'').matchAll(/「([^」]+)�
 test('reviewed catalog has the intended response-type balance',()=>{
  const questions=catalog().questions,counts={};
  for(const question of questions)counts[question.type]=(counts[question.type]||0)+1;
- assert.equal(questions.length,639);
- assert.deepEqual(counts,{choice:597,fill:14,reorder:28});
+ assert.equal(questions.length,659);
+ assert.deepEqual(counts,{choice:597,fill:24,reorder:38});
 });
 
 test('new fill questions accept reviewed aliases and reject unrelated text',()=>{
  const questions=catalog().questions.filter(question=>/^fq\d{3}$/.test(question.id));
- assert.equal(questions.length,12);
+ assert.equal(questions.length,22);
  assert.deepEqual(Array.from(new Set(questions.map(q=>q.difficultyTier))).sort(),['application','foundation','transfer']);
  for(const question of questions){
   assert.equal(question.type,'fill');
@@ -32,6 +32,14 @@ test('new fill questions accept reviewed aliases and reject unrelated text',()=>
   const accepted=[question.a,...(question.acceptedAnswers||[])].map(normalize);
   assert.equal(new Set(accepted).size,accepted.length,`${question.id}: duplicate accepted answer`);
  }
+});
+
+test('second fill batch adds ten fresh source-diverse productive questions',()=>{
+ const questions=catalog().questions.filter(question=>/^fq0(?:1[3-9]|2[0-2])$/.test(question.id));
+ assert.equal(questions.length,10);
+ assert.equal(new Set(questions.map(q=>q.sourceTextId)).size,10);
+ assert.equal(new Set(questions.map(q=>q.sourceSentenceId)).size,10);
+ assert.deepEqual(questions.reduce((counts,q)=>(counts[q.difficultyTier]=(counts[q.difficultyTier]||0)+1,counts),{}),{foundation:4,application:4,transfer:2});
 });
 
 test('new reorder questions have valid exact-use contracts and broad source coverage',()=>{
