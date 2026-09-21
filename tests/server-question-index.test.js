@@ -44,7 +44,7 @@ test('cross-sentence prompts retain passage-level provenance',()=>{
 
 test('legacy single-source prompts do not retain CROSS provenance',()=>{
  const catalog=loadReviewedCatalog(root),byId=new Map(catalog.questions.map(question=>[question.id,question]));
- const expectedSources={lpq059:'shengyouhuan',lpq063:'yuwosuoyu',cap1q010:'taohuayuan',cap1q012:'hezhouji',cap1q022:'shishuo',cap1q023:'shishuo'};
+ const expectedSources={p3q002:'mengzi-gongsunchou-xia',p3q033:'liaozhai-cuzhi',lpq046:'liaozhai-cuzhi',lpq059:'shengyouhuan',lpq063:'yuwosuoyu',cap1q010:'taohuayuan',cap1q012:'hezhouji',cap1q022:'shishuo',cap1q023:'shishuo'};
  for(const[id,sourceTextId]of Object.entries(expectedSources)){
   const question=byId.get(id);
   assert.equal(question.sourceTextId,sourceTextId,id);
@@ -57,7 +57,9 @@ test('legacy single-source prompts do not retain CROSS provenance',()=>{
   assert.equal(question.sourceSentenceId,null,id);
  }
  const unresolved=catalog.questions.filter(question=>question.sourceScope==='sentence'&&question.sourceTextId==='CROSS'&&!question.id.startsWith('ad')).map(question=>question.id);
- assert.deepEqual(Array.from(unresolved),['p3q002','p3q017','p3q033','lpq018','lpq046']);
+ assert.equal(byId.get('p3q033').sourceSentenceId,'sentence:liaozhai-cuzhi:fuzhi-yizhang');
+ assert.equal(byId.get('lpq046').sourceSentenceId,'sentence:liaozhai-cuzhi:fuzhi-yizhang');
+ assert.deepEqual(Array.from(unresolved),['p3q017','lpq018']);
 });
 
 test('adaptive function-word prompts retain their identifiable source texts',()=>{

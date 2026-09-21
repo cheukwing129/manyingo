@@ -111,6 +111,7 @@ const SOURCE_TEXT_OVERRIDES={
  q004:'chenshe-shijia',
  q005:'lianpo-linxiangru',
  p3q001:'chenshe-shijia',
+ p3q002:'mengzi-gongsunchou-xia',
  p3q003:'caogui',
  p3q005:'lunyu',
  p3q006:'yuwosuoyu',
@@ -131,6 +132,7 @@ const SOURCE_TEXT_OVERRIDES={
  p3q029:'yueyanglou',
  p3q030:'loushiming',
  p3q032:'loushiming',
+ p3q033:'liaozhai-cuzhi',
  p3q034:'caogui',
  p3q038:'caogui',
  p3q041:'yueyanglou',
@@ -157,6 +159,7 @@ const SOURCE_TEXT_OVERRIDES={
  lpq042:'caogui',
  lpq043:'taohuayuan',
  lpq045:'loushiming',
+ lpq046:'liaozhai-cuzhi',
  lpq059:'shengyouhuan',
  lpq063:'yuwosuoyu',
  lpq064:'longzhongdui',
@@ -227,7 +230,9 @@ const SOURCE_SENTENCE_GROUPS={
  p3q025:'sentence:lianpo-linxiangru:tu-jian-qi',
  lpq036:'sentence:lianpo-linxiangru:tu-jian-qi',
  ad1q022:'sentence:lianpo-linxiangru:tu-jian-qi',
- ad1q033:'sentence:caogui:heyi-zhan'
+ ad1q033:'sentence:caogui:heyi-zhan',
+ p3q033:'sentence:liaozhai-cuzhi:fuzhi-yizhang',
+ lpq046:'sentence:liaozhai-cuzhi:fuzhi-yizhang'
 };
 
 const DSE_SET_TEXT_IDS=new Set([
