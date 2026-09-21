@@ -182,8 +182,20 @@ const SOURCE_TEXT_OVERRIDES={
  ad1q015:'maqianlishuo',
  ad1q016:'lunyu',
  ad1q017:'yueyanglou',
+ ad1q019:'taohuayuan',
+ ad1q020:'yueyanglou',
  ad1q022:'lianpo-linxiangru',
+ ad1q023:'lianpo-linxiangru',
+ ad1q025:'lingguanzhuanxu',
+ ad1q028:'caogui',
+ ad1q029:'taohuayuan',
+ ad1q031:'loushiming',
+ ad1q032:'zouji',
  ad1q033:'caogui',
+ ad1q034:'caogui',
+ ad1q035:'yueyanglou',
+ ad1q036:'chushibiao',
+ ad2q022:'ailianshuo',
  ad3q002:'yueyanglou'
 };
 
@@ -211,6 +223,7 @@ const SOURCE_SENTENCE_GROUPS={
  p2q072:'sentence:loushiming:helouzhiyou',
  lpq045:'sentence:loushiming:helouzhiyou',
  p3q030:'sentence:loushiming:helouzhiyou',
+ ad1q031:'sentence:loushiming:helouzhiyou',
  p3q025:'sentence:lianpo-linxiangru:tu-jian-qi',
  lpq036:'sentence:lianpo-linxiangru:tu-jian-qi',
  ad1q022:'sentence:lianpo-linxiangru:tu-jian-qi',

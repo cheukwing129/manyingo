@@ -69,8 +69,20 @@ test('adaptive function-word prompts retain their identifiable source texts',()=
   assert.equal(question.sourceScope,'sentence',id);
   assert.ok(question.sourceSentenceId,id);
  }
+});
+
+test('adaptive sentence-pattern prompts retain their identifiable source texts',()=>{
+ const catalog=loadReviewedCatalog(root),byId=new Map(catalog.questions.map(question=>[question.id,question]));
+ const expectedSources={ad1q019:'taohuayuan',ad1q020:'yueyanglou',ad1q023:'lianpo-linxiangru',ad1q025:'lingguanzhuanxu',ad1q028:'caogui',ad1q029:'taohuayuan',ad1q031:'loushiming',ad1q032:'zouji',ad1q034:'caogui',ad1q035:'yueyanglou',ad1q036:'chushibiao',ad2q022:'ailianshuo'};
+ for(const[id,sourceTextId]of Object.entries(expectedSources)){
+  const question=byId.get(id);
+  assert.equal(question.sourceTextId,sourceTextId,id);
+  assert.equal(question.sourceScope,'sentence',id);
+  assert.ok(question.sourceSentenceId,id);
+ }
+ assert.equal(byId.get('ad1q031').sourceSentenceId,'sentence:loushiming:helouzhiyou');
  const unresolved=catalog.questions.filter(question=>question.sourceScope==='sentence'&&question.sourceTextId==='CROSS'&&question.id.startsWith('ad')).map(question=>question.id);
- assert.deepEqual(Array.from(unresolved),['ad1q013','ad1q019','ad1q020','ad1q023','ad1q025','ad1q026','ad1q028','ad1q029','ad1q031','ad1q032','ad1q034','ad1q035','ad1q036','ad2q022','ad3q007']);
+ assert.deepEqual(Array.from(unresolved),['ad1q013','ad1q026','ad3q007']);
 });
 
 test('worker prefers bundled reviewed metadata and retains Firestore fallback',()=>{
