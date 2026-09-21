@@ -65,6 +65,14 @@ test('successful main tests trigger only non-destructive automatic catalog upser
   assert.doesNotMatch(autoBlock,/--prune|--verify/);
 });
 
+test('Tests workflow has a manual main recovery trigger for missed push events',()=>{
+  const workflow=read('.github/workflows/test.yml');
+  assert.match(workflow,/on:\s*\n\s*workflow_dispatch:/);
+  assert.match(workflow,/push:\s*\n\s*branches: \[main\]/);
+  assert.match(workflow,/pull_request:/);
+  assert.match(workflow,/run: npm test/);
+});
+
 test('automatic content sync touches Firestore only when reviewed catalog inputs changed',()=>{
   const workflow=read('.github/workflows/firebase-content-sync.yml');
   assert.match(workflow,/Detect reviewed catalog changes/);
