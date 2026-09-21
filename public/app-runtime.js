@@ -298,7 +298,8 @@ const SOURCE_SCOPE_OVERRIDES={
  ad3q003:'cross-source',
  ad3q004:'cross-source',
  ad3q005:'cross-source',
- ad3q006:'cross-source'
+ ad3q006:'cross-source',
+ ad3q007:'cross-source'
 };
 
 function canonicalDseSetTextId(value){const id=String(value||'');return DSE_SET_TEXT_ALIASES.get(id)||id;}
