@@ -44,7 +44,7 @@ test('cross-sentence prompts retain passage-level provenance',()=>{
 
 test('legacy single-source prompts do not retain CROSS provenance',()=>{
  const catalog=loadReviewedCatalog(root),byId=new Map(catalog.questions.map(question=>[question.id,question]));
- const expectedSources={p3q002:'mengzi-gongsunchou-xia',p3q033:'liaozhai-cuzhi',lpq046:'liaozhai-cuzhi',lpq059:'shengyouhuan',lpq063:'yuwosuoyu',cap1q010:'taohuayuan',cap1q012:'hezhouji',cap1q022:'shishuo',cap1q023:'shishuo'};
+ const expectedSources={p3q002:'mengzi-gongsunchou-xia',p3q033:'liaozhai-cuzhi',lpq017:'yugong-yishan',lpq046:'liaozhai-cuzhi',lpq059:'shengyouhuan',lpq063:'yuwosuoyu',cap1q010:'taohuayuan',cap1q012:'hezhouji',cap1q022:'shishuo',cap1q023:'shishuo'};
  for(const[id,sourceTextId]of Object.entries(expectedSources)){
   const question=byId.get(id);
   assert.equal(question.sourceTextId,sourceTextId,id);
@@ -123,7 +123,7 @@ test('exact duplicate-stem audit tracks reviewed reductions',()=>{
  const catalog=loadReviewedCatalog(root);
  const stems=new Map();
  for(const question of catalog.questions){const stem=String(question.q||'').replace(/\s+/g,'').trim();if(stem)stems.set(stem,(stems.get(stem)||0)+1);}
- assert.equal(Array.from(stems.values()).filter(count=>count>1).length,6);
+ assert.equal(Array.from(stems.values()).filter(count=>count>1).length,5);
 });
 
 test('worker prefers bundled reviewed metadata and retains Firestore fallback',()=>{

@@ -87,7 +87,7 @@ const SOURCE_TEXT_OVERRIDES={
  lpq014:'liji-tangong',
  lpq015:'yugong-yishan',
  lpq016:'yugong-yishan',
- lpq017:'maqianlishuo',
+ lpq017:'yugong-yishan',
  lpq020:'lunyu',
  lpq021:'yueyanglou',
  lpq066:'shengyouhuan',
