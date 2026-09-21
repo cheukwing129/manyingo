@@ -7,7 +7,7 @@ if(typeof document!=='undefined'&&document.readyState==='loading'){
  // question-pack-transfer-03.js, question-pack-transfer-04.js, question-pack-transfer-05.js,
  // question-pack-transfer-06.js, question-pack-transfer-07.js,
  // question-pack-settext-language-01.js, question-pack-settext-language-02.js,
- // and question-pack-reorder-01.js.
+ // question-pack-fill-01.js, and question-pack-reorder-01.js.
  if(!window.ManjingoQuestionPack02)document.write('<script src="./question-packs-core.js"><\/script>');
 }
 
@@ -58,6 +58,7 @@ const transferPack06=window.ManjingoQuestionPackTransfer06||{knowledgePoints:[],
 const transferPack07=window.ManjingoQuestionPackTransfer07||{knowledgePoints:[],questions:[]};
 const setTextLanguagePack01=window.ManjingoQuestionPackSetTextLanguage01||{questions:[]};
 const setTextLanguagePack02=window.ManjingoQuestionPackSetTextLanguage02||{questions:[]};
+const fillPack01=window.ManjingoQuestionPackFill01||{questions:[]};
 const reorderPack01=window.ManjingoQuestionPackReorder01||{questions:[]};
 
 const KP_REVISIONS={
@@ -73,7 +74,7 @@ const QUESTION_REVISIONS={
 };
 
 const knowledgePoints=[...baseKnowledgePoints,...pack02.knowledgePoints,...pack03.knowledgePoints,...transferPack03.knowledgePoints,...transferPack04.knowledgePoints,...transferPack05.knowledgePoints,...transferPack06.knowledgePoints,...transferPack07.knowledgePoints].map(kp=>KP_REVISIONS[kp.kpId]?{...kp,...KP_REVISIONS[kp.kpId]}:{...kp});
-const rawQuestions=[...baseQuestions,...pack02.questions,...pack03.questions,...lessonPack.questions,...capacityPack01.questions,...transferPack01.questions,...transferPack03.questions,...transferPack04.questions,...transferPack05.questions,...transferPack06.questions,...transferPack07.questions,...setTextLanguagePack01.questions,...setTextLanguagePack02.questions,...reorderPack01.questions].map(q=>QUESTION_REVISIONS[q.id]?{...q,...QUESTION_REVISIONS[q.id]}:{...q});
+const rawQuestions=[...baseQuestions,...pack02.questions,...pack03.questions,...lessonPack.questions,...capacityPack01.questions,...transferPack01.questions,...transferPack03.questions,...transferPack04.questions,...transferPack05.questions,...transferPack06.questions,...transferPack07.questions,...setTextLanguagePack01.questions,...setTextLanguagePack02.questions,...fillPack01.questions,...reorderPack01.questions].map(q=>QUESTION_REVISIONS[q.id]?{...q,...QUESTION_REVISIONS[q.id]}:{...q});
 
 function misconceptionConcept(q){
  const kp=String(q&&q.kpId||''),answer=String(q&&q.a||''),text=String(q&&q.q||'');
