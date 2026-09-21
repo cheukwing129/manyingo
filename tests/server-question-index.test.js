@@ -25,7 +25,7 @@ test('generated server question index matches every reviewed question',()=>{
 test('adaptive comparison prompts cannot masquerade as single-source sentences',()=>{
  const catalog=loadReviewedCatalog(root),byId=new Map(catalog.questions.map(question=>[question.id,question]));
  const counts={};for(const question of catalog.questions)counts[question.sourceScope]=(counts[question.sourceScope]||0)+1;
- assert.deepEqual(counts,{sentence:496,passage:41,'cross-source':41,concept:29});
+ assert.deepEqual(counts,{sentence:497,passage:41,'cross-source':41,concept:28});
  for(const id of ['ad1q003','ad1q006','ad1q009','ad1q012','ad1q018','ad1q027','ad2q001','ad2q003','ad2q006','ad2q007','ad2q008','ad2q009','ad2q010','ad2q011','ad2q012','ad2q013','ad2q014','ad2q015','ad2q016','ad2q019','ad2q021','ad2q024','ad2q026','ad2q027','ad3q001','ad3q003','ad3q004','ad3q005','ad3q006','ad3q007']){const question=byId.get(id);assert.equal(question.sourceScope,'cross-source',id);assert.equal(question.sourceSentenceId,null,id);}
  const scenario=byId.get('ad2q025');assert.equal(scenario.sourceScope,'concept');assert.equal(scenario.sourceSentenceId,null);
  const quotation=byId.get('ad3q002');assert.equal(quotation.sourceTextId,'yueyanglou');assert.equal(quotation.sourceScope,'sentence');assert.equal(quotation.sourceSentenceId,'sentence:yueyanglou:xianyou-houle');
@@ -106,9 +106,24 @@ test('application ellipsis evidence is distinct from foundation practice',()=>{
  assert.deepEqual(Array.from(application.skillIds),['syn.ellipsis-subject','syn.ellipsis-object']);
  assert.equal(application.a,'扶蘇');
  assert.notEqual(application.q,foundation.q);
+});
+
+test('transfer adverbial-postposition evidence requires contextual reordering',()=>{
+ const catalog=loadReviewedCatalog(root),byId=new Map(catalog.questions.map(question=>[question.id,question]));
+ const transfer=byId.get('p3q036'),application=byId.get('lpq048');
+ assert.equal(transfer.sourceTextId,'mengzi-lianghuiwang-xia');
+ assert.equal(transfer.sourceSentenceId,'sentence:mengzi-lianghuiwang-xia:wang-chang-yu-zhuangzi-yi-haoyue');
+ assert.equal(transfer.difficultyTier,'transfer');
+ assert.deepEqual(Array.from(transfer.skillIds),['syn.adverbial-postpose']);
+ assert.equal(transfer.a,'王嘗以好樂語莊子');
+ assert.notEqual(transfer.q,application.q);
+});
+
+test('exact duplicate-stem audit tracks reviewed reductions',()=>{
+ const catalog=loadReviewedCatalog(root);
  const stems=new Map();
  for(const question of catalog.questions){const stem=String(question.q||'').replace(/\s+/g,'').trim();if(stem)stems.set(stem,(stems.get(stem)||0)+1);}
- assert.equal(Array.from(stems.values()).filter(count=>count>1).length,7);
+ assert.equal(Array.from(stems.values()).filter(count=>count>1).length,6);
 });
 
 test('worker prefers bundled reviewed metadata and retains Firestore fallback',()=>{

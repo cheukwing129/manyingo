@@ -134,6 +134,7 @@ const SOURCE_TEXT_OVERRIDES={
  p3q032:'loushiming',
  p3q033:'liaozhai-cuzhi',
  p3q034:'caogui',
+ p3q036:'mengzi-lianghuiwang-xia',
  p3q038:'caogui',
  p3q041:'yueyanglou',
  lpq005:'ailianshuo',
@@ -233,7 +234,8 @@ const SOURCE_SENTENCE_GROUPS={
  ad1q033:'sentence:caogui:heyi-zhan',
  lpq042:'sentence:chenshe-shijia:fusu-yishuojian-shangshi-wai-jiangbing',
  p3q033:'sentence:liaozhai-cuzhi:fuzhi-yizhang',
- lpq046:'sentence:liaozhai-cuzhi:fuzhi-yizhang'
+ lpq046:'sentence:liaozhai-cuzhi:fuzhi-yizhang',
+ p3q036:'sentence:mengzi-lianghuiwang-xia:wang-chang-yu-zhuangzi-yi-haoyue'
 };
 
 const DSE_SET_TEXT_IDS=new Set([
