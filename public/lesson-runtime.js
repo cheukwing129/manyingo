@@ -156,7 +156,7 @@ const SOURCE_TEXT_OVERRIDES={
  lpq037:'quyuan-liezhuan',
  lpq039:'lingguanzhuanxu',
  lpq040:'shishuo',
- lpq042:'caogui',
+ lpq042:'chenshe-shijia',
  lpq043:'taohuayuan',
  lpq045:'loushiming',
  lpq046:'liaozhai-cuzhi',
@@ -231,6 +231,7 @@ const SOURCE_SENTENCE_GROUPS={
  lpq036:'sentence:lianpo-linxiangru:tu-jian-qi',
  ad1q022:'sentence:lianpo-linxiangru:tu-jian-qi',
  ad1q033:'sentence:caogui:heyi-zhan',
+ lpq042:'sentence:chenshe-shijia:fusu-yishuojian-shangshi-wai-jiangbing',
  p3q033:'sentence:liaozhai-cuzhi:fuzhi-yizhang',
  lpq046:'sentence:liaozhai-cuzhi:fuzhi-yizhang'
 };
