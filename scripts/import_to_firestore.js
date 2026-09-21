@@ -14,6 +14,8 @@
  *   public/question-pack-transfer-07.js
  *   public/question-pack-settext-language-01.js
  *   public/question-pack-settext-language-02.js
+ *   public/question-pack-fill-01.js
+ *   public/question-pack-reorder-01.js
  *   public/content-catalog.js
  *   public/question-pack-adaptive-01.js
  *   public/question-pack-adaptive-02.js
@@ -98,7 +100,7 @@ function catalogTargets(catalog) {
   const questions = catalog.questions.map(question => ({
     id:String(question.id), data:{
       type:question.type,kpId:question.kpId,textId:question.textId==='CROSS'?null:(question.textId||null),question:question.q,
-      options:Array.isArray(question.o)?Array.from(question.o,String):[],answer:question.a==null?'':String(question.a),explanation:question.explanation||'',
+      options:Array.isArray(question.o)?Array.from(question.o,String):[],answer:question.a==null?'':String(question.a),acceptedAnswers:Array.isArray(question.acceptedAnswers)?Array.from(question.acceptedAnswers,String):[],explanation:question.explanation||'',
       fragments:Array.isArray(question.fragments)?question.fragments.map(item=>({id:String(item.id),text:String(item.text)})):[],answerOrder:Array.isArray(question.answerOrder)?question.answerOrder.map(String):[],modelAnswer:question.modelAnswer||null,
       misconceptionKey:question.misconceptionKey||null,misconceptionLabel:question.misconceptionLabel||null,difficultyTier:question.difficultyTier||null,
       skillIds:Array.isArray(question.skillIds)?Array.from(question.skillIds,String):[],skillContractVersion:question.skillContractVersion||null,sourceTextId:question.sourceTextId||null,sourceSentenceId:question.sourceSentenceId||null,

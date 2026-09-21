@@ -25,7 +25,7 @@ test('generated server question index matches every reviewed question',()=>{
 test('adaptive comparison prompts cannot masquerade as single-source sentences',()=>{
  const catalog=loadReviewedCatalog(root),byId=new Map(catalog.questions.map(question=>[question.id,question]));
  const counts={};for(const question of catalog.questions)counts[question.sourceScope]=(counts[question.sourceScope]||0)+1;
- assert.deepEqual(counts,{sentence:497,passage:41,'cross-source':41,concept:28});
+ assert.deepEqual(counts,{sentence:517,passage:41,'cross-source':41,concept:28});
  for(const id of ['ad1q003','ad1q006','ad1q009','ad1q012','ad1q018','ad1q027','ad2q001','ad2q003','ad2q006','ad2q007','ad2q008','ad2q009','ad2q010','ad2q011','ad2q012','ad2q013','ad2q014','ad2q015','ad2q016','ad2q019','ad2q021','ad2q024','ad2q026','ad2q027','ad3q001','ad3q003','ad3q004','ad3q005','ad3q006','ad3q007']){const question=byId.get(id);assert.equal(question.sourceScope,'cross-source',id);assert.equal(question.sourceSentenceId,null,id);}
  const scenario=byId.get('ad2q025');assert.equal(scenario.sourceScope,'concept');assert.equal(scenario.sourceSentenceId,null);
  const quotation=byId.get('ad3q002');assert.equal(quotation.sourceTextId,'yueyanglou');assert.equal(quotation.sourceScope,'sentence');assert.equal(quotation.sourceSentenceId,'sentence:yueyanglou:xianyou-houle');

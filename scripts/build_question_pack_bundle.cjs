@@ -17,6 +17,7 @@ const sources = [
   'question-pack-transfer-07.js',
   'question-pack-settext-language-01.js',
   'question-pack-settext-language-02.js',
+  'question-pack-fill-01.js',
   'question-pack-reorder-01.js'
 ];
 const output = path.join(root, 'public', 'question-packs-core.js');
