@@ -60,6 +60,19 @@ test('legacy single-source prompts do not retain CROSS provenance',()=>{
  assert.deepEqual(Array.from(unresolved),['p3q002','p3q017','p3q033','lpq018','lpq046']);
 });
 
+test('adaptive function-word prompts retain their identifiable source texts',()=>{
+ const catalog=loadReviewedCatalog(root),byId=new Map(catalog.questions.map(question=>[question.id,question]));
+ const expectedSources={ad1q001:'ailianshuo',ad1q002:'chenshe-shijia',ad1q004:'lunyu',ad1q005:'zuiwengtingji',ad1q007:'lang',ad1q008:'xiaoshitan',ad1q010:'zouji',ad1q011:'shengyouhuan',ad1q014:'maqianlishuo',ad1q015:'maqianlishuo',ad1q016:'lunyu',ad1q017:'yueyanglou'};
+ for(const[id,sourceTextId]of Object.entries(expectedSources)){
+  const question=byId.get(id);
+  assert.equal(question.sourceTextId,sourceTextId,id);
+  assert.equal(question.sourceScope,'sentence',id);
+  assert.ok(question.sourceSentenceId,id);
+ }
+ const unresolved=catalog.questions.filter(question=>question.sourceScope==='sentence'&&question.sourceTextId==='CROSS'&&question.id.startsWith('ad')).map(question=>question.id);
+ assert.deepEqual(Array.from(unresolved),['ad1q013','ad1q019','ad1q020','ad1q023','ad1q025','ad1q026','ad1q028','ad1q029','ad1q031','ad1q032','ad1q034','ad1q035','ad1q036','ad2q022','ad3q007']);
+});
+
 test('worker prefers bundled reviewed metadata and retains Firestore fallback',()=>{
  const worker=fs.readFileSync(path.join(root,'public','_worker.js'),'utf8');
  assert.match(worker,/import '\.\/server-question-index\.js'/);
