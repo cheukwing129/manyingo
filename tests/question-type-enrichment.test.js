@@ -12,8 +12,8 @@ const sourceQuotation=text=>Array.from(String(text||'').matchAll(/「([^」]+)�
 test('reviewed catalog has the intended response-type balance',()=>{
  const questions=catalog().questions,counts={};
  for(const question of questions)counts[question.type]=(counts[question.type]||0)+1;
- assert.equal(questions.length,627);
- assert.deepEqual(counts,{choice:597,fill:14,reorder:16});
+ assert.equal(questions.length,639);
+ assert.deepEqual(counts,{choice:597,fill:14,reorder:28});
 });
 
 test('new fill questions accept reviewed aliases and reject unrelated text',()=>{
@@ -48,7 +48,7 @@ test('new reorder questions have valid exact-use contracts and broad source cove
 });
 
 test('new questions introduce neither duplicate stems nor reused quoted prompts',()=>{
- const questions=catalog().questions,newIds=new Set(questions.filter(q=>/^(?:fq|rq0(?:09|1[0-6]))/.test(q.id)).map(q=>q.id));
+ const questions=catalog().questions,newIds=new Set(questions.filter(q=>/^(?:fq|toq|rq0(?:09|1[0-6]))/.test(q.id)).map(q=>q.id));
  const stems=new Map(),sourceQuotations=new Map(),sentenceIds=new Map();
  for(const question of questions){
   const stem=normalize(question.q);if(stem){if(!stems.has(stem))stems.set(stem,[]);stems.get(stem).push(question.id)}

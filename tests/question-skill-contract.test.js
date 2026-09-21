@@ -20,8 +20,8 @@ test('compiled Firestore catalog preserves the same skill contract used by the p
    assert.equal(contract.resolveCoreSkill(question,question.kpId,skillId,curriculum),skillId,`${question.id} cannot be credited to planned ${skillId}`);
   }
  }
- assert.equal(core.length,470);
- assert.equal(assignments,535);
+ assert.equal(core.length,482);
+ assert.equal(assignments,561);
 });
 
 test('versioned question metadata rejects an unrelated client-selected skill',()=>{
