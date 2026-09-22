@@ -13,6 +13,10 @@ test('Stage 3 production smoke validates deployed pack runtime diagnostics rotat
   assert.match(source,/readTextAsset\('\/stage3-diagnostics\.js', 'Stage 3 diagnostics asset'\)/);
   assert.match(source,/readTextAsset\('\/stage3-reading\.js', 'Stage 3 reading asset'\)/);
   assert.match(source,/readTextAsset\('\/question-pack-transfer-07\.js', 'Stage 3 question pack'\)/);
+  assert.match(source,/readTextAsset\('\/question-pack-passage-set-01\.js', 'passage-set question pack'\)/);
+  assert.match(source,/passageSetPack\.passageSets\.length === 6/);
+  assert.match(source,/passageSetPack\.questions\.length === 18/);
+  assert.match(source,/stage3\.buildPassageSet/);
   assert.match(source,/homeShellSource\.includes\("script\.src='\.\/stage3-reading\.js'"\)/);
   assert.match(source,/homeShellSource\.includes\('loadStage3Reading\(\);'\)/);
   assert.match(source,/themeSource\.includes\("script\.src='\.\/stage3-diagnostics\.js'"\)/);
@@ -57,5 +61,6 @@ test('Pages deployment wait includes Stage 3 diagnostics runtime and expanded qu
   assert.match(workflow,/theme-runtime\.js/);
   assert.match(workflow,/home-shell\.js/);
   assert.match(workflow,/question-pack-transfer-07\.js/);
+  assert.match(workflow,/question-pack-passage-set-01\.js/);
   assert.match(workflow,/tr10q036/);
 });

@@ -25,7 +25,7 @@ function memoryStorage() {
 
 console.log(`Smoke testing Stage 3 UI at ${baseUrl}`);
 
-const [homepageSource, homeShellSource, themeSource, curriculumSource, diagnosticsSource, diagnosticSyncSource, stage3Source, packSource] = await Promise.all([
+const [homepageSource, homeShellSource, themeSource, curriculumSource, diagnosticsSource, diagnosticSyncSource, stage3Source, packSource, passageSetPackSource] = await Promise.all([
   readTextAsset('/', 'homepage'),
   readTextAsset('/home-shell.js', 'home shell asset'),
   readTextAsset('/theme-runtime.js', 'theme runtime asset'),
@@ -33,7 +33,8 @@ const [homepageSource, homeShellSource, themeSource, curriculumSource, diagnosti
   readTextAsset('/stage3-diagnostics.js', 'Stage 3 diagnostics asset'),
   readTextAsset('/stage3-diagnostic-sync.js', 'Stage 3 diagnostic sync asset'),
   readTextAsset('/stage3-reading.js', 'Stage 3 reading asset'),
-  readTextAsset('/question-pack-transfer-07.js', 'Stage 3 question pack')
+  readTextAsset('/question-pack-transfer-07.js', 'Stage 3 question pack'),
+  readTextAsset('/question-pack-passage-set-01.js', 'passage-set question pack')
 ]);
 
 check(homepageSource.includes('./home-shell.js'), 'deployed homepage does not load the home shell');
@@ -50,10 +51,12 @@ vm.runInContext(diagnosticsSource, context, { filename: 'production/stage3-diagn
 vm.runInContext(diagnosticSyncSource, context, { filename: 'production/stage3-diagnostic-sync.js' });
 vm.runInContext(stage3Source, context, { filename: 'production/stage3-reading.js' });
 vm.runInContext(packSource, context, { filename: 'production/question-pack-transfer-07.js' });
+vm.runInContext(passageSetPackSource, context, { filename: 'production/question-pack-passage-set-01.js' });
 const diagnostics = context.ManjingoStage3Diagnostics;
 const diagnosticSync = context.ManjingoStage3DiagnosticSync;
 const stage3 = context.ManjingoStage3Reading;
 const pack = context.window.ManjingoQuestionPackTransfer07;
+const passageSetPack = context.window.ManjingoQuestionPackPassageSet01;
 check(diagnostics && typeof diagnostics.recordAttempt === 'function', 'deployed Stage 3 diagnostics runtime is missing recordAttempt()');
 check(typeof diagnostics.recordVerification === 'function', 'deployed Stage 3 diagnostics runtime is missing recordVerification()');
 check(typeof diagnostics.diagnosticSelection === 'function', 'deployed Stage 3 diagnostics runtime is missing option selection diagnosis');
@@ -66,6 +69,18 @@ check(typeof stage3.summarizeResults === 'function', 'deployed Stage 3 runtime i
 check(typeof stage3.isStage3Question === 'function', 'deployed Stage 3 runtime is missing Stage 3 filtering');
 check(pack && Array.isArray(pack.questions), 'deployed Stage 3 question pack is missing');
 check(pack.questions.length === 36, `deployed Stage 3 pack contains ${pack.questions.length} questions instead of 36`);
+check(passageSetPack && passageSetPack.passageSets.length === 6, 'deployed passage-set pack does not contain six texts');
+check(passageSetPack.questions.length === 18, 'deployed passage-set pack does not contain eighteen questions');
+check(typeof stage3.buildPassageSet === 'function', 'deployed Stage 3 runtime is missing grouped passage rotation');
+let passageSetCursor = 0;
+const seenPassageSets = new Set();
+for (let run = 0; run < 6; run += 1) {
+  const built = stage3.buildPassageSet(passageSetPack.passageSets, passageSetPack.questions, passageSetCursor);
+  check(built.questions.length === 3, `deployed passage set ${built.passageSet && built.passageSet.id} does not contain three questions`);
+  seenPassageSets.add(built.passageSet.id);
+  passageSetCursor = built.nextCursor;
+}
+check(seenPassageSets.size === 6 && passageSetCursor === 0, 'deployed passage-set rotation repeats before all six texts appear');
 
 const coreSkillIds = new Set(context.ManjingoCurriculumV1.coreSkills().map(skill => skill.id));
 for (const [questionId, mappedSkillIds] of Object.entries(diagnostics.DIAGNOSTIC_MAP)) {
@@ -143,4 +158,4 @@ const summary = stage3.summarizeResults([
 ]);
 check(summary.total === 6 && summary.correct === 4 && summary.rows.length === 3, 'deployed Stage 3 result summary is invalid');
 
-console.log('✓ deployed Stage 3 loader, 36-question bank, choice-aware diagnostics, cross-device merge, verification reset, rotation, and summary are healthy');
+console.log('✓ deployed Stage 3 loader, six grouped passages, 54 advanced questions, diagnostics, rotation, and summaries are healthy');

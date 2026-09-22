@@ -24,8 +24,12 @@ test('Firestore content sync defaults to read-only review and supports ADC',()=>
 test('Firestore importer loads stage 3 and both prescribed-text language packs with metadata',()=>{
   const source=read('scripts/import_to_firestore.js');
   assert.match(source,/question-pack-transfer-07\.js/);
+  assert.match(source,/question-pack-passage-set-01\.js/);
   assert.match(source,/passageId:question\.passageId\|\|null/);
   assert.match(source,/passageText:question\.passageText\|\|null/);
+  assert.match(source,/passageSetId:question\.passageSetId\|\|null/);
+  assert.match(source,/inspectCollection\('passageSets',targets\.passageSets\)/);
+  assert.match(source,/passageSetCount/);
   assert.match(source,/question-pack-settext-language-01\.js/);
   assert.match(source,/question-pack-settext-language-02\.js/);
   assert.match(source,/sourceWorkId:question\.sourceWorkId\|\|null/);
@@ -40,7 +44,7 @@ test('Firestore importer resolves Firebase Admin through the Functions package b
   assert.doesNotMatch(source,/node_modules', 'firebase-admin'/);
 });
 
-test('prune only removes stale question and knowledge-point documents',()=>{
+test('prune only removes stale managed catalog documents, never source texts',()=>{
   const source=read('scripts/import_to_firestore.js');
   assert.match(source,/mode\s*===\s*'prune'/);
   assert.match(source,/report\.collectionName\s*!==\s*'texts'/);

@@ -8,6 +8,7 @@ if(typeof document!=='undefined'&&document.readyState==='loading'){
  // question-pack-transfer-06.js, question-pack-transfer-07.js,
  // question-pack-settext-language-01.js, question-pack-settext-language-02.js,
  // question-pack-fill-01.js, question-pack-reorder-01.js, and question-pack-translation-order-01.js.
+ // question-pack-passage-set-01.js adds grouped unseen-passage tasks.
  if(!window.ManjingoQuestionPack02)document.write('<script src="./question-packs-core.js"><\/script>');
 }
 
@@ -61,6 +62,7 @@ const setTextLanguagePack02=window.ManjingoQuestionPackSetTextLanguage02||{quest
 const fillPack01=window.ManjingoQuestionPackFill01||{questions:[]};
 const reorderPack01=window.ManjingoQuestionPackReorder01||{questions:[]};
 const translationOrderPack01=window.ManjingoQuestionPackTranslationOrder01||{questions:[]};
+const passageSetPack01=window.ManjingoQuestionPackPassageSet01||{passageSets:[],questions:[]};
 
 const KP_REVISIONS={
  kp_p3_zhi:{content:'之：跨語境辨析',difficulty:3},kp_p3_er:{content:'而：跨語境辨析',difficulty:3},kp_p3_yi:{content:'以：跨語境辨析',difficulty:3},kp_p3_yu:{content:'於：跨語境辨析',difficulty:3},kp_p3_qi:{content:'其：跨語境辨析',difficulty:3},kp_p3_judgment:{content:'判斷句：跨句辨析',difficulty:3},kp_p3_passive:{content:'被動句：跨形式辨析',difficulty:3},kp_p3_fronting:{content:'賓語前置：跨句辨析',difficulty:3},kp_p3_adverbial:{content:'狀語後置：跨句辨析',difficulty:3},kp_p3_ellipsis:{content:'省略句：語境補足',difficulty:3},kp_p3_translation:{content:'文言翻譯：綜合策略',difficulty:3},kp_p3_argument:{content:'論證方法：綜合辨析',difficulty:3}
@@ -75,7 +77,8 @@ const QUESTION_REVISIONS={
 };
 
 const knowledgePoints=[...baseKnowledgePoints,...pack02.knowledgePoints,...pack03.knowledgePoints,...transferPack03.knowledgePoints,...transferPack04.knowledgePoints,...transferPack05.knowledgePoints,...transferPack06.knowledgePoints,...transferPack07.knowledgePoints].map(kp=>KP_REVISIONS[kp.kpId]?{...kp,...KP_REVISIONS[kp.kpId]}:{...kp});
-const rawQuestions=[...baseQuestions,...pack02.questions,...pack03.questions,...lessonPack.questions,...capacityPack01.questions,...transferPack01.questions,...transferPack03.questions,...transferPack04.questions,...transferPack05.questions,...transferPack06.questions,...transferPack07.questions,...setTextLanguagePack01.questions,...setTextLanguagePack02.questions,...fillPack01.questions,...reorderPack01.questions,...translationOrderPack01.questions].map(q=>QUESTION_REVISIONS[q.id]?{...q,...QUESTION_REVISIONS[q.id]}:{...q});
+const rawQuestions=[...baseQuestions,...pack02.questions,...pack03.questions,...lessonPack.questions,...capacityPack01.questions,...transferPack01.questions,...transferPack03.questions,...transferPack04.questions,...transferPack05.questions,...transferPack06.questions,...transferPack07.questions,...setTextLanguagePack01.questions,...setTextLanguagePack02.questions,...fillPack01.questions,...reorderPack01.questions,...translationOrderPack01.questions,...passageSetPack01.questions].map(q=>QUESTION_REVISIONS[q.id]?{...q,...QUESTION_REVISIONS[q.id]}:{...q});
+const passageSets=(passageSetPack01.passageSets||[]).map(set=>({...set,questionIds:Array.isArray(set.questionIds)?set.questionIds.map(String):[]}));
 
 function misconceptionConcept(q){
  const kp=String(q&&q.kpId||''),answer=String(q&&q.a||''),text=String(q&&q.q||'');
@@ -99,7 +102,7 @@ function selectQuestionsForPlan(plan,sourceQuestions,limit){
  items.forEach(item=>{if(queue.length>=max)return;let available=(byKp.get(item.kpId)||[]).filter(q=>!used.has(q.id));const production=item.skillId==='trans.reorder'?available.filter(q=>q.type==='reorder'&&Array.isArray(q.skillIds)&&q.skillIds.includes('trans.reorder')):[];if(production.length)available=production;if(!available.length)return;const conceptPreferred=Array.isArray(item.conceptQuestionIds)?item.conceptQuestionIds.map(String):[],misconceptionPreferred=Array.isArray(item.misconceptionQuestionIds)?item.misconceptionQuestionIds.map(String):[],preferred=Array.from(new Set([...conceptPreferred,...misconceptionPreferred])),preferredSet=new Set(preferred),preferredPool=preferred.length?available.filter(q=>preferredSet.has(String(q.id))):[],pool=preferredPool.length?preferredPool:available;let ranked=rotation&&typeof rotation.rank==='function'?rotation.rank(pool):pool.slice(),candidate=diversity&&typeof diversity.choose==='function'?diversity.choose(ranked,queue,{avoidSentenceIds}):ranked[0]||null;if(!candidate&&preferredPool.length){ranked=rotation&&typeof rotation.rank==='function'?rotation.rank(available):available.slice();candidate=diversity&&typeof diversity.choose==='function'?diversity.choose(ranked,queue,{avoidSentenceIds}):ranked[0]||null;}if(!candidate)candidate=available[Math.floor(Math.random()*available.length)];used.add(candidate.id);queue.push({...candidate,skillId:item.skillId||candidate.skillId||null,category:item.category||'new',priority:item.priority??3,conceptReview:conceptPreferred.includes(String(candidate.id)),conceptKey:item.conceptKey||candidate.misconceptionKey||null,conceptLabel:item.conceptLabel||candidate.misconceptionLabel||null,conceptMastery:item.conceptMastery??null,misconceptionReview:misconceptionPreferred.includes(String(candidate.id))});});
  return queue;
 }
-window.ManjingoContent={catalogVersion:'reviewed-v1',knowledgePoints:knowledgePoints.map(x=>({...x})),questions:questions.map(x=>({...x})),getKnowledgePointIds,selectQuestionsForPlan,misconceptionConcept};
+window.ManjingoContent={catalogVersion:'reviewed-v1',knowledgePoints:knowledgePoints.map(x=>({...x})),questions:questions.map(x=>({...x})),passageSets:passageSets.map(x=>({...x,questionIds:x.questionIds.slice()})),getKnowledgePointIds,selectQuestionsForPlan,misconceptionConcept};
 if(typeof document!=='undefined'&&document.readyState==='loading'){
  if(window.ManjingoLessonRuntimeBundled){/* lesson page supplies its reviewed runtime separately */}
  else if(window.ManjingoUseAppRuntimeBundle)document.write('<script src="./app-runtime.js"><\/script>');
