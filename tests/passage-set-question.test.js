@@ -60,3 +60,9 @@ test('target highlighting escapes source text and marks only the requested sente
  assert.match(html,/甲&lt;乙&gt;丙，<mark class="stage3-target">乙丙<\/mark>。/);
  assert.equal((html.match(/stage3-target/g)||[]).length,1);
 });
+
+test('wrong-answer review adds exactly one terminal punctuation mark',()=>{
+ assert.equal(stage3.reviewAnswer('認為琴的外觀不夠古舊'),'參考答案：認為琴的外觀不夠古舊。 ');
+ assert.equal(stage3.reviewAnswer('有一位貴人經過，看見了這張琴，便用百金買下它。'),'參考答案：有一位貴人經過，看見了這張琴，便用百金買下它。 ');
+ assert.equal(stage3.reviewAnswer('為甚麼？'),'參考答案：為甚麼？ ');
+});
