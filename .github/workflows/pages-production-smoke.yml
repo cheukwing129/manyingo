@@ -78,6 +78,7 @@ jobs:
                curl -fsS "$MANJINGO_BASE_URL/launch-state-runtime.js" | grep -q 'restoreTodayPlanFromCompletion' && \
                curl -fsS "$MANJINGO_BASE_URL/account-ui.js" | grep -Fq "result&&result.ok===true" && \
                curl -fsS "$MANJINGO_BASE_URL/question-pack-transfer-07.js" | grep -q 'tr10q036' && \
+               curl -fsS "$MANJINGO_BASE_URL/question-pack-passage-set-01.js" | grep -q 'psq018' && \
                curl -fsS "$MANJINGO_BASE_URL/question-pack-settext-language-01.js" | grep -q 'stl1q036' && \
                curl -fsS "$MANJINGO_BASE_URL/question-pack-settext-language-02.js" | grep -q 'stl2q024' && \
                curl -fsS "$MANJINGO_BASE_URL/content-catalog.js" | grep -q 'question-pack-settext-language-02.js' && \

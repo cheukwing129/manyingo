@@ -13,7 +13,7 @@ function questionData(question,catalogVersion){
   options:Array.isArray(question.o)?Array.from(question.o,String):[],answer:question.a==null?'':String(question.a),acceptedAnswers:Array.isArray(question.acceptedAnswers)?question.acceptedAnswers.map(String):[],
   fragments:Array.isArray(question.fragments)?question.fragments.map(item=>({id:String(item.id),text:String(item.text)})):[],answerOrder:Array.isArray(question.answerOrder)?question.answerOrder.map(String):[],modelAnswer:question.modelAnswer||null,reorderMode:question.reorderMode||null,requiredCount:Number.isInteger(question.requiredCount)?question.requiredCount:null,
   misconceptionKey:question.misconceptionKey||null,misconceptionLabel:question.misconceptionLabel||null,
-  skillIds:Array.isArray(question.skillIds)?Array.from(question.skillIds,String):[],skillContractVersion:question.skillContractVersion||null,sourceTextId:question.sourceTextId||null,sourceSentenceId:question.sourceSentenceId||null,sourceScope:question.sourceScope||null,
+  skillIds:Array.isArray(question.skillIds)?Array.from(question.skillIds,String):[],skillContractVersion:question.skillContractVersion||null,sourceTextId:question.sourceTextId||null,sourceSentenceId:question.sourceSentenceId||null,sourceScope:question.sourceScope||null,passageSetId:question.passageSetId||null,
   baseXp:Number(question.baseXp||question.xp||8),catalogVersion
  };
 }

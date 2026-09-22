@@ -17,6 +17,7 @@
  *   public/question-pack-fill-01.js
  *   public/question-pack-reorder-01.js
  *   public/question-pack-translation-order-01.js
+ *   public/question-pack-passage-set-01.js
  *   public/content-catalog.js
  *   public/question-pack-adaptive-01.js
  *   public/question-pack-adaptive-02.js
@@ -26,7 +27,7 @@
  * Safe modes:
  *   node scripts/import_to_firestore.js --check   # default; report drift only
  *   node scripts/import_to_firestore.js --apply   # upsert reviewed docs, keep stale docs
- *   node scripts/import_to_firestore.js --prune   # upsert reviewed docs, delete stale question/KP docs
+ *   node scripts/import_to_firestore.js --prune   # upsert reviewed docs, delete stale managed catalog docs
  *   node scripts/import_to_firestore.js --verify  # fail when Firestore differs from reviewed catalog
  *
  * Authentication:
@@ -107,11 +108,14 @@ function catalogTargets(catalog) {
       misconceptionKey:question.misconceptionKey||null,misconceptionLabel:question.misconceptionLabel||null,difficultyTier:question.difficultyTier||null,
       skillIds:Array.isArray(question.skillIds)?Array.from(question.skillIds,String):[],skillContractVersion:question.skillContractVersion||null,sourceTextId:question.sourceTextId||null,sourceSentenceId:question.sourceSentenceId||null,
       sourceWorkId:question.sourceWorkId||null,setTextLanguage:question.setTextLanguage===true?true:null,
-      passageId:question.passageId||null,passageText:question.passageText||null,
+      passageId:question.passageId||null,passageSetId:question.passageSetId||null,passageText:question.passageText||null,
       sourceKind:question.sourceKind||null,transferLevel:Number.isInteger(question.transferLevel)?question.transferLevel:null,baseXp:Number(question.baseXp||question.xp||8),catalogVersion:version
     }
   }));
-  return {version,knowledgePoints,questions};
+  const passageSets = (Array.isArray(catalog.passageSets)?catalog.passageSets:[]).map(set=>({
+    id:String(set.id),data:{title:set.title||'',source:set.source||'',sourceTextId:set.sourceTextId||null,sourceKind:set.sourceKind||null,difficultyTier:set.difficultyTier||null,passageText:set.passageText||'',questionIds:Array.isArray(set.questionIds)?set.questionIds.map(String):[],catalogVersion:version}
+  }));
+  return {version,knowledgePoints,questions,passageSets};
 }
 
 function normalized(value){if(Array.isArray(value))return value.map(normalized);if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,normalized(value[key])]));return value===undefined?null:value;}
@@ -123,20 +127,20 @@ async function writeTargets(report){const rows=dirtyTargets(report);for(let star
 async function deleteStale(report){for(let start=0;start<report.stale.length;start+=400){const batch=db.batch();for(const id of report.stale.slice(start,start+400))batch.delete(db.collection(report.collectionName).doc(id));await batch.commit();}}
 function hasContentDrift(reports,includeStale=true){return reports.some(report=>report.create.length||report.update.length||(includeStale&&report.stale.length));}
 function hasPrunableStale(reports){return reports.some(report=>report.collectionName!=='texts'&&report.stale.length);}
-async function inspectAll(){const catalog=loadReviewedCatalog(),targets=catalogTargets(catalog),reports=await Promise.all([inspectCollection('texts',textTargets()),inspectCollection('knowledgePoints',targets.knowledgePoints),inspectCollection('questions',targets.questions)]);return{catalog,targets,reports};}
+async function inspectAll(){const catalog=loadReviewedCatalog(),targets=catalogTargets(catalog),reports=await Promise.all([inspectCollection('texts',textTargets()),inspectCollection('knowledgePoints',targets.knowledgePoints),inspectCollection('questions',targets.questions),inspectCollection('passageSets',targets.passageSets)]);return{catalog,targets,reports};}
 
 (async()=>{
  try{
   console.log(`Manjingo Firestore catalog sync: ${mode}`);console.log(`Project: ${PROJECT_ID}`);
-  const before=await inspectAll();console.log(`Reviewed catalog: ${before.targets.version} · ${before.targets.knowledgePoints.length} KP · ${before.targets.questions.length} questions`);before.reports.forEach(summarize);
+  const before=await inspectAll();console.log(`Reviewed catalog: ${before.targets.version} · ${before.targets.knowledgePoints.length} KP · ${before.targets.questions.length} questions · ${before.targets.passageSets.length} passage sets`);before.reports.forEach(summarize);
   if(mode==='check'){console.log(hasContentDrift(before.reports)?'\nℹ️ Firestore differs from the reviewed catalog. No changes were made.':'\n✅ Firestore already matches the reviewed catalog.');return;}
   if(mode==='verify'){if(hasContentDrift(before.reports))throw new Error('Firestore catalog verification failed: drift remains');console.log('\n✅ Firestore exactly matches the reviewed catalog.');return;}
   const writeDrift=hasContentDrift(before.reports,false),pruneDrift=mode==='prune'&&hasPrunableStale(before.reports);
   if(!writeDrift&&!pruneDrift){console.log(mode==='prune'?'\n✅ Reviewed catalog already synchronized; nothing to write or prune.':'\n✅ Reviewed catalog already synchronized; no write quota consumed.');return;}
   for(const report of before.reports)await writeTargets(report);
   if(mode==='prune')for(const report of before.reports.filter(report=>report.collectionName!=='texts'))await deleteStale(report);
-  await db.collection('contentMeta').doc('catalog').set({catalogVersion:before.targets.version,questionCount:before.targets.questions.length,knowledgePointCount:before.targets.knowledgePoints.length,syncMode:mode,syncedAt:FieldValue.serverTimestamp()},{merge:true});
+  await db.collection('contentMeta').doc('catalog').set({catalogVersion:before.targets.version,questionCount:before.targets.questions.length,knowledgePointCount:before.targets.knowledgePoints.length,passageSetCount:before.targets.passageSets.length,syncMode:mode,syncedAt:FieldValue.serverTimestamp()},{merge:true});
   const after=await inspectAll();after.reports.forEach(summarize);const remainingWriteDrift=hasContentDrift(after.reports,mode==='prune');if(remainingWriteDrift)throw new Error('Firestore catalog still differs after synchronization');
-  console.log(mode==='prune'?'\n✅ Reviewed catalog synchronized and stale question/KP documents pruned.':'\n✅ Reviewed catalog synchronized; stale documents intentionally preserved.');
+  console.log(mode==='prune'?'\n✅ Reviewed catalog synchronized and stale managed catalog documents pruned.':'\n✅ Reviewed catalog synchronized; stale documents intentionally preserved.');
  }catch(error){console.error(`\n❌ ${error.message||error}`);process.exitCode=1;}
 })();
