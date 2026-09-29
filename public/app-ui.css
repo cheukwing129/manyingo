@@ -141,6 +141,9 @@ body .feedback-ui.wrong,#lessonApp .feedback-ui.wrong{border-color:#ffc5c5}
 /* Learning session completion */
 .session-summary.done{padding:10px 0 2px!important;text-align:center;font-weight:inherit}
 .session-summary-icon{width:62px;height:62px;margin:0 auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--ui-green-soft);font-size:32px}
+.session-summary-icon.mascot-celebrate{width:fit-content;max-width:100%;height:auto;min-height:0;border-radius:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:transparent;font-size:11px;line-height:1.3}
+.session-summary-icon.mascot-celebrate img{display:block;flex:0 0 auto;width:76px;height:104px;object-fit:contain}
+.session-summary-icon.mascot-celebrate span{display:block;max-width:100%;color:var(--ui-green-dark,#398500);font-size:11px;line-height:1.3;font-weight:900;text-align:center;overflow-wrap:anywhere}
 .session-summary h3{margin:0;color:var(--ui-ink);font-size:24px;line-height:1.25;letter-spacing:-.02em}
 .session-summary-lead{margin:6px 0 16px;color:var(--ui-muted);font-size:13px;font-weight:800}
 .session-summary-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 14px}
@@ -187,6 +190,7 @@ body .feedback-ui.wrong,#lessonApp .feedback-ui.wrong{border-color:#ffc5c5}
   #lessonApp .action,#lessonApp .option,body .action,body .option{min-height:50px}
   .feedback-result{padding:12px}.feedback-teaching{padding:12px}.feedback-progress,.feedback-next{padding-left:12px;padding-right:12px}
   .session-summary h3{font-size:22px}.session-summary-metrics>div{padding:11px 4px}.session-summary-metrics strong{font-size:17px}
+  .session-summary-icon.mascot-celebrate img{width:68px;height:94px}
 }
 @media(max-width:370px){
   body{padding-left:10px!important;padding-right:10px!important}
