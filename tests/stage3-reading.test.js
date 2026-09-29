@@ -53,6 +53,16 @@ test('Stage 3 summary reports overall and per-skill performance',()=>{
  assert.equal(bySkill.get('transfer.mixed').accuracy,0);
 });
 
+test('Stage 3 motion gives brief feedback and respects reduced-motion preference',()=>{
+ const css=stage3.MOTION_CSS,source=fs.readFileSync(path.join(__dirname,'..','public','stage3-reading.js'),'utf8');
+ assert.match(css,/stage3-question-enter 180ms/);
+ assert.match(css,/stage3-feedback-in 160ms/);
+ assert.match(css,/stage3-score-in 200ms/);
+ assert.match(css,/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+ assert.match(css,/animation:none!important/);
+ assert.match(source,/class="stage3-question-motion"/);
+});
+
 test('home shell is wired to load the Stage 3 module without adding a fifth primary tab',()=>{
  const source=fs.readFileSync(path.join(__dirname,'..','public','home-shell.js'),'utf8'),html=fs.readFileSync(path.join(__dirname,'..','public','index.html'),'utf8');
  assert.match(source,/stage3-reading\.js/);
