@@ -7,5 +7,8 @@
 /app-ui.css
   Cache-Control: public, max-age=300, must-revalidate
 
+/brand/favicon.png
+  Cache-Control: no-cache, must-revalidate
+
 /*.html
   Cache-Control: no-cache
