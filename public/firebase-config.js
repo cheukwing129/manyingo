@@ -12,6 +12,13 @@ const firebaseConfig = {
   appId: "1:653860419855:web:bd584b431a71a0ca70267a"
 };
 
+// Only this stable review domain uses its same-origin auth proxy. Its Firebase
+// authorized domain and Google OAuth callback must also be configured in console.
+const PREVIEW_AUTH_DOMAIN = 'refactor-explicit-runtime-en.manyingo.pages.dev';
+if (typeof location !== 'undefined' && location.protocol === 'https:' && location.hostname === PREVIEW_AUTH_DOMAIN) {
+  firebaseConfig.authDomain = PREVIEW_AUTH_DOMAIN;
+}
+
 let db = null;
 let auth = null;
 let firebaseReadyPromise = null;

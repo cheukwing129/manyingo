@@ -113,7 +113,7 @@ test('session summary counts provisional XP once and accepts delayed confirmed X
 });
 
 test('session summary is loaded after answer feedback and preserves homepage completion status',()=>{
- const catalog=read('public/content-catalog.js'),runtime=read('public/session-summary.js'),css=read('public/app-ui.css');
+ const catalog=read('public/home-shell.js'),runtime=read('public/session-summary.js'),css=read('public/app-ui.css');
  assert.match(catalog,/feedback-ui\.js.*session-summary\.js/);
  assert.match(runtime,/📱 今日學習完成/);
  assert.match(runtime,/class="session-summary done"/);
@@ -141,4 +141,18 @@ test('lesson completion mascot has a static compact layout when feedback UI is n
  assert.match(caption[1],/font-size:11px/);
  assert.match(caption[1],/overflow-wrap:anywhere/);
  assert.match(css,/\.session-summary-icon\.mascot-celebrate img\{width:68px;height:94px\}/);
+});
+
+
+test('summary can initialize after DOM ready before its global API is published',()=>{
+ const vm=require('node:vm');
+ let observed=0;
+ class Observer{observe(){observed++}}
+ const document={readyState:'complete',body:{},addEventListener(){},querySelector(){return null},querySelectorAll(){return[]}};
+ const context={document,MutationObserver:Observer,URLSearchParams,console};
+ vm.createContext(context);
+ vm.runInContext(read('public/session-summary.js'),context);
+ assert.ok(context.ManjingoSessionSummary.observer instanceof Observer);
+ assert.equal(observed,1);
+ assert.equal(typeof context.ManjingoSessionSummary.reset,'function');
 });

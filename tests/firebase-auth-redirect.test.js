@@ -56,3 +56,18 @@ test('Google login paints busy feedback before Firebase initialization',()=>{
   assert.ok(login.indexOf('busy=true;render(null)')>=0,'login should repaint the button immediately');
   assert.ok(login.indexOf('busy=true;render(null)')<login.indexOf('fb=await firebase()'),'busy feedback must appear before Firebase work');
 });
+
+
+test('only the exact HTTPS review domain switches Firebase auth to its own origin',()=>{
+  const vm=require('node:vm');
+  const source=read('public/firebase-config.js');
+  const configSource=source.slice(0,source.indexOf('let db = null;')).replace("import './answer-outbox.js';",'');
+  function domain(url){return vm.runInNewContext(configSource+'; firebaseConfig.authDomain',{location:new URL(url)})}
+  const preview='refactor-explicit-runtime-en.manyingo.pages.dev';
+  assert.equal(domain('https://'+preview),preview);
+  assert.equal(domain('https://manyingo.pages.dev'),'manyingo.pages.dev');
+  for(const url of ['http://'+preview,'https://29494271.manyingo.pages.dev','https://'+preview+'.example.com','https://localhost']){
+    assert.equal(domain(url),'manyingo.pages.dev',url);
+  }
+  assert.equal(vm.runInNewContext(configSource+'; firebaseConfig.authDomain'),'manyingo.pages.dev');
+});

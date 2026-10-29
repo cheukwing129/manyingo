@@ -85,35 +85,31 @@ test('cross-device merge treats a newer difficulty observation as newer state wh
  assert.equal(accountSync.recordTime(local),new Date('2026-09-11T00:10:00.000Z').getTime());
 });
 
-test('observability re-wraps a replaced rotation chooser without duplicating UI listeners',()=>{
+test('difficulty observations follow direct choices without replacing rotation functions or repeating UI listeners',()=>{
  const memory=new Map([['manjingo_progress_cache',JSON.stringify({knowledge:{kp1:{mastery:50}}})]]);
  const localStorage={getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,String(value))};
- let listenerCount=0,firstCalls=0,secondCalls=0;
- const rotation={choose(list){firstCalls+=1;return list[0]||null}};
- const window={ManjingoQuestionRotation:rotation,localStorage,setTimeout,clearTimeout,addEventListener(name){if(name==='manjingo:difficulty-observed')listenerCount+=1},dispatchEvent(){}};
+ let listenerCount=0;
+ const window={localStorage,setTimeout,clearTimeout,addEventListener(name){if(name==='manjingo:difficulty-observed')listenerCount+=1},dispatchEvent(){}};
  const context={window,localStorage,console,Map,Set,Array,Object,Number,String,Math,Date,JSON,setTimeout,clearTimeout};
  vm.createContext(context);
+ vm.runInContext(source('public/question-rotation.js'),context);
+ const rotation=window.ManjingoQuestionRotation,original={rank:rotation.rank,select:rotation.select,choose:rotation.choose};
  vm.runInContext(source('public/difficulty-observability.js'),context);
- const api=context.window.ManjingoDifficultyObservability,firstWrapper=rotation.choose;
- assert.equal(firstWrapper.__difficultyObservabilityWrapper,true);
+ const api=window.ManjingoDifficultyObservability;
+ assert.equal(rotation.choose([{id:'q1',kpId:'kp1',difficultyTier:'application'}],[]).id,'q1');
+ vm.runInContext(source('public/question-difficulty.js'),context);
+ assert.equal(rotation.choose([{id:'q2',kpId:'kp1',difficultyTier:'application'}],[]).id,'q2');
+ for(const method of ['rank','select','choose'])assert.equal(rotation[method],original[method],method+' must stay stable after lazy modules load');
+ assert.equal(JSON.parse(memory.get('manjingo_progress_cache')).knowledge.kp1.difficultyObservability.totalDecisions,2);
  assert.equal(listenerCount,1);
- firstWrapper([{id:'q1',kpId:'kp1',difficultyTier:'application'}],[]);
- assert.equal(firstCalls,1);
- rotation.choose=function(list){secondCalls+=1;return list[0]||null};
- assert.equal(api.install(),true,'reinstall should wrap the replacement chooser');
- assert.notEqual(rotation.choose,firstWrapper);
- assert.equal(rotation.choose.__difficultyObservabilityWrapper,true);
- rotation.choose([{id:'q2',kpId:'kp1',difficultyTier:'application'}],[]);
- assert.equal(secondCalls,1);
- assert.equal(listenerCount,1,'UI listener must remain single-install');
- assert.equal(api.install(),false,'already wrapped chooser should not be wrapped again');
+ assert.equal(api.installUi(),false,'UI installation must be idempotent');
  assert.equal(listenerCount,1);
 });
 
 test('browser runtime integrates difficulty explanations inside learning results',()=>{
- const rotation=source('public/question-rotation.js'),observability=source('public/difficulty-observability.js');
+ const rotation=source('public/home-shell.js'),observability=source('public/difficulty-observability.js');
  const difficultyPos=rotation.indexOf('question-difficulty.js'),observabilityPos=rotation.indexOf('difficulty-observability.js');
- assert.ok(difficultyPos>=0&&observabilityPos>difficultyPos,'observability must wrap the calibrated difficulty selector');
+ assert.ok(difficultyPos>=0&&observabilityPos>difficultyPos,'observability must have calibrated difficulty context available');
  assert.match(observability,/ManjingoAccountSync/);
  assert.match(observability,/sync\.schedule\(\)/);
  assert.match(observability,/manjingo:difficulty-observed/);

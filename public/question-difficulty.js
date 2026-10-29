@@ -4,7 +4,7 @@ const api=factory(root);
 if(typeof module==='object'&&module.exports)module.exports=api;
 root.ManjingoQuestionDifficulty=api;
 if(root.window&&root.window!==root)root.window.ManjingoQuestionDifficulty=api;
-api.install();
+api.extendCatalog();
 })(typeof globalThis!=='undefined'?globalThis:this,function(root){
 'use strict';
 const TIERS=['foundation','application','transfer'];
@@ -55,7 +55,7 @@ function contextFor(list,preferredIds){
 function adaptivePacks(){
  return['ManjingoQuestionPackAdaptive01','ManjingoQuestionPackAdaptive02','ManjingoQuestionPackAdaptive03'].map(fromRoot).filter(pack=>pack&&Array.isArray(pack.questions));
 }
-function installCatalog(){
+function extendCatalog(){
  const catalog=fromRoot('ManjingoContent'),packs=adaptivePacks();
  if(!catalog||!Array.isArray(catalog.questions)||!packs.length)return false;
  const revisions=Object.assign({},...packs.map(pack=>pack.tierRevisions&&typeof pack.tierRevisions==='object'?pack.tierRevisions:{}));
@@ -69,14 +69,5 @@ function installCatalog(){
  catalog.catalogVersion=packs.map(pack=>pack.catalogVersion).filter(Boolean).pop()||'reviewed-v2';
  return true;
 }
-function installRotation(){
- const rotation=fromRoot('ManjingoQuestionRotation');if(!rotation||rotation.__difficultyAdaptiveInstalled)return false;
- rotation.rank=function(list){return rank(list,{...contextFor(list),rotation})};
- rotation.select=function(list,limit){return rotation.rank(list).slice(0,Math.max(0,Number(limit)||0))};
- rotation.choose=function(list,preferredIds){return choose(list,{...contextFor(list,preferredIds),preferredIds,rotation})};
- rotation.__difficultyAdaptiveInstalled=true;
- return true;
-}
-function install(){const catalogInstalled=installCatalog(),rotationInstalled=installRotation();return catalogInstalled||rotationInstalled}
-return{TIERS,LABELS,clampMastery,tierIndex,tierOf,tierForMastery,rank,select,choose,labelFor,practiceMode,contextFor,adaptivePacks,installCatalog,installRotation,install};
+return{TIERS,LABELS,clampMastery,tierIndex,tierOf,tierForMastery,rank,select,choose,labelFor,practiceMode,contextFor,adaptivePacks,extendCatalog};
 });

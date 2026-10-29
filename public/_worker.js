@@ -567,7 +567,11 @@ async function proxyFirebaseAuth(request) {
 
 async function api(request, env, trace, ctx) {
   const url = new URL(request.url);
-  if (url.pathname === '/api/health') return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: Boolean(env.FIREBASE_CLIENT_EMAIL && env.FIREBASE_PRIVATE_KEY), learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION, kpUniversePolicy:SERVER_KP_UNIVERSE.VERSION, questionIndexPolicy:SERVER_QUESTION_INDEX.version, questionIndexCount:SERVER_QUESTION_INDEX.count, planBootstrapPolicy:'fresh-anonymous-zero-read-v2' });
+  if (url.pathname === '/api/health') {
+    // Report fixed binding names only; never return values or inspect credentials.
+    const missingBindings = ['FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'].filter(name => !env[name]);
+    return json({ ok: true, service: 'manjingo-learning', firestoreProject: projectId(env), configured: missingBindings.length === 0, missingBindings, learningPolicy: 'shared-v1', practicePolicy:SERVER_PRACTICE.VERSION, stage3CalibrationPolicy:STAGE3_CALIBRATION.VERSION, kpUniversePolicy:SERVER_KP_UNIVERSE.VERSION, questionIndexPolicy:SERVER_QUESTION_INDEX.version, questionIndexCount:SERVER_QUESTION_INDEX.count, planBootstrapPolicy:'fresh-anonymous-zero-read-v2' });
+  }
   const identity=await timed(trace,'auth',()=>verifyFirebaseIdToken(request, env)),uid=identity.uid;
   if (url.pathname === '/api/submit-answer' && request.method === 'POST') return submitAnswer(request, env, uid, trace);
   if (url.pathname === '/api/stage3-calibration' && request.method === 'POST') return submitStage3Calibration(request,env,uid,trace);

@@ -12,7 +12,6 @@ if(typeof module==='object'&&module.exports){
 const api=factory(root,curriculum,metadata,diversity,skillMastery);
 root.ManjingoSkillFirstPlan=api;
 if(root.window&&root.window!==root)root.window.ManjingoSkillFirstPlan=api;
-api.install();
 })(typeof globalThis!=='undefined'?globalThis:this,function(root,curriculum,metadata,diversity,skillMastery){
 'use strict';
 
@@ -20,7 +19,6 @@ const VERSION='skill-first-plan-v2';
 const CATEGORY_ORDER={review:0,weak:1,new:2,stable:3};
 
 function runtimeRoot(){return root&&root.window||root}
-function content(){const r=runtimeRoot();return r&&r.ManjingoContent||null}
 function rotation(){const r=runtimeRoot();return r&&r.ManjingoQuestionRotation||null}
 function learning(){const r=runtimeRoot();return r&&r.ManjingoLocalLearning||null}
 function skillMasteryApi(){const r=runtimeRoot();return r&&r.ManjingoSkillMasteryV1||skillMastery||null}
@@ -140,10 +138,6 @@ function selectQuestionsForPlan(plan,sourceQuestions,limit,options){
  }
  return queue;
 }
-function install(){
- const r=runtimeRoot(),catalog=r&&r.ManjingoContent;if(!catalog||typeof catalog.selectQuestionsForPlan!=='function'||catalog.__skillFirstPlanInstalled)return false;
- const legacy=catalog.selectQuestionsForPlan.bind(catalog);catalog.__legacySelectQuestionsForPlan=legacy;catalog.selectQuestionsForPlan=function(plan,questions,limit){try{return selectQuestionsForPlan(plan,questions,limit,{learning:learning(),rotation:rotation(),diversity,skillMastery:skillMasteryApi()})}catch(error){if(r&&r.console&&typeof r.console.warn==='function')r.console.warn('skill-first selector fallback',error);return legacy(plan,questions,limit)}};catalog.__skillFirstPlanInstalled=true;return true;
-}
 
-return{VERSION,coreQuestions,poolsFor,kpSkillsFor,kpIdsForSkill,orderedSkillIds,skillState,adaptPlan,selectQuestionsForPlan,install};
+return{VERSION,coreQuestions,poolsFor,kpSkillsFor,kpIdsForSkill,orderedSkillIds,skillState,adaptPlan,selectQuestionsForPlan};
 });

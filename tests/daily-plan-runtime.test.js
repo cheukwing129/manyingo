@@ -61,14 +61,17 @@ test('choice balancing distributes an all-A source evenly without changing the c
  assert.ok(balanced.some(item=>item.o[0]!=='A'));
 });
 
-test('daily runtime installs answer-position balancing around the existing plan selector',()=>{
- const source=Array.from({length:10},(_,i)=>({id:'tr'+(i+1),type:'choice',o:['correct','b','c','d'],a:'correct'}));
- const window={ManjingoContent:{questions:source.map(x=>({...x,o:x.o.slice()})),selectQuestionsForPlan(_plan,questions,limit){return questions.slice(0,limit)}}};
- load(window);
- const selected=window.ManjingoContent.selectQuestionsForPlan({},source,10),counts=[0,0,0,0];
+test('legacy choice balancing uses a stable catalog selector',()=>{
+ const context={window:{},console};vm.createContext(context);
+ vm.runInContext(read('public/content-catalog.js'),context);
+ const content=context.window.ManjingoContent,selector=content.selectQuestionsForPlan;
+ vm.runInContext(read('public/daily-plan-runtime.js'),context);
+ const source=Array.from({length:10},(_,i)=>({id:'tr'+(i+1),kpId:'kp'+i,type:'choice',o:['correct','b','c','d'],a:'correct'}));
+ const plan={items:source.map(q=>({kpId:q.kpId}))},selected=content.selectQuestionsForPlan(plan,source,10),counts=[0,0,0,0];
  selected.forEach(item=>counts[item.o.indexOf(item.a)]++);
  assert.ok(Math.max(...counts)-Math.min(...counts)<=1,JSON.stringify(counts));
- assert.equal(window.ManjingoContent.__balancedDailyChoices,true);
+ assert.equal(content.selectQuestionsForPlan,selector,'balancing must not replace the selector');
+ assert.equal(content.__balancedDailyChoices,true);
 });
 
 test('remaining-plan summary reports live review weak and new counts',()=>{

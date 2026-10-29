@@ -36,7 +36,7 @@ test('server commits skill mastery atomically with KP gamification and answer lo
 });
 
 test('server records versioned evidence before granting verified mastery',()=>{
- const worker=read('public/_worker.js'),client=read('public/question-rotation.js');
+ const worker=read('public/_worker.js'),client=read('public/home-shell.js');
  assert.match(worker,/import '\.\/skill-evidence-v1\.js'/);
  assert.match(worker,/SKILL_EVIDENCE\.update\(skillPrev\.evidence,answer,questionData,skillId,now\)/);
  assert.match(worker,/nativeSkill\.masteryVerified=verification\.verified/);

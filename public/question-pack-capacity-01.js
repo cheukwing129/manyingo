@@ -5,7 +5,7 @@ const questions=[
  {id:'cap1q002',kpId:'kp_yueyang_001',textId:'yueyanglou',type:'choice',q:'翻譯「滕子京謫守巴陵郡」時，「謫」最應落實為哪個意思？',o:['被貶','治理','守衛','遷居'],a:'被貶',explanation:'「守」是出任太守，「謫」才是被貶謫；翻譯時要把兩個詞的功能分開。'},
  {id:'cap1q003',kpId:'kp_yueyang_001',textId:'yueyanglou',type:'choice',q:'下列哪項和「謫」的文言義最接近？',o:['降職外放','升官受賞','告老還鄉','出遊訪友'],a:'降職外放',explanation:'「謫」的核心是因過失受到貶降並往外地任職，與升遷、退休或出遊無關。'},
 
- {id:'cap1q004',kpId:'kp_yueyang_004',textId:'yueyanglou',type:'fill',q:'____________，後天下之樂而樂。',a:'先天下之憂而憂',explanation:'《岳陽樓記》名句為「先天下之憂而憂，後天下之樂而樂」。'},
+ {id:'cap1q004',kpId:'kp_yueyang_004',textId:'yueyanglou',type:'choice',previousResponseType:'fill',q:'「後天下之樂而樂」的上句是？',o:['先天下之憂而憂','先天下之樂而樂','後天下之憂而憂','與天下同樂'],a:'先天下之憂而憂',explanation:'《岳陽樓記》名句為「先天下之憂而憂，後天下之樂而樂」。'},
  {id:'cap1q005',kpId:'kp_yueyang_004',textId:'yueyanglou',type:'choice',q:'下列哪一句與《岳陽樓記》原文完全相同？',o:['先天下之憂而憂，後天下之樂而樂','先天下人之憂而憂，後天下人之樂而樂','先天下之憂而悲，後天下之樂而喜','先天下而憂，後天下而樂'],a:'先天下之憂而憂，後天下之樂而樂',explanation:'名句默寫重點是準確還原原文，不應自行增「人」、換詞或刪去結構助詞。'},
  {id:'cap1q006',kpId:'kp_yueyang_004',textId:'yueyanglou',type:'choice',q:'補全原句：「先天下之憂而憂，後天下之＿＿＿＿。」',o:['樂而樂','樂而喜','樂則樂','樂後樂'],a:'樂而樂',explanation:'原文後半句是「後天下之樂而樂」，句式與前半「先天下之憂而憂」相對。'},
 

@@ -1,16 +1,8 @@
 (function(){
 'use strict';
 
-if(typeof document!=='undefined'&&document.readyState==='loading'){
- // question-packs-core.js is generated from question-pack-02.js, question-pack-03.js,
- // question-pack-lesson.js, question-pack-capacity-01.js, question-pack-transfer-01.js,
- // question-pack-transfer-03.js, question-pack-transfer-04.js, question-pack-transfer-05.js,
- // question-pack-transfer-06.js, question-pack-transfer-07.js,
- // question-pack-settext-language-01.js, question-pack-settext-language-02.js,
- // question-pack-fill-01.js, question-pack-reorder-01.js, and question-pack-translation-order-01.js.
- // question-pack-passage-set-01.js adds grouped unseen-passage tasks.
- if(!window.ManjingoQuestionPack02)document.write('<script src="./question-packs-core.js"><\/script>');
-}
+// Question packs are supplied by catalog-runtime.js (or the importing tool).
+// This module assembles content only; page entry points own runtime loading.
 
 const baseKnowledgePoints=[
  {kpId:'kp_yueyang_001',textId:'yueyanglou',type:'實詞',content:'謫',difficulty:1,teachable:true},
@@ -43,7 +35,7 @@ const baseQuestions=[
  {id:'q004',kpId:'kp_virtual_zhi',textId:'CROSS',type:'choice',q:'「輟耕之壟上」中「之」字的用法是？',o:['代詞','結構助詞（的）','動詞（到／往）','語氣助詞'],a:'動詞（到／往）',explanation:'「之」後接地點「壟上」，整句表示到田壟上去，所以「之」作動詞，意思是「往／到」。'},
  {id:'q005',kpId:'sx_001',textId:'CROSS',type:'choice',q:'「廉頗者，趙之良將也」屬於哪種句式？',o:['判斷句','被動句','省略句','倒裝句'],a:'判斷句',explanation:'「者……也」在此判定廉頗的身分是趙國良將，屬於典型判斷句。'},
  {id:'q010',kpId:'kp_translation_001',textId:'yueyanglou',type:'choice',q:'「微斯人，吾誰與歸」的正確白話翻譯是？',o:['如果沒有這樣的人，我要跟從誰呢？','如果沒有這樣的人，誰會跟從我呢？','沒有這樣的人，我不知道去哪裡。','這個人不存在，我們一起回去。'],a:'如果沒有這樣的人，我要跟從誰呢？',explanation:'「微」是「如果沒有」；「吾誰與歸」是賓語前置，還原為「吾與誰歸」，即「我跟從／歸依誰呢」。'},
- {id:'q008',kpId:'kp_yueyang_004',textId:'yueyanglou',type:'fill',q:'先天下之憂而憂，____________。',a:'後天下之樂而樂',explanation:'《岳陽樓記》原句是「先天下之憂而憂，後天下之樂而樂」。'},
+ {id:'q008',kpId:'kp_yueyang_004',textId:'yueyanglou',type:'choice',previousResponseType:'fill',q:'「先天下之憂而憂」的下句是？',o:['後天下之樂而樂','後天下之憂而憂','先天下之樂而樂','與天下同樂'],a:'後天下之樂而樂',explanation:'《岳陽樓記》原句是「先天下之憂而憂，後天下之樂而樂」。'},
  {id:'q006',kpId:'kp_translation_001',textId:'yueyanglou',type:'choice',q:'「吾誰與歸」中「歸」最接近哪個意思？',o:['歸還','歸依／一道','回家','歸來'],a:'歸依／一道',explanation:'這裡「歸」不是回家的「歸」，而是「歸依、一道」的意思；整句問「我同誰一道呢」。'}
 ];
 
@@ -95,17 +87,24 @@ function misconceptionConcept(q){
 }
 const questions=rawQuestions.map(q=>{const concept=misconceptionConcept(q);return concept?{...q,misconceptionKey:concept.key,misconceptionLabel:concept.label}:{...q};});
 function getKnowledgePointIds(options){const teachableOnly=!options||options.teachableOnly!==false;return knowledgePoints.filter(kp=>!teachableOnly||kp.teachable).map(kp=>kp.kpId);}
-function selectQuestionsForPlan(plan,sourceQuestions,limit){
+function selectBaseQuestionsForPlan(plan,sourceQuestions,limit){
  const source=Array.isArray(sourceQuestions)?sourceQuestions:[],items=Array.isArray(plan&&plan.items)?plan.items:[],max=Math.max(0,Number(limit)||Number(plan&&plan.targetCount)||10),byKp=new Map(),rotation=window.ManjingoQuestionRotation,metadata=window.ManjingoQuestionMetadataV1,diversity=window.ManjingoQuestionDiversityV1;
  source.forEach(raw=>{if(!raw||!raw.id||!raw.kpId)return;const q=metadata&&typeof metadata.annotate==='function'?metadata.annotate(raw):raw;if(!byKp.has(q.kpId))byKp.set(q.kpId,[]);byKp.get(q.kpId).push(q)});
  const used=new Set(),queue=[],avoidSentenceIds=rotation&&typeof rotation.recentSentenceIds==='function'?rotation.recentSentenceIds():[];
  items.forEach(item=>{if(queue.length>=max)return;let available=(byKp.get(item.kpId)||[]).filter(q=>!used.has(q.id));const production=item.skillId==='trans.reorder'?available.filter(q=>q.type==='reorder'&&Array.isArray(q.skillIds)&&q.skillIds.includes('trans.reorder')):[];if(production.length)available=production;if(!available.length)return;const conceptPreferred=Array.isArray(item.conceptQuestionIds)?item.conceptQuestionIds.map(String):[],misconceptionPreferred=Array.isArray(item.misconceptionQuestionIds)?item.misconceptionQuestionIds.map(String):[],preferred=Array.from(new Set([...conceptPreferred,...misconceptionPreferred])),preferredSet=new Set(preferred),preferredPool=preferred.length?available.filter(q=>preferredSet.has(String(q.id))):[],pool=preferredPool.length?preferredPool:available;let ranked=rotation&&typeof rotation.rank==='function'?rotation.rank(pool):pool.slice(),candidate=diversity&&typeof diversity.choose==='function'?diversity.choose(ranked,queue,{avoidSentenceIds}):ranked[0]||null;if(!candidate&&preferredPool.length){ranked=rotation&&typeof rotation.rank==='function'?rotation.rank(available):available.slice();candidate=diversity&&typeof diversity.choose==='function'?diversity.choose(ranked,queue,{avoidSentenceIds}):ranked[0]||null;}if(!candidate)candidate=available[Math.floor(Math.random()*available.length)];used.add(candidate.id);queue.push({...candidate,skillId:item.skillId||candidate.skillId||null,category:item.category||'new',priority:item.priority??3,conceptReview:conceptPreferred.includes(String(candidate.id)),conceptKey:item.conceptKey||candidate.misconceptionKey||null,conceptLabel:item.conceptLabel||candidate.misconceptionLabel||null,conceptMastery:item.conceptMastery??null,misconceptionReview:misconceptionPreferred.includes(String(candidate.id))});});
  return queue;
 }
-window.ManjingoContent={catalogVersion:'reviewed-v1',knowledgePoints:knowledgePoints.map(x=>({...x})),questions:questions.map(x=>({...x})),passageSets:passageSets.map(x=>({...x,questionIds:x.questionIds.slice()})),getKnowledgePointIds,selectQuestionsForPlan,misconceptionConcept};
-if(typeof document!=='undefined'&&document.readyState==='loading'){
- if(window.ManjingoLessonRuntimeBundled){/* lesson page supplies its reviewed runtime separately */}
- else if(window.ManjingoUseAppRuntimeBundle)document.write('<script src="./app-runtime.js"><\/script>');
- else document.write('<script src="./reorder-question.js"><\/script><script src="./curriculum-v1.js"><\/script><script src="./question-metadata-v1.js"><\/script><script src="./question-diversity-v1.js"><\/script><script src="./question-rotation.js"><\/script><script src="./learning-path.js"><\/script><script src="./practice-effectiveness.js"><\/script><script src="./learning-path-ui.js"><\/script><script src="./weakness-panel.js"><\/script><script src="./mastery-dashboard.js"><\/script><script src="./feedback-ui.js"><\/script><script src="./session-summary.js"><\/script><script src="./account-sync.js"><\/script><script src="./account-ui.js"><\/script>');
+// Resolve the optional skill selector at the call boundary. The legacy route
+// keeps its original option balancing, including when skill selection fails.
+function selectQuestionsForPlan(plan,sourceQuestions,limit){
+ const skills=window.ManjingoSkillFirstPlan;
+ if(skills&&typeof skills.selectQuestionsForPlan==='function'){
+  try{return skills.selectQuestionsForPlan(plan,sourceQuestions,limit,{learning:window.ManjingoLocalLearning||null,rotation:window.ManjingoQuestionRotation||null,diversity:window.ManjingoQuestionDiversityV1||null,skillMastery:window.ManjingoSkillMasteryV1||null})}
+  catch(error){if(window.console&&typeof window.console.warn==='function')window.console.warn('skill-first selector fallback',error)}
+ }
+ const selected=selectBaseQuestionsForPlan(plan,sourceQuestions,limit),daily=window.ManjingoDailyPlanRuntime;
+ return daily&&typeof daily.balanceChoiceQuestions==='function'?daily.balanceChoiceQuestions(selected,'plan:'+String(limit==null?'auto':limit)):selected;
 }
+window.ManjingoContent={catalogVersion:'reviewed-v1',knowledgePoints:knowledgePoints.map(x=>({...x})),questions:questions.map(x=>({...x})),passageSets:passageSets.map(x=>({...x,questionIds:x.questionIds.slice()})),getKnowledgePointIds,selectQuestionsForPlan,misconceptionConcept};
+
 })();

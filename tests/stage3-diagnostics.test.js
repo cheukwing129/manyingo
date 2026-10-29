@@ -172,7 +172,7 @@ test('homepage and lesson wire diagnostics without changing the Stage 3 advanced
   const lesson=fs.readFileSync(path.join(root,'public/lesson.html'),'utf8');
   const pack=fs.readFileSync(path.join(root,'public/question-pack-transfer-07.js'),'utf8');
   assert.match(theme,/stage3-diagnostics\.js/);
-  const localLesson=lesson.indexOf('<script src="./local-lesson.js"></script>');
+  const localLesson=lesson.search(/<script src="\.\/local-lesson\.js(?:\?[^"]*)?"><\/script>/);
   const diagnostics=lesson.indexOf('<script src="./stage3-diagnostics.js"></script>');
   const open=lesson.indexOf('window.ManjingoLocalLesson.open');
   assert.ok(localLesson>=0&&diagnostics>localLesson&&open>diagnostics,'diagnostics must patch local lesson before open()');

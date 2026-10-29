@@ -121,7 +121,7 @@ test('instant feedback can be enhanced again when cloud progress replaces it',()
 });
 
 test('catalog loads layered feedback UI on both homepage and lesson flows',()=>{
-  const catalog=read('public/content-catalog.js');
+  const catalog=read('public/home-shell.js');
   assert.match(catalog,/feedback-ui\.js/);
   const lesson=read('public/lesson.html');
   const home=read('public/index.html');

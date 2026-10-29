@@ -101,7 +101,7 @@ function catalogTargets(catalog) {
   }));
   const questions = catalog.questions.map(question => ({
     id:String(question.id), data:{
-      type:question.type,kpId:question.kpId,textId:question.textId==='CROSS'?null:(question.textId||null),question:question.q,
+      type:question.type,previousResponseType:question.previousResponseType||null,kpId:question.kpId,textId:question.textId==='CROSS'?null:(question.textId||null),question:question.q,
       options:Array.isArray(question.o)?Array.from(question.o,String):[],answer:question.a==null?'':String(question.a),acceptedAnswers:Array.isArray(question.acceptedAnswers)?Array.from(question.acceptedAnswers,String):[],explanation:question.explanation||'',
       fragments:Array.isArray(question.fragments)?question.fragments.map(item=>({id:String(item.id),text:String(item.text)})):[],answerOrder:Array.isArray(question.answerOrder)?question.answerOrder.map(String):[],modelAnswer:question.modelAnswer||null,
       reorderMode:question.reorderMode||null,requiredCount:Number.isInteger(question.requiredCount)?question.requiredCount:null,targetText:question.targetText||null,

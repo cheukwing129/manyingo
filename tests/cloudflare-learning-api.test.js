@@ -75,6 +75,30 @@ test('health endpoint reports learning and practice policy without exposing cred
  assert.equal(JSON.stringify(body).includes('PRIVATE KEY'),false);
 });
 
+test('health identifies missing bindings without exposing values or contacting external services',async()=>{
+ const worker=(await loadWorker()).default;
+ const email='private-account-marker@example.test',key='private-key-marker';
+ const originalFetch=globalThis.fetch;
+ globalThis.fetch=async()=>{throw new Error('health must not contact external services')};
+ try{
+  for(const [env,missing] of [
+   [{},['FIREBASE_CLIENT_EMAIL','FIREBASE_PRIVATE_KEY']],
+   [{FIREBASE_CLIENT_EMAIL:email},['FIREBASE_PRIVATE_KEY']],
+   [{FIREBASE_PRIVATE_KEY:key},['FIREBASE_CLIENT_EMAIL']],
+   [{FIREBASE_CLIENT_EMAIL:email,FIREBASE_PRIVATE_KEY:key},[]]
+  ]){
+   const response=await worker.fetch(new Request('https://example.test/api/health'),env);
+   const body=await response.json();
+   assert.equal(response.status,200);
+   assert.equal(response.headers.get('cache-control'),'no-store');
+   assert.equal(body.configured,missing.length===0);
+   assert.deepEqual(body.missingBindings,missing);
+   assert.equal(JSON.stringify(body).includes(email),false);
+   assert.equal(JSON.stringify(body).includes(key),false);
+  }
+ }finally{globalThis.fetch=originalFetch}
+});
+
 test('worker verifies Firebase token audience issuer expiry and RS256 signature',()=>{
  assert.match(source,/payload\.aud !== pid/);
  assert.match(source,/payload\.iss !== `https:\/\/securetoken\.google\.com\/\$\{pid\}`/);

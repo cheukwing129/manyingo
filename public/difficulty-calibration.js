@@ -4,7 +4,6 @@ const api=factory(root);
 if(typeof module==='object'&&module.exports)module.exports=api;
 root.ManjingoDifficultyCalibration=api;
 if(root.window&&root.window!==root)root.window.ManjingoDifficultyCalibration=api;
-api.installLocalTracking();
 })(typeof globalThis!=='undefined'?globalThis:this,function(root){
 'use strict';
 const TIERS=['foundation','application','transfer'];
@@ -62,24 +61,12 @@ function questionTier(kpId,questionId,explicitTier){
  return validTier(question&&question.difficultyTier);
 }
 function emit(detail){const target=root.window||root,EventCtor=root.CustomEvent||(root.window&&root.window.CustomEvent);if(target&&typeof target.dispatchEvent==='function'&&typeof EventCtor==='function')target.dispatchEvent(new EventCtor('manjingo:learning-state-changed',{detail:{source:'difficulty-calibration',...(detail||{})}}));}
-function recordAnswer(answer){
+function recordAnswer(answer,options){
  if(!answer||!answer.kpId||typeof answer.isCorrect!=='boolean')return null;
  const state=readState();if(!state)return null;if(!state.knowledge||typeof state.knowledge!=='object')state.knowledge={};
  const kpId=String(answer.kpId),record=state.knowledge[kpId]&&typeof state.knowledge[kpId]==='object'?{...state.knowledge[kpId]}:{};
  const tier=questionTier(kpId,answer.questionId,answer.difficultyTier),tierStats=recordTierOutcome(record.tierStats,tier,answer.isCorrect,new Date());
- record.tierStats=tierStats;record.lastDifficultyTier=tier;state.knowledge[kpId]=record;if(!writeState(state))return null;emit({kpId,tier,isCorrect:answer.isCorrect});return{tier,tierStats};
+ record.tierStats=tierStats;record.lastDifficultyTier=tier;state.knowledge[kpId]=record;if(!writeState(state))return null;if(!options||!options.silent)emit({kpId,tier,isCorrect:answer.isCorrect});return{tier,tierStats};
 }
-function localLearning(){return root.ManjingoLocalLearning||(root.window&&root.window.ManjingoLocalLearning)||null}
-function installLocalTracking(){
- const learning=localLearning();
- if(learning&&!learning.__difficultyCalibrationInstalled&&typeof learning.submit==='function'){
-   const original=learning.submit.bind(learning);
-   learning.submit=function(kpId,correct,detail){const result=original(kpId,correct,detail);const tracked=recordAnswer({kpId,questionId:detail&&detail.questionId,difficultyTier:detail&&detail.difficultyTier,isCorrect:!!correct});return tracked?{...result,tierStats:tracked.tierStats,lastDifficultyTier:tracked.tier}:result;};
-   learning.__difficultyCalibrationInstalled=true;return true;
- }
- const doc=root.document||(root.window&&root.window.document);
- if(doc&&doc.readyState==='loading'&&!doc.__difficultyCalibrationPending){doc.__difficultyCalibrationPending=true;doc.addEventListener('DOMContentLoaded',()=>installLocalTracking(),{once:true});}
- return false;
-}
-return{TIERS,STATE_KEY,RECENT_LIMIT,PROMOTE_ACCURACY,APPLICATION_DEMOTE_ACCURACY,TRANSFER_DEMOTE_ACCURACY,tierIndex,validTier,emptyTier,emptyTierStats,normalizeTierStats,recordTierOutcome,tierProfile,baseTierForMastery,calibrationDecision,tierForMastery,questionTier,recordAnswer,installLocalTracking};
+return{TIERS,STATE_KEY,RECENT_LIMIT,PROMOTE_ACCURACY,APPLICATION_DEMOTE_ACCURACY,TRANSFER_DEMOTE_ACCURACY,tierIndex,validTier,emptyTier,emptyTierStats,normalizeTierStats,recordTierOutcome,tierProfile,baseTierForMastery,calibrationDecision,tierForMastery,questionTier,recordAnswer};
 });

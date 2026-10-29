@@ -26,15 +26,19 @@ function balanceChoiceQuestions(items,seed){
    return{...q,o:arrangeOptions(options,answer,desired,String(seed||'daily')+':'+questionId(q))};
  });
 }
-function installContentChoiceBalancing(){
+function balanceCatalogChoices(){
  const content=root&&root.ManjingoContent;if(!content||content.__balancedDailyChoices)return false;
  content.questions=balanceChoiceQuestions(content.questions,'catalog');
- if(typeof content.selectQuestionsForPlan==='function'){
-   const original=content.selectQuestionsForPlan.bind(content);
-   content.selectQuestionsForPlan=function(plan,sourceQuestions,limit){return balanceChoiceQuestions(original(plan,sourceQuestions,limit),'plan:'+String(limit==null?'auto':limit));};
- }
  try{Object.defineProperty(content,'__balancedDailyChoices',{value:true,enumerable:false,configurable:false});}catch(_){content.__balancedDailyChoices=true;}
  return true;
+}
+// The homepage calls this entry for both local and cloud plans. The policy is
+// resolved at call time because adaptive study modules are loaded on demand.
+function selectQuestionsForPlan(plan,sourceQuestions,limit){
+ const content=root.ManjingoContent,policy=root.ManjingoPracticeEffectiveness,learning=root.ManjingoLocalLearning;
+ if(!content||typeof content.selectQuestionsForPlan!=='function')return[];
+ const select=(adjusted,questions,count)=>content.selectQuestionsForPlan(adjusted,questions,count);
+ return policy&&typeof policy.selectQuestionsForPlan==='function'?policy.selectQuestionsForPlan(plan,sourceQuestions,limit,select,learning):select(plan,sourceQuestions,limit);
 }
 function sessionReservation(queue,index,completedQuestionIds,targetCount){
  const list=Array.isArray(queue)?queue:[],completed=toSet(completedQuestionIds),safeIndex=Math.max(0,Number(index)||0),current=list[safeIndex]||null,currentId=questionId(current),currentPending=!!currentId&&!completed.has(currentId),excludedIds=new Set(completed);
@@ -50,7 +54,7 @@ function mergeReservation(reservation,candidates){
 }
 function counts(items){const list=Array.isArray(items)?items:[];return{review:list.filter(x=>x&&x.category==='review').length,weak:list.filter(x=>x&&x.category==='weak').length,newKnowledge:list.filter(x=>x&&x.category==='new').length,total:list.length}}
 function summary(items){const c=counts(items);return c.total?'剩餘安排：複習 '+c.review+' · 弱項 '+c.weak+' · 新知識 '+c.newKnowledge:'本輪已沒有剩餘題目。'}
-const api={questionId,hash32,stableShuffle,arrangeOptions,balanceChoiceQuestions,installContentChoiceBalancing,sessionReservation,mergeReservation,counts,summary};
+const api={questionId,hash32,stableShuffle,arrangeOptions,balanceChoiceQuestions,balanceCatalogChoices,selectQuestionsForPlan,sessionReservation,mergeReservation,counts,summary};
 root.ManjingoDailyPlanRuntime=api;
-installContentChoiceBalancing();
+balanceCatalogChoices();
 })(window);

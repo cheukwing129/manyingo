@@ -1,6 +1,5 @@
 (function(){
 'use strict';
-if(typeof document!=='undefined'&&document.readyState==='loading'&&!window.ManjingoMascotRuntime){document.write('<script src="./mascot-runtime.js"><\/script>')}
 function clean(v){return String(v||'').replace(/\s+/g,' ').trim()}
 function answerKey(v){return String(v||'').replace(/[，。、；：！？\s]/g,'')}
 function unique(items){return Array.from(new Set((items||[]).map(clean).filter(Boolean)))}

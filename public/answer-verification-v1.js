@@ -26,7 +26,8 @@ function verify(question,selectedAnswer){
  const accepted=acceptedAnswers(question);if(!accepted.length)throw Object.assign(new Error('Question has no authoritative answer'),{status:500});
  const selected=String(selectedAnswer==null?'':selectedAnswer);if(!normalize(selected))throw Object.assign(new Error('Selected answer required'),{status:400});
  const options=Array.isArray(question.options)?question.options:Array.isArray(question.o)?question.o:[],normalizedSelected=normalize(selected),normalizedOptions=options.map(normalize);
- if(options.length&& !normalizedOptions.includes(normalizedSelected))throw Object.assign(new Error('Selected answer is not a question option'),{status:400});
+ // Converted questions retain the old text contract for cached pages and queued answers.
+ if(options.length&&!normalizedOptions.includes(normalizedSelected)&&question.previousResponseType!=='fill')throw Object.assign(new Error('Selected answer is not a question option'),{status:400});
  return{version:VERSION,isCorrect:accepted.some(answer=>normalize(answer)===normalizedSelected),correctAnswer:accepted[0],selectedAnswer:selected};
 }
 return{VERSION,normalize,acceptedAnswers,reorderDefinition,verify};

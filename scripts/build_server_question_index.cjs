@@ -9,7 +9,7 @@ const output=path.join(root,'public','server-question-index.js');
 
 function questionData(question,catalogVersion){
  return{
-  type:question.type,kpId:question.kpId,textId:question.textId==='CROSS'?null:(question.textId||null),
+  type:question.type,previousResponseType:question.previousResponseType||null,kpId:question.kpId,textId:question.textId==='CROSS'?null:(question.textId||null),
   options:Array.isArray(question.o)?Array.from(question.o,String):[],answer:question.a==null?'':String(question.a),acceptedAnswers:Array.isArray(question.acceptedAnswers)?question.acceptedAnswers.map(String):[],
   fragments:Array.isArray(question.fragments)?question.fragments.map(item=>({id:String(item.id),text:String(item.text)})):[],answerOrder:Array.isArray(question.answerOrder)?question.answerOrder.map(String):[],modelAnswer:question.modelAnswer||null,reorderMode:question.reorderMode||null,requiredCount:Number.isInteger(question.requiredCount)?question.requiredCount:null,
   misconceptionKey:question.misconceptionKey||null,misconceptionLabel:question.misconceptionLabel||null,

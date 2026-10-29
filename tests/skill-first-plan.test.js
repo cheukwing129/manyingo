@@ -26,4 +26,19 @@ test('dedicated KPs keep their migration skill identity when evidence is cross-t
 test('single-sentence transfer enters the normal skill-first scheduling pool',()=>assertSkillPool(['transfer.single-sentence'],[{kpId:'kp_transfer_single_sentence',category:'new',priority:3}]));
 test('second stage 2 native KPs enter skill-first scheduling with direct skill identity',()=>assertSkillPool(['syn.attributive-postpose','syn.fixed-patterns','read.parallel-inference'],[{kpId:'kp_syn_attributive_postpose',category:'new',priority:3},{kpId:'kp_syn_fixed_patterns',category:'new',priority:3},{kpId:'kp_read_parallel_inference',category:'new',priority:3}]));
 test('stage 2 closeout native KPs enter skill-first scheduling with direct skill identity',()=>assertSkillPool(['read.actor-tracking','read.unknown-word-tolerance','trans.fluency','transfer.sentence-pair','transfer.micro-passage'],[{kpId:'kp_read_actor_tracking',category:'new',priority:3},{kpId:'kp_read_unknown_word_tolerance',category:'new',priority:3},{kpId:'kp_trans_fluency',category:'new',priority:3},{kpId:'kp_transfer_sentence_pair',category:'new',priority:3},{kpId:'kp_transfer_micro_passage',category:'new',priority:3}]));
-test('question rotation browser loader installs skill-first layer before adaptive packs',()=>{const s=fs.readFileSync(path.join(root,'public/question-rotation.js'),'utf8'),skillIndex=s.indexOf('./skill-first-plan.js'),adaptiveIndex=s.indexOf('./question-pack-adaptive-01.js');assert.ok(skillIndex>=0&&adaptiveIndex>skillIndex);});
+test('question rotation browser loader installs skill-first layer before adaptive packs',()=>{const s=fs.readFileSync(path.join(root,'public/home-shell.js'),'utf8'),skillIndex=s.indexOf('./skill-first-plan.js'),adaptiveIndex=s.indexOf('./question-pack-adaptive-01.js');assert.ok(skillIndex>=0&&adaptiveIndex>skillIndex);});
+
+test('a skill selector failure retains the legacy queue and answer-position balancing',()=>{
+ const context={window:{},console};vm.createContext(context);
+ vm.runInContext(source('public/content-catalog.js'),context);
+ vm.runInContext(source('public/daily-plan-runtime.js'),context);
+ const catalog=context.window.ManjingoContent,select=catalog.selectQuestionsForPlan;
+ const questions=Array.from({length:8},(_,i)=>({id:'fallback'+i,kpId:'fallback_kp'+i,type:'choice',o:['answer','b','c','d'],a:'answer'}));
+ const plan={items:questions.map(q=>({kpId:q.kpId,category:'new'}))};
+ const expected=JSON.stringify(select(plan,questions,8));
+ context.window.ManjingoSkillFirstPlan={selectQuestionsForPlan(){throw new Error('temporarily unavailable')}};
+ assert.equal(JSON.stringify(select(plan,questions,8)),expected);
+ assert.equal(catalog.selectQuestionsForPlan,select);
+ const slots=JSON.parse(expected).map(q=>q.o.indexOf(q.a));
+ assert.equal(new Set(slots).size,4);
+});

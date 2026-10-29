@@ -61,24 +61,25 @@ function loadStudyPlanShell(options={}){
   return{shell:window.ManjingoHomeShell,window,document,appended};
 }
 
-test('homepage replaces parser-blocking app runtime with a small reviewed core',()=>{
-  const{shell,window,document,writes}=loadDeferralShell();
-  assert.equal(shell.installStartupRuntimeDeferral(),true);
-  document.write('<script src="./app-runtime.js"></script>');
-  assert.equal(writes.length,1);
-  assert.doesNotMatch(writes[0],/app-runtime\.js/);
-  for(const file of CORE)assert.match(writes[0],new RegExp(file.replaceAll('.','\\.')));
-  assert.match(writes[0],/<\/script>/);
-  assert.equal(window.ManjingoStartupRuntimeBundled,true);
-  assert.equal(window.ManjingoHomeRuntimeDeferral.core.length,CORE.length);
+test('homepage initializes lazy loading directly without replacing document.write',()=>{
+  const{shell,window,document,writes,listeners}=loadDeferralShell();
+  const originalWrite=document.write;
+  assert.equal(shell.installRuntimeLoader(),true);
+  assert.equal(document.write,originalWrite);
+  assert.deepEqual(writes,[]);
   assert.equal(typeof window.ManjingoEnsureAppRuntime,'function');
+  assert.equal(typeof window.ManjingoEnsureViewRuntime,'function');
+  assert.ok(window.ManjingoHomeRuntime);
+  assert.equal(listeners.DOMContentLoaded.length,1,'background scheduling must be registered directly');
+  assert.equal(shell.installRuntimeLoader(),false,'loader initialization is idempotent');
+  assert.equal(listeners.DOMContentLoaded.length,1);
+  assert.deepEqual(require('../scripts/build_startup_bundles.cjs').bundles['home-runtime.js'],CORE);
 });
 
-test('homepage parser core is much smaller than the legacy app runtime',()=>{
+test('homepage parser core stays within its startup byte budget',()=>{
   const coreBytes=CORE.reduce((sum,file)=>sum+fs.statSync(path.join(root,'public',file)).size,0);
-  const fullBytes=fs.statSync(path.join(root,'public','app-runtime.js')).size;
   assert.ok(coreBytes<40000,`critical core unexpectedly grew to ${coreBytes} bytes`);
-  assert.ok(coreBytes<fullBytes*.2,`critical core ${coreBytes} is not materially smaller than ${fullBytes}`);
+  assert.ok(fs.statSync(path.join(root,'public','home-runtime.js')).size<40000,'bundled home core exceeded its startup budget');
 });
 
 test('secondary UI and account work stays off parser startup and yields to study input',()=>{
@@ -88,7 +89,7 @@ test('secondary UI and account work stays off parser startup and yields to study
   assert.match(source,/runtimeStudyActive\(\)\|\|Date\.now\(\)-lastInteractionAt<900/);
   assert.match(source,/requestIdleCallback\(run,\{timeout:3500\}\)/);
   assert.match(source,/if\(view!=='today'\)void requestViewRuntime\(view\)\.catch/);
-  assert.match(source,/window\.ManjingoStartupRuntimeBundled=true/);
+  assert.doesNotMatch(source,/document\.write/);
 });
 
 test('secondary home views lazy-load only their required runtime groups',()=>{
@@ -134,7 +135,7 @@ test('adaptive study-plan dependencies stay out of automatic background runtime'
   const deferred=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
   assert.ok(deferred,'deferred runtime list missing');
   for(const file of ['curriculum-v1.js','skill-mastery-v1.js','skill-first-plan.js','question-pack-adaptive-01.js','question-pack-adaptive-02.js','question-pack-adaptive-03.js','difficulty-calibration.js','question-difficulty.js','difficulty-observability.js','practice-effectiveness.js'])assert.doesNotMatch(deferred[1],new RegExp(file.replaceAll('.','\\.')));
-  for(const file of ['remote-sync-guard.js','account-sync.js','account-ui.js'])assert.match(deferred[1],new RegExp(file.replaceAll('.','\\.')));
+  for(const file of ['account-sync.js','account-ui.js'])assert.match(deferred[1],new RegExp(file.replaceAll('.','\\.')));
   const stages=source.slice(source.indexOf('const STUDY_PLAN_RUNTIME_STAGES='),source.indexOf('const DEFERRED_APP_RUNTIME='));
   assert.doesNotMatch(stages,/skill-evidence-v1\.js/,'skill evidence must stay view-only and outside study-plan runtime');
   assert.match(source,/function loadRuntimeStage\(files\)\{return Promise\.all\(\(files\|\|\[\]\)\.map\(src=>loadDeferredScript\(src\)\)\)\}/);
@@ -267,7 +268,7 @@ test('start plan rebuild refreshes adaptive local questions without downgrading 
   assert.ok(rebuild,'start-plan rebuild helper missing');
   assert.match(rebuild[0],/refreshLocalQuestionPool\(\)/);
   assert.match(rebuild[0],/currentPlanSource==='cloud'&&latestRemotePlan&&cloudQuestionPool\.length/);
-  assert.match(rebuild[0],/content\.selectQuestionsForPlan\(latestRemotePlan,cloudQuestionPool,SESSION_TARGET\)/);
+  assert.match(rebuild[0],/planRuntime\.selectQuestionsForPlan\(latestRemotePlan,cloudQuestionPool,SESSION_TARGET\)/);
   assert.match(rebuild[0],/if\(selected\.length\)questions=selected;return'cloud'/,'an existing cloud plan must return before local fallback even if reselection is empty');
   assert.ok(rebuild[0].indexOf("return'cloud'")<rebuild[0].indexOf('buildLocalPlan(SESSION_TARGET)'),'cloud preservation must precede local fallback');
   assert.doesNotMatch(rebuild[0],/cloudModule|getDailyLearningPlan|fetchAllQuestions|ensureLogin/,'Start rebuild must never issue a cloud request');
