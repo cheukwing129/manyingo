@@ -85,3 +85,21 @@
 4. 舊 Firebase Functions 暫留。雖然正式學習 API 使用 Cloudflare Worker，部署 workflow 仍支援透過 `ENABLE_FIREBASE_FUNCTIONS_DEPLOY` 發布 Functions；應先確認實際部署及外部呼叫狀況，才移除實作、parity 測試及部署選項。
 
 學習資料格式、儲存鍵、Firestore 規則及學習演算法未在本輪修改。兩個既有未合併 PR（#122、#143）保留不動。
+
+## 預覽環境準備（第六步）
+
+- PR #178 的 `07b648b` 已由 Cloudflare Pages 成功部署；不可變 URL 為 `https://29494271.manyingo.pages.dev`。以該 URL 執行 `npm run smoke:assets` 通過，沒有建立測試帳戶或提交答案。
+- 後續驗收固定使用分支別名 `https://refactor-explicit-runtime-en.manyingo.pages.dev`；別名會跟隨該 PR 分支的最新部署。
+- 實際讀取預覽 `/api/health` 回報 `configured:false`；這表示預覽缺少所需後端憑證，不能宣稱雲端同步已驗收。
+- Firebase 公開專案設定目前只授權 localhost、Firebase 預設網域及 manjingo／manyingo 正式網域，尚未包含上述預覽別名。
+- 前端只在完全相符且為 HTTPS 的預覽別名使用同源 `authDomain`，沿用既有 `/__/auth/` 反向代理；正式網域和其他來源的設定保留。測試涵蓋正式／預覽、HTTP、隨機部署子網域、相似惡意網域及沒有 location 的環境。
+- 參考：[Firebase redirect 最佳實務](https://firebase.google.com/docs/auth/web/redirect-best-practices)。同源代理仍需要控制台授權，程式碼不會代替這些設定。
+
+### 控制台待辦
+
+1. Cloudflare → Workers & Pages → manyingo → Settings → Variables and Secrets，選擇 **Preview** 環境，加入加密的 `FIREBASE_CLIENT_EMAIL`、`FIREBASE_PRIVATE_KEY`（依原部署使用的 service-account JSON）。不要從對話傳送私鑰，也不要提交到 Git；完成後重新部署預覽。
+2. Firebase → manjingo-95d9a → Authentication → Settings → Authorized domains，加入 `refactor-explicit-runtime-en.manyingo.pages.dev`。
+3. Google Cloud → 同一專案的 Google Auth Platform → Clients（或 APIs & Services → Credentials）→ 正式站目前使用的 Web OAuth client，**保留既有設定並新增** redirect URI：`https://refactor-explicit-runtime-en.manyingo.pages.dev/__/auth/handler`。
+4. 確認預覽 `/api/health` 為 `configured:true`，然後用實體手機瀏覽器開啟固定預覽別名，完成 Google 登入、答題、重新整理及另一裝置同步驗收。預覽仍連到現有 Firebase 專案，使用專用測試帳戶；不可將此環境稱為獨立資料庫。
+
+目前沒有修改控制台設定，也沒有完成真實 OAuth／同步／實體手機驗收。PR 保持未合併。
