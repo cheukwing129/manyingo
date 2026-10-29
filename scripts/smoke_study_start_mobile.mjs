@@ -98,11 +98,13 @@ async function press(cdp,selector){
   const point=await waitFor(cdp,`(async()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled)return null;e.scrollIntoView({block:'center',behavior:'instant'});await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));const b=e.getBoundingClientRect(),x=b.left+b.width/2,y=b.top+b.height/2,hit=document.elementFromPoint(x,y);return b.width&&b.height&&(hit===e||e.contains(hit))?{x,y}:null})()`,'unobscured '+selector);
   if(currentDevice==='mobile'){
     await cdp.call('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...point,radiusX:1,radiusY:1,force:1,id:1}]});
+    await new Promise(resolve=>setTimeout(resolve,45));
     await cdp.call('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   }else{
     await cdp.call('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});
     await cdp.call('Input.dispatchMouseEvent',{type:'mouseReleased',...point,button:'left',clickCount:1});
   }
+  await evaluate(cdp,'new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
 }
 async function noHorizontalOverflow(cdp,label){
   const size=await evaluate(cdp,'({width:innerWidth,scroll:document.documentElement.scrollWidth})');
@@ -120,7 +122,9 @@ async function answerVisible(cdp,lesson,wrong){
       const text=fragments.find(p=>String(p.id)===String(id)).text;
       const index=await evaluate(cdp,`Array.from(document.querySelectorAll(${JSON.stringify(host+' .reorder-piece')})).findIndex(b=>b.textContent===${JSON.stringify(text)})`);
       check(index>=0,'reorder fragment missing');
-      await press(cdp,host+' .reorder-piece:nth-child('+(index+1)+')');
+      const piece=host+' .reorder-piece:nth-child('+(index+1)+')';
+      await press(cdp,piece);
+      await waitFor(cdp,`document.querySelector(${JSON.stringify(piece)})?.disabled===true`,'selected reorder fragment');
     }
     await press(cdp,host+' .reorder-controls .action');
   }else if(q.type==='fill'){
@@ -250,7 +254,7 @@ try{
     acceptanceReport.passed=true;
   }
 }catch(error){
-  if(localAcceptance&&cdp){try{await screenshot(cdp,'failure')}catch(_){}acceptanceReport.error=String(error.stack||error)}
+  if(localAcceptance&&cdp){try{await screenshot(cdp,'failure');acceptanceReport.failureDom=await evaluate(cdp,`({url:location.pathname,question:document.querySelector('#quiz .question, .lesson-question')?.textContent,html:document.querySelector('#answers, #lessonApp')?.innerHTML,errors:[]})`)}catch(_){}acceptanceReport.error=String(error.stack||error)}
   throw error;
 }finally{
   clearTimeout(deadline);
