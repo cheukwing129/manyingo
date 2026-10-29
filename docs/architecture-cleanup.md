@@ -129,4 +129,6 @@
 
 - 使用者已再次核實設定；現有預覽 health 仍為 configured:false，因此新增 `missingBindings`，逐項列出未注入或空值的固定 binding 名稱。
 - configured 的判定與原本一致，health 只讀取 binding 是否有值，不執行私鑰解析、OAuth 或 Firestore 連線，也不回傳任何憑證內容。HTTP 200 與 no-store 保留。
-- 回歸測試覆蓋兩項全缺、只缺私鑰、只缺電郵、兩項齊備四種組合，同時驗證不會外連、不會洩漏測試憑證值。實際缺少哪一項以新版預覽的部署回應為準。
+- 回歸測試覆蓋兩項全缺、只缺私鑰、只缺電郵、兩項齊備四種組合，同時驗證不會外連、不會洩漏測試憑證值。完整 npm test 706 項及本次 CI 的 test／browser 全部通過。
+- 新版 f5adc1a 已由 Cloudflare 部署為 b56763ba；固定預覽 health 實際回傳 missingBindings 同時包含 FIREBASE_CLIENT_EMAIL 和 FIREBASE_PRIVATE_KEY。這表示兩項都未載入目前 Worker，並非已判定憑證格式或 IAM 失敗。
+- 尚未取得 Cloudflare 控制台登入狀態，無法直接讀取設定；後續需查看不含值的設定畫面（專案、Preview 環境、變數名稱與類型），以定位環境／綁定差異。未讀取、輸出或修改私鑰，PR 保持未合併。
