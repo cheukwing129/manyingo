@@ -13,13 +13,13 @@ test('generated browser bundle stays identical to the reviewed question packs', 
   assert.equal(result.status, 0, result.stderr || result.stdout);
 });
 
-test('content catalog replaces sixteen parser-blocking pack requests with one bundle', () => {
-  const catalog = read('public/content-catalog.js');
-  assert.match(catalog, /document\.write\('<script src="\.\/question-packs-core\.js/);
-  assert.equal((catalog.match(/document\.write\('/g) || []).filter(Boolean).length >= 1, true);
-  for (const file of ['question-pack-02.js', 'question-pack-transfer-07.js', 'question-pack-fill-01.js', 'question-pack-reorder-01.js', 'question-pack-translation-order-01.js', 'question-pack-passage-set-01.js']) {
-    assert.doesNotMatch(catalog, new RegExp(`document\\.write\\([^\\n]+${file.replaceAll('.', '\\.')}`));
-  }
+test('catalog bundle assembles reviewed packs without requesting extra scripts', () => {
+  const writes = [];
+  const context = { window: {}, document: { readyState: 'loading', write(value) { writes.push(value); } } };
+  vm.createContext(context);
+  vm.runInContext(read('public/catalog-runtime.js'), context);
+  assert.equal(context.window.ManjingoContent.questions.length, 607);
+  assert.deepEqual(writes, []);
 });
 
 test('browser bundle exposes every reviewed pack before the catalog assembles questions', () => {

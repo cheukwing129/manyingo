@@ -113,7 +113,7 @@ test('session summary counts provisional XP once and accepts delayed confirmed X
 });
 
 test('session summary is loaded after answer feedback and preserves homepage completion status',()=>{
- const catalog=read('public/content-catalog.js'),runtime=read('public/session-summary.js'),css=read('public/app-ui.css');
+ const catalog=read('public/home-shell.js'),runtime=read('public/session-summary.js'),css=read('public/app-ui.css');
  assert.match(catalog,/feedback-ui\.js.*session-summary\.js/);
  assert.match(runtime,/📱 今日學習完成/);
  assert.match(runtime,/class="session-summary done"/);

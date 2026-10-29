@@ -1,16 +1,8 @@
 (function(){
 'use strict';
 
-if(typeof document!=='undefined'&&document.readyState==='loading'){
- // question-packs-core.js is generated from question-pack-02.js, question-pack-03.js,
- // question-pack-lesson.js, question-pack-capacity-01.js, question-pack-transfer-01.js,
- // question-pack-transfer-03.js, question-pack-transfer-04.js, question-pack-transfer-05.js,
- // question-pack-transfer-06.js, question-pack-transfer-07.js,
- // question-pack-settext-language-01.js, question-pack-settext-language-02.js,
- // question-pack-fill-01.js, question-pack-reorder-01.js, and question-pack-translation-order-01.js.
- // question-pack-passage-set-01.js adds grouped unseen-passage tasks.
- if(!window.ManjingoQuestionPack02)document.write('<script src="./question-packs-core.js"><\/script>');
-}
+// Question packs are supplied by catalog-runtime.js (or the importing tool).
+// This module assembles content only; page entry points own runtime loading.
 
 const baseKnowledgePoints=[
  {kpId:'kp_yueyang_001',textId:'yueyanglou',type:'實詞',content:'謫',difficulty:1,teachable:true},
@@ -103,9 +95,5 @@ function selectQuestionsForPlan(plan,sourceQuestions,limit){
  return queue;
 }
 window.ManjingoContent={catalogVersion:'reviewed-v1',knowledgePoints:knowledgePoints.map(x=>({...x})),questions:questions.map(x=>({...x})),passageSets:passageSets.map(x=>({...x,questionIds:x.questionIds.slice()})),getKnowledgePointIds,selectQuestionsForPlan,misconceptionConcept};
-if(typeof document!=='undefined'&&document.readyState==='loading'){
- if(window.ManjingoLessonRuntimeBundled){/* lesson page supplies its reviewed runtime separately */}
- else if(window.ManjingoUseAppRuntimeBundle)document.write('<script src="./app-runtime.js"><\/script>');
- else document.write('<script src="./reorder-question.js"><\/script><script src="./curriculum-v1.js"><\/script><script src="./question-metadata-v1.js"><\/script><script src="./question-diversity-v1.js"><\/script><script src="./question-rotation.js"><\/script><script src="./learning-path.js"><\/script><script src="./practice-effectiveness.js"><\/script><script src="./learning-path-ui.js"><\/script><script src="./weakness-panel.js"><\/script><script src="./mastery-dashboard.js"><\/script><script src="./feedback-ui.js"><\/script><script src="./session-summary.js"><\/script><script src="./account-sync.js"><\/script><script src="./account-ui.js"><\/script>');
-}
+
 })();

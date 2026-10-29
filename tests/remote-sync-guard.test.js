@@ -61,7 +61,7 @@ test('stale standalone gamification sync cannot move totals backwards',()=>{
 });
 
 test('browser adaptive loader installs the remote sync guard',()=>{
-  const rotation=fs.readFileSync(path.join(__dirname,'..','public','question-rotation.js'),'utf8');
+  const rotation=fs.readFileSync(path.join(__dirname,'..','public','home-shell.js'),'utf8');
   assert.match(rotation,/remote-sync-guard\.js/);
   assert.ok(rotation.indexOf('difficulty-observability.js')<rotation.indexOf('remote-sync-guard.js'));
   assert.match(source,/__remoteSyncGuardInstalled/);

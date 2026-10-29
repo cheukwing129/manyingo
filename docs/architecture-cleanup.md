@@ -1,0 +1,45 @@
+# 架構整理進度
+
+日期：2026-10-29
+起點：`25915e0926a0f5b243d299ddc97951eba62ae273`（main）
+
+## 已完成：明確載入入口
+
+- 題庫組合器 `content-catalog.js` 只組合內容，不再插入其他程式。
+- 移除題庫、題目輪替及答題回饋中的 `document.write`，以及首頁攔截 `document.write` 的機制。
+- 首頁順序：`home-shell.js` → `catalog-runtime.js` → `home-runtime.js` → 共用學習規則 → 本機學習引擎 → 每日計劃。
+- 課堂順序：`lesson-shell.js` → `catalog-runtime.js` → `lesson-runtime.js` → 共用學習規則 → 本機學習引擎 → 課堂內容及操作程式。
+- 首頁核心組合清單只在 `scripts/build_startup_bundles.cjs` 定義，產物為 `public/home-runtime.js`（39,160 bytes，未壓縮）。
+- 原有分頁、學習意圖預熱、觸控啟動等待及閒置時同步安排保留。
+- 已變更的既有入口使用 `?v=entry-v1`，避免瀏覽器在轉換時沿用會注入舊 runtime 的快取版本。
+- 已移除沒有正式入口使用的 `public/app-runtime.js` 及其組合清單、快取設定；原有完整組合測試由實際首頁及課堂入口執行測試接替。
+- 載入重構先獨立驗證及保存，再整理無用產物與測試指令。
+
+## 驗證與日常工作方式
+
+| 改動範圍 | 指令 |
+| --- | --- |
+| 首頁、課堂、載入、登入及同步入口 | `npm run test:runtime` |
+| 學習規則、每日計劃、掌握度及難度 | `npm run test:learning` |
+| 題庫、題型及課堂內容 | `npm run test:content` |
+| 吉祥物素材 | `npm run test:art` |
+| 重建載入產物 | `npm run build:startup` |
+| 核對所有產物是否與來源一致 | `npm run check:generated` |
+| 發布前完整檢查（CI 沿用） | `npm test` |
+
+這些分組是日常相關檢查的入口，並不代表各組完全互斥或覆蓋所有跨模組影響。共用邊界、部署或跨範圍改動，應執行完整檢查。CI 的 `Tests` workflow 仍執行完整 `npm test`，未放寬合併檢查。
+
+新增執行驗證直接讀取 HTML 的 script 清單，在同一 VM 中執行真實模組，覆蓋冷啟動、自適應選題、答題寫入、成果與弱點並行載入、共用模組去重及既有學習資料保留。兩項原有測試的預設日期補上 UTC 時區，修正於非 UTC 環境出現的誤報。
+
+本次未取得 Chromium；下載元件失敗，沒有完成真實瀏覽器及手機觸控實測。VM 測試不等同瀏覽器實測，未宣稱載入時間提升幅度。
+
+最終本機驗證：`npm test` 共 689 項測試全部通過，測試執行約 4.4 秒；`npm run test:runtime` 共 103 項通過。完整產物核對及吉祥物檢查通過。兩項只檢查舊載入程式字串的重複檢查，已由實際並行載入的行為測試接替。
+
+## 後續工作及邊界
+
+1. 逐項把學習計劃、難度、補強及同步的函數包裝，改為明確的整合入口。應以現有行為測試為依據，每次處理一條流程，避免同時變更學習演算法。
+2. 評估首頁與課堂延後載入器共用的必要性；目前保留兩者原有行為，未作額外抽象。
+3. 舊 Firebase Functions 暫留。雖然正式學習 API 使用 Cloudflare Worker，部署 workflow 仍支援透過 `ENABLE_FIREBASE_FUNCTIONS_DEPLOY` 發布 Functions；應先確認實際部署及外部呼叫狀況，才移除實作、parity 測試及部署選項。
+4. 在具備瀏覽器的環境完成首次觸控啟動、課堂答題、成果/弱點切換與 Google 登入實測。
+
+學習資料格式、儲存鍵、Firestore 規則及學習演算法未在這一批修改。兩個既有未合併 PR（#122、#143）保留不動。

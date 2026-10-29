@@ -111,7 +111,7 @@ test('observability re-wraps a replaced rotation chooser without duplicating UI 
 });
 
 test('browser runtime integrates difficulty explanations inside learning results',()=>{
- const rotation=source('public/question-rotation.js'),observability=source('public/difficulty-observability.js');
+ const rotation=source('public/home-shell.js'),observability=source('public/difficulty-observability.js');
  const difficultyPos=rotation.indexOf('question-difficulty.js'),observabilityPos=rotation.indexOf('difficulty-observability.js');
  assert.ok(difficultyPos>=0&&observabilityPos>difficultyPos,'observability must wrap the calibrated difficulty selector');
  assert.match(observability,/ManjingoAccountSync/);

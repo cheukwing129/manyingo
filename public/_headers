@@ -1,7 +1,10 @@
 /catalog-runtime.js
   Cache-Control: public, max-age=300, must-revalidate
 
-/app-runtime.js
+/home-runtime.js
+  Cache-Control: public, max-age=300, must-revalidate
+
+/lesson-runtime.js
   Cache-Control: public, max-age=300, must-revalidate
 
 /app-ui.css

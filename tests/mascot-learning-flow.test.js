@@ -8,7 +8,7 @@ const exists=p=>fs.existsSync(path.join(__dirname,'..',p));
 
 test('answer feedback maps Little Ink Spirit through the shared runtime',()=>{
   const source=read('public/feedback-ui.js');
-  assert.match(source,/mascot-runtime\.js/);
+  assert.match(read('public/home-shell.js'),/mascot-runtime\.js[\s\S]*feedback-ui\.js/);
   assert.match(source,/function mascotFeedbackState\(isCorrect\)/);
   assert.match(source,/runtime\.asset\(state\)/);
   assert.match(source,/mascot-state-'\+state/);

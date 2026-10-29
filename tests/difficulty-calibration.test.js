@@ -81,7 +81,7 @@ test('browser telemetry records the reviewed question tier into learner state',(
 });
 
 test('runtime loads telemetry before difficulty selection and records cloud telemetry only after confirmed delivery',()=>{
- const rotation=source('public/question-rotation.js'),firebase=source('public/firebase-config.js');
+ const rotation=source('public/home-shell.js'),firebase=source('public/firebase-config.js');
  const calibrationPos=rotation.indexOf('difficulty-calibration.js'),difficultyPos=rotation.indexOf('question-difficulty.js');
  assert.ok(calibrationPos>=0&&difficultyPos>calibrationPos,'calibration must load before difficulty selector');
  assert.match(firebase,/function recordDifficultyOutcome\(answer, result\)/);

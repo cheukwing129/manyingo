@@ -129,7 +129,7 @@ test('browser catalog and Firestore importer keep the two prescribed-text langua
  const importer=fs.readFileSync(path.join(root,'scripts','import_to_firestore.js'),'utf8');
  const workflow=fs.readFileSync(path.join(root,'.github','workflows','pages-production-smoke.yml'),'utf8');
  for(const suffix of ['01','02']){
-  assert.match(catalog,new RegExp(`question-pack-settext-language-${suffix}\\.js`));
+  assert.match(fs.readFileSync(path.join(root,'scripts','build_question_pack_bundle.cjs'),'utf8'),new RegExp(`question-pack-settext-language-${suffix}\\.js`));
   assert.match(catalog,new RegExp(`ManjingoQuestionPackSetTextLanguage${suffix}`));
   assert.match(importer,new RegExp(`question-pack-settext-language-${suffix}\\.js`));
  }

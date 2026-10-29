@@ -16,7 +16,7 @@ test('Firebase auth upgrades anonymous learners to Google without discarding the
 });
 
 test('Google account flow exposes private client synchronization storage',()=>{
- const firebase=read('public/firebase-config.js'),catalog=read('public/content-catalog.js'),ui=read('public/account-ui.js');
+ const firebase=read('public/firebase-config.js'),catalog=read('public/home-shell.js'),ui=read('public/account-ui.js');
  assert.match(firebase,/fetchClientSyncState/);
  assert.match(firebase,/saveClientSyncState/);
  assert.match(firebase,/clientSync', 'state'/);
