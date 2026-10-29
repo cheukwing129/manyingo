@@ -142,7 +142,7 @@ body .feedback-ui.wrong,#lessonApp .feedback-ui.wrong{border-color:#ffc5c5}
 .feedback-mascot,.session-summary-icon.mascot-celebrate{animation:moling-float 3.6s ease-in-out infinite}
 .feedback-ui.wrong .feedback-mascot{animation-duration:4.4s}
 .session-summary-icon.mascot-celebrate{animation-duration:4.2s}
-@keyframes moling-float{0%,100%{transform:translateY(2px)}50%{transform:translateY(-4px)}}
+@keyframes moling-float{0%,100%{transform:translate(-2px,2px)}50%{transform:translate(2px,-4px)}}
 .feedback-mascot-message{display:block;margin-top:4px;font-size:12px;line-height:1.5;color:var(--ui-text)}
 .feedback-ui .feedback-answer-row{display:block;margin:0;padding:12px 16px;border-top:1px solid var(--ui-border);font-size:14px;line-height:1.6;color:var(--ui-ink)}
 .feedback-ui.correct .feedback-result{background:#f3fbeD}
