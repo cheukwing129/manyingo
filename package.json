@@ -22,7 +22,8 @@
     "test:unit": "node --test functions/*.test.js tests/*.test.js",
     "test:runtime": "node --test tests/runtime-entrypoints.test.js tests/startup-bundles.test.js tests/home-runtime-deferral.test.js tests/lesson-runtime-deferral.test.js tests/progressive-boot.test.js tests/home-shell.test.js tests/browser-flow-smoke.test.js tests/app-ui.test.js tests/next-question-prewarm.test.js tests/mobile-study-start-smoke.test.js tests/firebase-auth-redirect.test.js tests/answer-outbox.test.js tests/remote-sync-guard.test.js tests/account-sync.test.js tests/account-sync-batch.test.js",
     "test:learning": "node --test functions/learningEngine.test.js tests/local-learning.test.js tests/learning-policy-parity.test.js tests/daily-plan-runtime.test.js tests/skill-first-plan.test.js tests/skill-mastery-v1.test.js tests/skill-evidence-v1.test.js tests/practice-effectiveness.test.js tests/difficulty-calibration.test.js tests/question-difficulty.test.js",
-    "test:content": "node --test tests/content-catalog.test.js tests/question-quality.test.js tests/question-pack-bundle.test.js tests/question-metadata-v1.test.js tests/question-skill-contract.test.js tests/question-type-enrichment.test.js tests/settext-language-pack.test.js tests/reorder-question.test.js tests/translation-order-question.test.js tests/passage-set-question.test.js tests/lesson-quality.test.js"
+    "test:content": "node --test tests/content-catalog.test.js tests/question-quality.test.js tests/question-pack-bundle.test.js tests/question-metadata-v1.test.js tests/question-skill-contract.test.js tests/question-type-enrichment.test.js tests/settext-language-pack.test.js tests/reorder-question.test.js tests/translation-order-question.test.js tests/passage-set-question.test.js tests/lesson-quality.test.js",
+    "smoke:assets": "node scripts/smoke_pages_api.mjs --assets-only"
   },
   "devDependencies": {
     "wrangler": "^3.0.0"

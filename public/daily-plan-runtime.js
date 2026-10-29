@@ -26,13 +26,9 @@ function balanceChoiceQuestions(items,seed){
    return{...q,o:arrangeOptions(options,answer,desired,String(seed||'daily')+':'+questionId(q))};
  });
 }
-function installContentChoiceBalancing(){
+function balanceCatalogChoices(){
  const content=root&&root.ManjingoContent;if(!content||content.__balancedDailyChoices)return false;
  content.questions=balanceChoiceQuestions(content.questions,'catalog');
- if(typeof content.selectQuestionsForPlan==='function'){
-   const original=content.selectQuestionsForPlan.bind(content);
-   content.selectQuestionsForPlan=function(plan,sourceQuestions,limit){return balanceChoiceQuestions(original(plan,sourceQuestions,limit),'plan:'+String(limit==null?'auto':limit));};
- }
  try{Object.defineProperty(content,'__balancedDailyChoices',{value:true,enumerable:false,configurable:false});}catch(_){content.__balancedDailyChoices=true;}
  return true;
 }
@@ -58,7 +54,7 @@ function mergeReservation(reservation,candidates){
 }
 function counts(items){const list=Array.isArray(items)?items:[];return{review:list.filter(x=>x&&x.category==='review').length,weak:list.filter(x=>x&&x.category==='weak').length,newKnowledge:list.filter(x=>x&&x.category==='new').length,total:list.length}}
 function summary(items){const c=counts(items);return c.total?'剩餘安排：複習 '+c.review+' · 弱項 '+c.weak+' · 新知識 '+c.newKnowledge:'本輪已沒有剩餘題目。'}
-const api={questionId,hash32,stableShuffle,arrangeOptions,balanceChoiceQuestions,installContentChoiceBalancing,selectQuestionsForPlan,sessionReservation,mergeReservation,counts,summary};
+const api={questionId,hash32,stableShuffle,arrangeOptions,balanceChoiceQuestions,balanceCatalogChoices,selectQuestionsForPlan,sessionReservation,mergeReservation,counts,summary};
 root.ManjingoDailyPlanRuntime=api;
-installContentChoiceBalancing();
+balanceCatalogChoices();
 })(window);

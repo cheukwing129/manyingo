@@ -12,6 +12,7 @@ const MAX_PER_KP=8;
 const SENTENCE_HISTORY_KEY='__sourceSentences';
 const MAX_SENTENCES=24;
 let observer=null;
+function fromRoot(name){return root[name]||(root.window&&root.window[name])}
 function store(){return root.localStorage||(root.window&&root.window.localStorage)||null}
 function read(){const s=store();if(!s)return{};try{const raw=JSON.parse(s.getItem(KEY)||'{}');return raw&&typeof raw==='object'?raw:{}}catch(e){return{}}}
 function write(data){const s=store();if(!s)return false;try{s.setItem(KEY,JSON.stringify(data||{}));return true}catch(e){return false}}
@@ -52,9 +53,15 @@ function remember(question){
  if(sentence){const recent=Array.isArray(data[SENTENCE_HISTORY_KEY])?data[SENTENCE_HISTORY_KEY].map(String):[];data[SENTENCE_HISTORY_KEY]=[sentence,...recent.filter(x=>x!==sentence)].slice(0,MAX_SENTENCES)}
  return write(data);
 }
-function rank(list){const source=Array.isArray(list)?list.slice():[];if(!source.length)return source;const byKp=new Map();source.forEach(q=>{const kpId=kpOf(q);if(!byKp.has(kpId))byKp.set(kpId,recentIds(kpId))});return source.map((q,index)=>{const ids=byKp.get(kpOf(q))||[],position=ids.indexOf(idOf(q));return{q,index,position}}).sort((a,b)=>{const aUnseen=a.position<0,bUnseen=b.position<0;if(aUnseen!==bUnseen)return aUnseen?-1:1;if(aUnseen&&bUnseen)return a.index-b.index;if(a.position!==b.position)return b.position-a.position;return a.index-b.index}).map(item=>item.q)}
-function select(list,limit){return balanceChoiceQuestions(rank(list).slice(0,Math.max(0,Number(limit)||0)),'rotation-select')}
-function choose(list,preferredIds){const source=Array.isArray(list)?list:[],preferred=new Set((Array.isArray(preferredIds)?preferredIds:[]).map(String)),preferredPool=preferred.size?source.filter(q=>preferred.has(idOf(q))):[];const pool=preferredPool.length?preferredPool:source;return rank(pool)[0]||null}
+function rank(list){const difficulty=fromRoot('ManjingoQuestionDifficulty');if(difficulty&&typeof difficulty.rank==='function')return difficulty.rank(list,{...difficulty.contextFor(list),rotation:api});const source=Array.isArray(list)?list.slice():[];if(!source.length)return source;const byKp=new Map();source.forEach(q=>{const kpId=kpOf(q);if(!byKp.has(kpId))byKp.set(kpId,recentIds(kpId))});return source.map((q,index)=>{const ids=byKp.get(kpOf(q))||[],position=ids.indexOf(idOf(q));return{q,index,position}}).sort((a,b)=>{const aUnseen=a.position<0,bUnseen=b.position<0;if(aUnseen!==bUnseen)return aUnseen?-1:1;if(aUnseen&&bUnseen)return a.index-b.index;if(a.position!==b.position)return b.position-a.position;return a.index-b.index}).map(item=>item.q)}
+function select(list,limit){const selected=rank(list).slice(0,Math.max(0,Number(limit)||0)),difficulty=fromRoot('ManjingoQuestionDifficulty');return difficulty&&typeof difficulty.rank==='function'?selected:balanceChoiceQuestions(selected,'rotation-select')}
+function choose(list,preferredIds){
+ const difficulty=fromRoot('ManjingoQuestionDifficulty');let candidate;
+ if(difficulty&&typeof difficulty.choose==='function')candidate=difficulty.choose(list,{...difficulty.contextFor(list,preferredIds),preferredIds,rotation:api});
+ else{const source=Array.isArray(list)?list:[],preferred=new Set((Array.isArray(preferredIds)?preferredIds:[]).map(String)),preferredPool=preferred.size?source.filter(q=>preferred.has(idOf(q))):[],pool=preferredPool.length?preferredPool:source;candidate=rank(pool)[0]||null}
+ const observability=fromRoot('ManjingoDifficultyObservability');if(observability&&typeof observability.observeChoice==='function')observability.observeChoice(list,preferredIds,candidate);
+ return candidate;
+}
 function clean(value){return String(value||'').replace(/\s+/g,' ').trim()}
 function rememberNode(node){if(!node||!node.matches)return false;const questionNode=node.matches('.question,.lesson-question')?node:node.querySelector&&node.querySelector('.question,.lesson-question');if(!questionNode)return false;const text=clean(questionNode.textContent),content=catalog();if(!text||!content||!Array.isArray(content.questions))return false;const question=content.questions.find(q=>clean(q&&q.q)===text);return question?remember(question):false}
 function install(){const doc=root.document||(root.window&&root.window.document);if(!doc)return false;rememberNode(doc);if(observer||typeof MutationObserver!=='function'&&!root.MutationObserver)return true;const Observer=root.MutationObserver||(root.window&&root.window.MutationObserver);if(typeof Observer!=='function'||!doc.body)return true;observer=new Observer(records=>records.forEach(record=>record.addedNodes&&record.addedNodes.forEach(rememberNode)));observer.observe(doc.body,{childList:true,subtree:true});return true}

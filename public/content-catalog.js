@@ -87,12 +87,23 @@ function misconceptionConcept(q){
 }
 const questions=rawQuestions.map(q=>{const concept=misconceptionConcept(q);return concept?{...q,misconceptionKey:concept.key,misconceptionLabel:concept.label}:{...q};});
 function getKnowledgePointIds(options){const teachableOnly=!options||options.teachableOnly!==false;return knowledgePoints.filter(kp=>!teachableOnly||kp.teachable).map(kp=>kp.kpId);}
-function selectQuestionsForPlan(plan,sourceQuestions,limit){
+function selectBaseQuestionsForPlan(plan,sourceQuestions,limit){
  const source=Array.isArray(sourceQuestions)?sourceQuestions:[],items=Array.isArray(plan&&plan.items)?plan.items:[],max=Math.max(0,Number(limit)||Number(plan&&plan.targetCount)||10),byKp=new Map(),rotation=window.ManjingoQuestionRotation,metadata=window.ManjingoQuestionMetadataV1,diversity=window.ManjingoQuestionDiversityV1;
  source.forEach(raw=>{if(!raw||!raw.id||!raw.kpId)return;const q=metadata&&typeof metadata.annotate==='function'?metadata.annotate(raw):raw;if(!byKp.has(q.kpId))byKp.set(q.kpId,[]);byKp.get(q.kpId).push(q)});
  const used=new Set(),queue=[],avoidSentenceIds=rotation&&typeof rotation.recentSentenceIds==='function'?rotation.recentSentenceIds():[];
  items.forEach(item=>{if(queue.length>=max)return;let available=(byKp.get(item.kpId)||[]).filter(q=>!used.has(q.id));const production=item.skillId==='trans.reorder'?available.filter(q=>q.type==='reorder'&&Array.isArray(q.skillIds)&&q.skillIds.includes('trans.reorder')):[];if(production.length)available=production;if(!available.length)return;const conceptPreferred=Array.isArray(item.conceptQuestionIds)?item.conceptQuestionIds.map(String):[],misconceptionPreferred=Array.isArray(item.misconceptionQuestionIds)?item.misconceptionQuestionIds.map(String):[],preferred=Array.from(new Set([...conceptPreferred,...misconceptionPreferred])),preferredSet=new Set(preferred),preferredPool=preferred.length?available.filter(q=>preferredSet.has(String(q.id))):[],pool=preferredPool.length?preferredPool:available;let ranked=rotation&&typeof rotation.rank==='function'?rotation.rank(pool):pool.slice(),candidate=diversity&&typeof diversity.choose==='function'?diversity.choose(ranked,queue,{avoidSentenceIds}):ranked[0]||null;if(!candidate&&preferredPool.length){ranked=rotation&&typeof rotation.rank==='function'?rotation.rank(available):available.slice();candidate=diversity&&typeof diversity.choose==='function'?diversity.choose(ranked,queue,{avoidSentenceIds}):ranked[0]||null;}if(!candidate)candidate=available[Math.floor(Math.random()*available.length)];used.add(candidate.id);queue.push({...candidate,skillId:item.skillId||candidate.skillId||null,category:item.category||'new',priority:item.priority??3,conceptReview:conceptPreferred.includes(String(candidate.id)),conceptKey:item.conceptKey||candidate.misconceptionKey||null,conceptLabel:item.conceptLabel||candidate.misconceptionLabel||null,conceptMastery:item.conceptMastery??null,misconceptionReview:misconceptionPreferred.includes(String(candidate.id))});});
  return queue;
+}
+// Resolve the optional skill selector at the call boundary. The legacy route
+// keeps its original option balancing, including when skill selection fails.
+function selectQuestionsForPlan(plan,sourceQuestions,limit){
+ const skills=window.ManjingoSkillFirstPlan;
+ if(skills&&typeof skills.selectQuestionsForPlan==='function'){
+  try{return skills.selectQuestionsForPlan(plan,sourceQuestions,limit,{learning:window.ManjingoLocalLearning||null,rotation:window.ManjingoQuestionRotation||null,diversity:window.ManjingoQuestionDiversityV1||null,skillMastery:window.ManjingoSkillMasteryV1||null})}
+  catch(error){if(window.console&&typeof window.console.warn==='function')window.console.warn('skill-first selector fallback',error)}
+ }
+ const selected=selectBaseQuestionsForPlan(plan,sourceQuestions,limit),daily=window.ManjingoDailyPlanRuntime;
+ return daily&&typeof daily.balanceChoiceQuestions==='function'?daily.balanceChoiceQuestions(selected,'plan:'+String(limit==null?'auto':limit)):selected;
 }
 window.ManjingoContent={catalogVersion:'reviewed-v1',knowledgePoints:knowledgePoints.map(x=>({...x})),questions:questions.map(x=>({...x})),passageSets:passageSets.map(x=>({...x,questionIds:x.questionIds.slice()})),getKnowledgePointIds,selectQuestionsForPlan,misconceptionConcept};
 

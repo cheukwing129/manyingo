@@ -8,7 +8,7 @@ test('Pages smoke verifies deployed learner difficulty guidance instant feedback
   const source=read('scripts/smoke_pages_api.mjs');
   assert.match(source,/from 'node:vm'/);
   assert.match(source,/readTextAsset\('\/difficulty-calibration\.js'/);
-  assert.match(source,/readTextAsset\('\/question-rotation\.js'/);
+  assert.match(source,/readTextAsset\('\/home-shell\.js'/);
   assert.match(source,/readTextAsset\('\/question-difficulty\.js'/);
   assert.match(source,/readTextAsset\('\/difficulty-observability\.js'/);
   assert.match(source,/readTextAsset\('\/feedback-ui\.js'/);
@@ -34,8 +34,8 @@ test('Pages smoke verifies deployed learner difficulty guidance instant feedback
   assert.match(source,/const queueIndex=todayAnswerSource\.indexOf\('queueCloudAnswer\(q,answerId,value\)'\)/);
   assert.match(source,/unlockIndex>=0&&feedbackIndex>unlockIndex&&queueIndex>feedbackIndex/);
   assert.match(source,/!todayAnswerSource\.includes\('await cloudSubmit'\)/);
-  assert.match(source,/indexOf\('difficulty-calibration\.js'\) < rotationSource\.indexOf\('question-difficulty\.js'\)/);
-  assert.match(source,/indexOf\('question-difficulty\.js'\) < rotationSource\.indexOf\('difficulty-observability\.js'\)/);
+  assert.match(source,/indexOf\('difficulty-calibration\.js'\) < homeShellSource\.indexOf\('question-difficulty\.js'\)/);
+  assert.match(source,/indexOf\('question-difficulty\.js'\) < homeShellSource\.indexOf\('difficulty-observability\.js'\)/);
   const calibrationCheck=source.indexOf("readTextAsset('/difficulty-calibration.js'");
   const observabilityCheck=source.indexOf("readTextAsset('/difficulty-observability.js'");
   const feedbackCheck=source.indexOf("readTextAsset('/feedback-ui.js'");
@@ -187,4 +187,31 @@ test('production smoke runs after content synchronization, skips irrelevant comm
 test('package exposes the production smoke command',()=>{
   const pkg=JSON.parse(read('package.json'));
   assert.equal(pkg.scripts['smoke:pages'],'node scripts/smoke_sync_guard.mjs && node scripts/smoke_answer_outbox.mjs && node scripts/smoke_practice_reliability.mjs && node scripts/smoke_pages_api.mjs');
+});
+
+test('asset-only smoke validates actual public files without contacting backend routes', {timeout:10000}, async()=>{
+  const {createServer}=require('node:http'),{spawn}=require('node:child_process');
+  const requests=[];
+  const server=createServer((request,response)=>{
+    const pathname=new URL(request.url,'http://localhost').pathname;requests.push(pathname);
+    const file=path.join(__dirname,'..','public',pathname==='/'?'index.html':pathname);
+    try{response.end(fs.readFileSync(file))}catch(error){response.statusCode=404;response.end('Unavailable')}
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  let child;
+  try{
+    child=spawn(process.execPath,['scripts/smoke_pages_api.mjs','--assets-only'],{cwd:path.join(__dirname,'..'),env:{...process.env,MANJINGO_BASE_URL:'http://127.0.0.1:'+server.address().port},stdio:['ignore','pipe','pipe']});
+    let output='';child.stdout.on('data',data=>{output+=String(data)});child.stderr.on('data',data=>{output+=String(data)});
+    let timer;
+    const code=await new Promise((resolve,reject)=>{timer=setTimeout(()=>{child.kill();reject(new Error('Asset smoke timed out'))},7500);child.once('error',reject);child.once('exit',resolve)}).finally(()=>clearTimeout(timer));
+    assert.equal(code,0,output);
+    assert.ok(requests.includes('/home-shell.js'));
+    assert.ok(requests.includes('/difficulty-calibration.js'));
+    assert.ok(requests.includes('/'));
+    assert.ok(!requests.some(route=>route.startsWith('/api/')),'asset smoke must stop before backend requests');
+    assert.match(output,/assets-only checks complete/);
+  }finally{
+    if(child&&child.exitCode===null)child.kill();
+    server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+  }
 });

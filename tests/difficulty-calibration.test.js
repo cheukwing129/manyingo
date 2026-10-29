@@ -97,3 +97,19 @@ test('runtime loads telemetry before difficulty selection and records cloud tele
  assert.ok(flushStart>=0&&flushEnd>flushStart);
  assert.doesNotMatch(firebase.slice(flushStart,flushEnd),/recordDifficultyOutcome/,'background replay must not double-count calibration after local fallback');
 });
+
+for(const calibrationFirst of [false,true])test('local answers record calibration without replacing submit: '+(calibrationFirst?'calibration first':'engine first'),()=>{
+ const memory=new Map(),localStorage={getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,String(value))};
+ const window={localStorage,ManjingoContent:{questions:[{id:'q1',kpId:'kp1',difficultyTier:'foundation'}]}},context={window,localStorage,console};
+ vm.createContext(context);
+ if(calibrationFirst)vm.runInContext(source('public/difficulty-calibration.js'),context);
+ vm.runInContext(source('public/local-learning.js'),context);
+ const engine=window.ManjingoLocalLearning,submit=engine.submit;
+ if(!calibrationFirst)vm.runInContext(source('public/difficulty-calibration.js'),context);
+ assert.equal(engine.submit,submit);
+ const answer=engine.submit('kp1',true,{questionId:'q1'}),saved=JSON.parse(memory.get('manjingo_progress_cache'));
+ assert.equal(answer.xpEarned,8);
+ assert.equal(answer.lastDifficultyTier,'foundation');
+ assert.equal(answer.tierStats.foundation.attempts,1);
+ assert.equal(saved.knowledge.kp1.tierStats.foundation.correctCount,1);
+});

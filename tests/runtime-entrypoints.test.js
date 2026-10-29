@@ -61,9 +61,14 @@ test('cold homepage loads real study and results modules once and retains local 
   assert.equal(app.ManjingoContent.questions.length, 607);
   assert.ok(app.ManjingoQuestionRotation);
   assert.equal(app.ManjingoQuestionDifficulty, undefined, 'adaptive work stays off parser startup');
+  const selector = app.ManjingoContent.selectQuestionsForPlan, submit = app.ManjingoLocalLearning.submit;
+  const rotationMethods = Object.fromEntries(['rank','select','choose'].map(name => [name,app.ManjingoQuestionRotation[name]]));
   const first = app.ManjingoHomeShell.ensureStudyPlanRuntime();
   await Promise.all([first, app.ManjingoHomeShell.ensureStudyPlanRuntime(), app.ManjingoHomeShell.prewarmStudyRuntime()]);
   assert.equal(app.ManjingoContent.questions.length, 677);
+  assert.equal(app.ManjingoContent.selectQuestionsForPlan,selector,'skill modules must not replace the catalog selector');
+  assert.equal(app.ManjingoLocalLearning.submit,submit,'calibration must not replace submission');
+  for (const name of ['rank','select','choose']) assert.equal(app.ManjingoQuestionRotation[name],rotationMethods[name],name+' must stay stable');
   assert.ok(app.ManjingoQuestionDifficulty);
   assert.ok(app.ManjingoFeedbackUI);
   const learning = app.ManjingoLocalLearning, catalog = app.ManjingoContent;
