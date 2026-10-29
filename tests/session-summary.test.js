@@ -142,3 +142,17 @@ test('lesson completion mascot has a static compact layout when feedback UI is n
  assert.match(caption[1],/overflow-wrap:anywhere/);
  assert.match(css,/\.session-summary-icon\.mascot-celebrate img\{width:68px;height:94px\}/);
 });
+
+
+test('summary can initialize after DOM ready before its global API is published',()=>{
+ const vm=require('node:vm');
+ let observed=0;
+ class Observer{observe(){observed++}}
+ const document={readyState:'complete',body:{},addEventListener(){},querySelector(){return null},querySelectorAll(){return[]}};
+ const context={document,MutationObserver:Observer,URLSearchParams,console};
+ vm.createContext(context);
+ vm.runInContext(read('public/session-summary.js'),context);
+ assert.ok(context.ManjingoSessionSummary.observer instanceof Observer);
+ assert.equal(observed,1);
+ assert.equal(typeof context.ManjingoSessionSummary.reset,'function');
+});

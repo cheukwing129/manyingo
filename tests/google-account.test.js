@@ -36,3 +36,21 @@ test('Firestore rules keep authoritative learning data server-only while allowin
    assert.match(rules,re,collection+' must remain server-authoritative');
  }
 });
+
+
+test('account UI handles an unavailable Firebase account subscription without an unhandled rejection',async()=>{
+ const vm=require('node:vm');
+ const button={};
+ const bar={innerHTML:'',querySelector(){return button}};
+ const document={readyState:'loading',addEventListener(){},getElementById(id){return id==='accountUiStyle'?{}:id==='accountBar'?bar:null}};
+ const context={document,window:{},fakeFirebase:{async getAccountState(){return{google:false}},async onAccountChanged(){throw new Error('SDK unavailable')}}};
+ context.window=context;
+ vm.createContext(context);
+ // Inject only the remote adapter; run the real install/render/error boundary.
+ const source=read('public/account-ui.js').replace("import('./firebase-config.js')",'Promise.resolve(fakeFirebase)');
+ vm.runInContext(source,context);
+ assert.equal(await context.ManjingoAccountUI.install(),true);
+ assert.match(bar.innerHTML,/目前使用本機模式/);
+ assert.match(bar.innerHTML,/使用 Google 同步/);
+ assert.doesNotMatch(bar.innerHTML,/ disabled/);
+});
