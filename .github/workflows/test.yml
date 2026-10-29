@@ -20,3 +20,26 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Run tests
         run: npm test
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Accept local checkout in mobile and desktop Chrome
+        run: npm run smoke:browser
+      - name: Save browser screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-acceptance
+          path: artifacts/browser-acceptance/
+          retention-days: 14
+          if-no-files-found: warn

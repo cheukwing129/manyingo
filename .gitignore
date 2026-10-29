@@ -6,3 +6,6 @@ gha-creds-*.json
 .DS_Store
 .dev.vars*
 .env*
+
+# Local browser acceptance output
+artifacts/browser-acceptance/

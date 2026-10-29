@@ -27,4 +27,6 @@ Manyingo 文言年糕是一個以每日練習建立可遷移文言閱讀能力�
 
 日常可按範圍執行 `npm run test:runtime`、`npm run test:learning`、`npm run test:content` 或 `npm run test:art`；發布前及 CI 維持完整 `npm test`。
 
+已安裝 Chrome／Chromium 的環境可執行 `npm run smoke:browser`，以本機候選檔案驗收手機觸控及桌面答題流程；此模式封鎖遠端服務，不建立雲端帳戶。CI 會保存截圖及 JSON 結果，Google 實際登入和實體手機仍需另行驗收。
+
 載入入口、產物重建方式、驗證限制及後續工作見 [架構整理進度](./docs/architecture-cleanup.md)。
