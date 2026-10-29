@@ -517,8 +517,8 @@ function fromRoot(name){return root[name]||(root.window&&root.window[name])}
 function store(){return root.localStorage||(root.window&&root.window.localStorage)||null}
 function read(){const s=store();if(!s)return{};try{const raw=JSON.parse(s.getItem(KEY)||'{}');return raw&&typeof raw==='object'?raw:{}}catch(e){return{}}}
 function write(data){const s=store();if(!s)return false;try{s.setItem(KEY,JSON.stringify(data||{}));return true}catch(e){return false}}
-function idOf(question){return question&&question.id!=null?String(question.id):''}
-function kpOf(question){return question&&question.kpId!=null?String(question.kpId):''}
+function idOf(q){return String(q?.id??'')}
+function kpOf(q){return String(q?.kpId??'')}
 function hash32(value){let h=2166136261>>>0;for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
 function randomRank(seed,step){let x=(hash32(seed)+Math.imul((Number(step)||0)+1,0x9e3779b9))>>>0;x^=x>>>16;x=Math.imul(x,0x7feb352d)>>>0;x^=x>>>15;x=Math.imul(x,0x846ca68b)>>>0;x^=x>>>16;return x>>>0;}
 function stableShuffle(values,seed){const result=(Array.isArray(values)?values:[]).slice();for(let i=result.length-1;i>0;i--){const j=randomRank(seed,i)%(i+1),tmp=result[i];result[i]=result[j];result[j]=tmp;}return result;}
@@ -537,20 +537,22 @@ function balanceChoiceQuestions(items,seed){
 function catalog(){return root.ManjingoContent||(root.window&&root.window.ManjingoContent)||null}
 function balanceCatalogChoices(){const content=catalog();if(!content||content.__balancedCatalogChoices||!Array.isArray(content.questions))return false;content.questions=balanceChoiceQuestions(content.questions,'catalog');try{Object.defineProperty(content,'__balancedCatalogChoices',{value:true,enumerable:false,configurable:false})}catch(_){content.__balancedCatalogChoices=true}return true;}
 function metadata(){return root.ManjingoQuestionMetadataV1||(root.window&&root.window.ManjingoQuestionMetadataV1)||null}
-function sentenceOf(question){
- const explicit=String(question&&question.sourceSentenceId||'');
- if(explicit)return explicit;
+function sentenceOf(q){
+ const s=String(q&&q.sourceSentenceId||'');
+ if(s)return s;
  const api=metadata();
- if(api&&typeof api.classify==='function')return String(api.classify(question).sourceSentenceId||'');
+ if(api&&typeof api.classify==='function')return String(api.classify(q).sourceSentenceId||'');
  return'';
 }
 function recentIds(kpId){const data=read(),ids=data[String(kpId)];return Array.isArray(ids)?ids.map(String):[]}
 function recentSentenceIds(){const data=read(),ids=data[SENTENCE_HISTORY_KEY];return Array.isArray(ids)?ids.map(String):[]}
-function remember(question){
- const id=idOf(question),kpId=kpOf(question);if(!id||!kpId)return false;
+function seenIds(d){return [...new Set(Object.values(d||read()).flat())]}
+function remember(q){
+ const id=idOf(q),kpId=kpOf(q);if(!id||!kpId)return false;
  const data=read(),current=Array.isArray(data[kpId])?data[kpId].map(String):[];
+ data.__seenQuestionIds=Array.from(new Set([id,...seenIds(data)]));
  data[kpId]=[id,...current.filter(x=>x!==id)].slice(0,MAX_PER_KP);
- const sentence=sentenceOf(question);
+ const sentence=sentenceOf(q);
  if(sentence){const recent=Array.isArray(data[SENTENCE_HISTORY_KEY])?data[SENTENCE_HISTORY_KEY].map(String):[];data[SENTENCE_HISTORY_KEY]=[sentence,...recent.filter(x=>x!==sentence)].slice(0,MAX_SENTENCES)}
  return write(data);
 }
@@ -567,7 +569,7 @@ function clean(value){return String(value||'').replace(/\s+/g,' ').trim()}
 function rememberNode(node){if(!node||!node.matches)return false;const questionNode=node.matches('.question,.lesson-question')?node:node.querySelector&&node.querySelector('.question,.lesson-question');if(!questionNode)return false;const text=clean(questionNode.textContent),content=catalog();if(!text||!content||!Array.isArray(content.questions))return false;const question=content.questions.find(q=>clean(q&&q.q)===text);return question?remember(question):false}
 function install(){const doc=root.document||(root.window&&root.window.document);if(!doc)return false;rememberNode(doc);if(observer||typeof MutationObserver!=='function'&&!root.MutationObserver)return true;const Observer=root.MutationObserver||(root.window&&root.window.MutationObserver);if(typeof Observer!=='function'||!doc.body)return true;observer=new Observer(records=>records.forEach(record=>record.addedNodes&&record.addedNodes.forEach(rememberNode)));observer.observe(doc.body,{childList:true,subtree:true});return true}
 function clear(){const s=store();if(!s)return false;try{s.removeItem(KEY);return true}catch(e){return false}}
-const api={KEY,MAX_PER_KP,SENTENCE_HISTORY_KEY,MAX_SENTENCES,idOf,kpOf,hash32,stableShuffle,arrangeOptions,balanceChoiceQuestions,balanceCatalogChoices,sentenceOf,recentIds,recentSentenceIds,remember,rank,select,choose,rememberNode,install,clear};
+const api={KEY,MAX_PER_KP,SENTENCE_HISTORY_KEY,MAX_SENTENCES,idOf,kpOf,hash32,stableShuffle,arrangeOptions,balanceChoiceQuestions,balanceCatalogChoices,sentenceOf,recentIds,recentSentenceIds,seenIds,remember,rank,select,choose,rememberNode,install,clear};
 const doc=root.document||(root.window&&root.window.document);if(doc){if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',install);else install()}
 return api;
 });
@@ -825,21 +827,22 @@ root.ManjingoMascotRuntime=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(root){
 'use strict';
 const RECOMMENDED_SIZES=Object.freeze([32,48,64,96,160]);
-const COMPACT_ASSET='./mascot/moling-head.svg';
+const COMPACT_ASSET='./mascot/v2/compact.svg';
+const COMPLETION_ASSET='./mascot/v2/complete.svg';
 const STATE_LIST=Object.freeze([
-  Object.freeze({id:'neutral',label:'一般',asset:'./mascot/moling-neutral.svg',intent:'首頁、一般歡迎、空狀態、品牌展示',motion:'static',artStatus:'baseline-approved',productionPriority:0}),
-  Object.freeze({id:'happy',label:'開心',asset:'./mascot/moling-happy.svg',intent:'答對、完成小步驟',motion:'short-bounce',artStatus:'production',productionPriority:1}),
-  Object.freeze({id:'celebrate',label:'慶祝',asset:'./mascot/moling-celebrate.svg',intent:'全對、完成一課、解鎖重要內容',motion:'single-celebration',artStatus:'production',productionPriority:5}),
-  Object.freeze({id:'encouraging',label:'鼓勵',asset:'./mascot/moling-encouraging.svg',intent:'答錯、補救學習、弱點診斷',motion:'gentle-lift',artStatus:'production',productionPriority:2}),
-  Object.freeze({id:'thinking',label:'思考',asset:'./mascot/moling-thinking.svg',intent:'提示、概念理解、重新教學',motion:'static-or-fade',artStatus:'production',productionPriority:3}),
-  Object.freeze({id:'determined',label:'堅定',asset:'./mascot/moling-determined.svg',intent:'連續學習、streak、每日目標',motion:'static-or-short-lift',artStatus:'production',productionPriority:4})
+ Object.freeze({"id":"neutral","label":"一般","asset":"./mascot/v2/neutral.svg","intent":"首頁、一般歡迎、空狀態、品牌展示","motion":"static","artStatus":"production","productionPriority":0}),
+ Object.freeze({"id":"happy","label":"開心","asset":"./mascot/v2/happy.svg","intent":"答對、完成小步驟","motion":"short-bounce","artStatus":"production","productionPriority":1}),
+ Object.freeze({"id":"celebrate","label":"慶祝","asset":"./mascot/v2/celebrate.svg","intent":"全對、完成一課、解鎖重要內容","motion":"single-celebration","artStatus":"production","productionPriority":5}),
+ Object.freeze({"id":"encouraging","label":"難過","asset":"./mascot/v2/sad.svg","intent":"答錯時清楚表達失落，配合支持式文字與解說","motion":"gentle-lift","artStatus":"production","productionPriority":2}),
+ Object.freeze({"id":"thinking","label":"思考","asset":"./mascot/v2/thinking.svg","intent":"提示、概念理解、重新教學","motion":"static-or-fade","artStatus":"production","productionPriority":3}),
+ Object.freeze({"id":"determined","label":"堅定","asset":"./mascot/v2/complete.svg","intent":"連續學習、streak、每日目標","motion":"static-or-short-lift","artStatus":"production","productionPriority":4})
 ]);
 const STATES=Object.freeze(Object.fromEntries(STATE_LIST.map(item=>[item.id,item])));
 const THINKING_TOKENS=Object.freeze(['📖','🧠','🔎']);
 let observer=null;
 function normalizeState(name){return Object.prototype.hasOwnProperty.call(STATES,String(name||''))?String(name):'neutral'}
 function descriptor(name){return STATES[normalizeState(name)]}
-function asset(name,options){const opts=options||{},size=Number(opts.size)||0;if(opts.compact===true||size>0&&size<=32)return COMPACT_ASSET;return descriptor(name).asset}
+function asset(name,options){const opts=options||{},size=Number(opts.size)||0;if((opts.compact===true||size>0&&size<=32)&&['happy','celebrate'].includes(normalizeState(name)))return COMPACT_ASSET;return descriptor(name).asset}
 function stateClass(name){return'mascot-state-'+normalizeState(name)}
 function list(){return STATE_LIST.slice()}
 function isCanonical(name){return normalizeState(name)===String(name||'')}
@@ -848,7 +851,7 @@ function productionQueue(){return STATE_LIST.filter(item=>!isProductionArt(item.
 function semanticThinkingIcon(node){if(!node||!node.classList)return false;const text=String(node.textContent||'').trim();if(!THINKING_TOKENS.includes(text))return false;node.classList.add('mascot-thinking');if(node.dataset)node.dataset.mascotState='thinking';return true}
 function scanSemantic(rootNode){if(typeof document==='undefined'||!rootNode)return 0;const nodes=[];if(rootNode.matches&&rootNode.matches('#lessonApp .lesson-step>.lesson-icon'))nodes.push(rootNode);if(rootNode.querySelectorAll)rootNode.querySelectorAll('#lessonApp .lesson-step>.lesson-icon').forEach(node=>nodes.push(node));let marked=0;nodes.forEach(node=>{if(semanticThinkingIcon(node))marked+=1});return marked}
 function installSemanticStates(){if(typeof document==='undefined'||!document.documentElement)return false;scanSemantic(document);if(observer||typeof MutationObserver!=='function'||!document.body)return true;observer=new MutationObserver(records=>records.forEach(record=>{if(record.target)scanSemantic(record.target);if(record.addedNodes)record.addedNodes.forEach(scanSemantic)}));observer.observe(document.body,{childList:true,subtree:true,characterData:true});api.observer=observer;return true}
-const api={version:1,name:'小墨靈 / Little Ink Spirit',recommendedSizes:RECOMMENDED_SIZES,compactAsset:COMPACT_ASSET,states:STATES,stateList:STATE_LIST,normalizeState,descriptor,asset,stateClass,list,isCanonical,isProductionArt,productionQueue,semanticThinkingIcon,scanSemantic,installSemanticStates,observer:null};
+const api={version:2,name:'小墨靈 / Little Ink Spirit',recommendedSizes:RECOMMENDED_SIZES,compactAsset:COMPACT_ASSET,completionAsset:COMPLETION_ASSET,states:STATES,stateList:STATE_LIST,normalizeState,descriptor,asset,stateClass,list,isCanonical,isProductionArt,productionQueue,semanticThinkingIcon,scanSemantic,installSemanticStates,observer:null};
 if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installSemanticStates);else installSemanticStates()}
 return api;
 });
@@ -893,12 +896,12 @@ function lessonInterventionOutcome(kpId,skillId){const engine=learning();if(!eng
 function lessonAction(data){if(!(data&&data.targeted))return{href:'./index.html#learningPath',label:'回到學習路徑'};if(data.remedial||data.reteach){const outcome=data.interventionOutcome||lessonInterventionOutcome(data.kpId,data.skillId);if(outcome&&outcome.needsAttention&&!outcome.stable)return{href:'./index.html#weaknessPanel',label:'查看學習重點'}}return{href:'./index.html#masteryDashboard',label:'查看學習成果'}}
 function recommend(data){if(data.page==='lesson')return lessonAction(data);if(data.persistentWeakness)return{href:'#weaknessPanel',label:'查看學習重點'};if(data.unlockedStages.length)return{href:'#learningPath',label:'看看新解鎖內容'};return{href:'#masteryDashboard',label:'查看學習成果'}}
 function model(extra){const base=extra||{},answered=Math.max(0,Number(base.answered!=null?base.answered:state.answered)||0),correct=Math.max(0,Math.min(answered,Number(base.correct!=null?base.correct:state.correct)||0)),delta=Number(base.masteryDelta!=null?base.masteryDelta:masteryDelta())||0,resolvedIds=Array.isArray(base.resolved)?base.resolved:Array.from(state.resolved),unlocked=Array.isArray(base.unlockedStages)?base.unlockedStages:newStages(),page=base.page||state.page,targeted=base.targeted!=null?!!base.targeted:state.targeted,remedial=base.remedial!=null?!!base.remedial:state.remedial,reteach=base.reteach!=null?!!base.reteach:state.reteach,kpId=base.kpId||state.kpId,skillId=base.skillId||state.skillId,wrongKpIds=Array.isArray(base.wrongKps)?base.wrongKps:Array.from(state.wrongKps),persistentWeakness=base.persistentWeakness!=null?!!base.persistentWeakness:persistentWrongSignal(wrongKpIds),interventionOutcome=base.interventionOutcome||((page==='lesson'&&(remedial||reteach))?lessonInterventionOutcome(kpId,skillId):null),title=base.title||(page==='lesson'?(reteach?'概念重教完成':remedial?'補救驗證完成':targeted?'弱點補強完成':'本課完成'):'今日學習完成'),data={page,targeted,remedial,reteach,kpId,skillId,interventionOutcome,kpLabel:base.kpLabel||kpLabel(kpId),title,answered,correct,wrong:Math.max(0,answered-correct),wrongKpIds:wrongKpIds.map(String),persistentWeakness,xp:Math.max(0,Number(base.xp!=null?base.xp:state.xp)||0),masteryDelta:delta,resolvedLabels:resolvedIds.map(kpLabel).filter(Boolean),unlockedStages:unlocked.map(clean).filter(Boolean)};data.action=base.action||recommend(data);return data}
-function celebrationCopy(data,accuracy){if(!data.answered)return'進度已更新！';if(accuracy===100)return'全對！太棒了！';if(accuracy>=80)return'很穩，繼續保持！';if(data.wrong)return'完成了，錯題也會變成下一步。';return'今天完成啦！'}
-const FALLBACK_MASCOT_ASSETS=Object.freeze({neutral:'./mascot/moling-neutral.svg',happy:'./mascot/moling-happy.svg',celebrate:'./mascot/moling-celebrate.svg'});
-const MASCOT_ASSETS=Object.freeze(Object.fromEntries(Object.keys(FALLBACK_MASCOT_ASSETS).map(name=>{const runtime=mascotRuntime();return[name,runtime&&typeof runtime.asset==='function'?runtime.asset(name):FALLBACK_MASCOT_ASSETS[name]]})));
-function mascotState(data,accuracy){if(!data||!data.answered)return'neutral';if(accuracy===100||data.unlockedStages&&data.unlockedStages.length)return'celebrate';return'happy'}
-function mascotAsset(name){const runtime=mascotRuntime();if(runtime&&typeof runtime.asset==='function')return runtime.asset(name);return FALLBACK_MASCOT_ASSETS[name]||FALLBACK_MASCOT_ASSETS.neutral}
-function markup(input){const data=model(input),accuracy=data.answered?Math.round(data.correct/data.answered*100):0,impact=[],mascot=mascotState(data,accuracy),progress=progressSignal(data.masteryDelta);if(data.resolvedLabels.length)impact.push('已修正：'+data.resolvedLabels.slice(0,3).join('、'));if(data.unlockedStages.length)impact.push('新解鎖：'+data.unlockedStages.join('、'));if(data.page==='lesson'&&data.kpLabel&&data.masteryDelta>0)impact.push('「'+data.kpLabel+'」掌握度提升 '+data.masteryDelta);if(!impact.length)impact.push(data.wrong?'答錯內容已加入之後的優先複習。':'本輪學習已記錄，下次會按最新掌握度安排。');return '<div class="session-summary done" role="status"><div class="session-summary-icon mascot-celebrate mascot-state-'+mascot+'" aria-label="小墨靈：'+esc(celebrationCopy(data,accuracy))+'"><img src="'+esc(mascotAsset(mascot))+'" alt="" aria-hidden="true"><span>'+esc(celebrationCopy(data,accuracy))+'</span></div><h3>'+esc(data.title)+'</h3><p class="session-summary-lead">'+(data.answered?'完成 '+data.answered+' 題 · 正確率 '+accuracy+'%':'學習進度已更新')+'</p><div class="session-summary-metrics"><div><strong>'+data.correct+' / '+data.answered+'</strong><span>答對</span></div><div><strong>+'+data.xp+'</strong><span>XP</span></div><div><strong>'+esc(progress.value)+'</strong><span>'+esc(progress.label)+'</span></div></div><div class="session-summary-impact"><strong>這一輪的改變</strong>'+impact.map(line=>'<p>'+esc(line)+'</p>').join('')+'</div><a class="action action-link session-summary-action" href="'+esc(data.action.href)+'">'+esc(data.action.label)+'</a></div>'}
+function celebrationCopy(data,accuracy){if(!data.answered)return'進度已更新！';if(accuracy===100&&!data.wrong)return'全對！太棒了！';if(accuracy>=80)return'很穩，繼續保持！';if(data.wrong)return'完成了，錯題也會變成下一步。';return'今天完成啦！'}
+const FALLBACK_MASCOT_ASSETS=Object.freeze({neutral:'./mascot/v2/neutral.svg',happy:'./mascot/v2/complete.svg',celebrate:'./mascot/v2/celebrate.svg'});
+const MASCOT_ASSETS=Object.freeze(Object.fromEntries(Object.keys(FALLBACK_MASCOT_ASSETS).map(name=>{const runtime=mascotRuntime();return[name,name==='happy'&&runtime&&runtime.completionAsset?runtime.completionAsset:runtime&&typeof runtime.asset==='function'?runtime.asset(name):FALLBACK_MASCOT_ASSETS[name]]})));
+function mascotState(data,accuracy){if(!data||!data.answered)return'neutral';if(accuracy===100&&!data.wrong||data.unlockedStages&&data.unlockedStages.length)return'celebrate';return'happy'}
+function mascotAsset(name){const runtime=mascotRuntime();if(name==='happy'&&runtime&&runtime.completionAsset)return runtime.completionAsset;if(runtime&&typeof runtime.asset==='function')return runtime.asset(name);return FALLBACK_MASCOT_ASSETS[name]||FALLBACK_MASCOT_ASSETS.neutral}
+function markup(input){const data=model(input),accuracy=data.answered?Math.round(data.correct/data.answered*100):0,impact=[],mascot=mascotState(data,accuracy),progress=progressSignal(data.masteryDelta);if(data.resolvedLabels.length)impact.push('已修正：'+data.resolvedLabels.slice(0,3).join('、'));if(data.unlockedStages.length)impact.push('新解鎖：'+data.unlockedStages.join('、'));if(data.page==='lesson'&&data.kpLabel&&data.masteryDelta>0)impact.push('「'+data.kpLabel+'」掌握度提升 '+data.masteryDelta);if(!impact.length)impact.push(data.wrong?'答錯內容已加入之後的優先複習。':'本輪學習已記錄，下次會按最新掌握度安排。');return '<div class="session-summary done" role="status"><div class="session-summary-header"><div class="session-summary-copy"><h3>'+esc(data.title)+'</h3><p class="session-summary-celebration">'+esc(celebrationCopy(data,accuracy))+'</p><p class="session-summary-lead">'+(data.answered?'完成 '+data.answered+' 題 · 正確率 '+accuracy+'%':'學習進度已更新')+'</p></div><div class="session-summary-icon mascot-celebrate mascot-state-'+mascot+'" aria-label="小墨靈：'+esc(celebrationCopy(data,accuracy))+'"><img src="'+esc(mascotAsset(mascot))+'" width="128" height="128" alt="" aria-hidden="true"></div></div><div class="session-summary-metrics"><div><strong>'+data.correct+' / '+data.answered+'</strong><span>答對</span></div><div><strong>+'+data.xp+'</strong><span>XP</span></div><div><strong>'+esc(progress.value)+'</strong><span>'+esc(progress.label)+'</span></div></div><div class="session-summary-impact"><strong>這一輪的改變</strong>'+impact.map(line=>'<p>'+esc(line)+'</p>').join('')+'</div><a class="action action-link session-summary-action" href="'+esc(data.action.href)+'">'+esc(data.action.label)+'</a></div>'}
 function render(host,input){if(!host)return false;host.innerHTML=markup(input);return true}
 function renderHomeCompletion(){if(typeof document==='undefined'||state.rendered)return false;const done=document.querySelector('#quiz .done');if(!done)return false;if(!state.active)beginFromPage();const host=document.getElementById('quiz');if(!host)return false;render(host,{page:'home'});const status=document.getElementById('status');if(status)status.textContent='📱 今日學習完成';state.rendered=true;return true}
 function renderLessonCompletion(){if(typeof document==='undefined'||state.rendered)return false;const complete=document.querySelector('#lessonApp .lesson-complete');if(!complete||complete.classList.contains('session-summary'))return false;if(!state.active)beginFromPage();const host=complete.closest('.lesson-content')||complete.parentElement;if(!host)return false;render(host,{page:'lesson'});state.rendered=true;return true}

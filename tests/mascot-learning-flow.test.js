@@ -28,18 +28,18 @@ test('completion summary maps results to canonical mascot states',()=>{
   assert.equal(summary.mascotState({answered:10,unlockedStages:[]},90),'happy');
   assert.equal(summary.mascotState({answered:10,unlockedStages:[]},100),'celebrate');
   assert.equal(summary.mascotState({answered:10,unlockedStages:['第二階段']},80),'celebrate');
-  assert.equal(summary.mascotAsset('happy'),'./mascot/moling-happy.svg');
-  assert.equal(summary.mascotAsset('unknown'),'./mascot/moling-neutral.svg');
+  assert.equal(summary.mascotAsset('happy'),'./mascot/v2/complete.svg');
+  assert.equal(summary.mascotAsset('unknown'),'./mascot/v2/neutral.svg');
 });
 
 test('completion markup uses state-specific mascot asset instead of the legacy filename',()=>{
   const perfect=summary.markup({page:'home',answered:10,correct:10,xp:80,masteryDelta:12,resolved:[],unlockedStages:[]});
   assert.match(perfect,/mascot-state-celebrate/);
-  assert.match(perfect,/\.\/mascot\/moling-celebrate\.svg/);
+  assert.match(perfect,/\.\/mascot\/v2\/celebrate\.svg/);
   assert.doesNotMatch(perfect,/src="\.\/mascot-moling\.svg"/);
   const good=summary.markup({page:'home',answered:10,correct:9,xp:70,masteryDelta:8,resolved:[],unlockedStages:[]});
   assert.match(good,/mascot-state-happy/);
-  assert.match(good,/\.\/mascot\/moling-happy\.svg/);
+  assert.match(good,/\.\/mascot\/v2\/complete\.svg/);
 });
 
 test('all six v1 mascot state assets exist while candidate and production artwork can graduate from the baseline',()=>{
@@ -83,8 +83,8 @@ test('thinking and determined states are connected to semantic learning UI',()=>
   const runtime=read('public/mascot-runtime.js');
   assert.match(css,/body\.app-nav-ready>\.title[^}]*manyingo-logo-classic\.webp/);
   assert.match(css,/html\[data-ui-theme="ink"\] body\.app-nav-ready>\.title[^}]*manyingo-logo-ink\.webp/);
-  assert.match(css,/\.player-status \.streak::before[^}]*moling-determined\.svg/);
-  assert.match(css,/#lessonApp \.lesson-step>\.lesson-icon\.mascot-thinking[^}]*moling-thinking\.svg/);
+  assert.match(css,/\.player-status \.streak::before[^}]*v2\/complete\.svg/);
+  assert.match(css,/#lessonApp \.lesson-step>\.lesson-icon\.mascot-thinking[^}]*v2\/thinking\.svg/);
   assert.match(runtime,/semanticThinkingIcon/);
   assert.match(runtime,/mascot-thinking/);
   assert.match(read('public/mascot/moling-thinking.svg'),/thinking production artwork v2/);

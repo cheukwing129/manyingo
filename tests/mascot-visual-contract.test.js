@@ -14,17 +14,17 @@ const sizes=[32,48,64,96,160];
 const productionPriority=['happy','encouraging','thinking','determined','celebrate'];
 const pendingPriority=[];
 
-test('mascot manifest is the complete six-state v1 contract',()=>{
-  assert.equal(manifest.version,1);
+test('mascot manifest preserves six state identities using the approved v2 artwork',()=>{
+  assert.equal(manifest.version,2);
   assert.deepEqual(manifest.recommendedSizes,sizes);
   assert.deepEqual(manifest.states.map(state=>state.id),stateIds);
-  assert.equal(manifest.compactAsset,'./mascot/moling-head.svg');
+  assert.equal(manifest.compactAsset,'./mascot/v2/compact.svg');
   manifest.states.forEach(state=>{
     assert.ok(state.label);
     assert.ok(state.intent);
     assert.ok(state.artStatus);
     assert.equal(Number.isFinite(state.productionPriority),true);
-    assert.match(state.asset,new RegExp('^\\.\\/mascot\\/moling-'+state.id+'\\.svg$'));
+    assert.match(state.asset,/^\.\/mascot\/v2\/[a-z]+\.svg$/);
   });
 });
 
@@ -47,31 +47,15 @@ test('runtime and manifest stay in exact parity including artwork readiness',()=
   assert.deepEqual(runtime.productionQueue().map(state=>state.id),pendingPriority);
 });
 
-test('manifest artwork lifecycle distinguishes baseline-derived, candidate, and production assets',()=>{
-  manifest.states.forEach(state=>{
-    const file='public/'+state.asset.replace(/^\.\//,'');
-    assert.equal(exists(file),true,file+' should exist');
-    const svg=read(file);
-    assert.match(svg,/viewBox="0 0 215 320"/);
-    const referencesBaseline=/\.\.\/mascot-moling\.svg/.test(svg);
-    if(state.artStatus==='placeholder-treatment'||state.artStatus==='provisional'||state.artStatus==='baseline-approved')assert.equal(referencesBaseline,true,state.id+' should still be baseline-derived');
-    if(state.artStatus==='candidate'||state.artStatus==='production')assert.equal(referencesBaseline,false,state.id+' should be independent from the legacy baseline');
-  });
-  const happy=manifest.states.find(state=>state.id==='happy');
-  const encouraging=manifest.states.find(state=>state.id==='encouraging');
-  const thinking=manifest.states.find(state=>state.id==='thinking');
-  const celebrate=manifest.states.find(state=>state.id==='celebrate');
-  assert.equal(happy.artStatus,'production');
-  assert.equal(encouraging.artStatus,'production');
-  assert.equal(thinking.artStatus,'production');
-  assert.equal(celebrate.artStatus,'production');
-  assert.match(read('public/mascot/moling-happy.svg'),/happy P1 production artwork v3/);
-  assert.match(read('public/mascot/moling-encouraging.svg'),/encouraging production artwork v4/);
-  assert.match(read('public/mascot/moling-thinking.svg'),/thinking production artwork v2/);
-  assert.match(read('public/mascot/moling-celebrate.svg'),/celebrate 狀態 P5 production artwork v4/);
+test('all live assets use the supplied v2 artwork and retain transparent embedded images',()=>{
+ for(const asset of new Set([...manifest.states.map(s=>s.asset),manifest.compactAsset,manifest.completionAsset])){
+  const svg=read('public/'+asset.slice(2));assert.match(svg,/viewBox="0 0 1024 1024"/);assert.match(svg,/data:image\/webp;base64,/);assert.match(svg,/libfile_/);assert.match(svg,/feFuncA/);assert.doesNotMatch(svg,/mascot-moling\.svg/);
+ }
+ assert.equal(runtime.descriptor('encouraging').asset,'./mascot/v2/sad.svg');
+ assert.equal(runtime.completionAsset,manifest.completionAsset);
 });
 
-test('happy production v3 keeps all-ink identity and restrained success cues',()=>{
+test('archived v1: happy production v3 keeps all-ink identity and restrained success cues',()=>{
   const happy=read('public/mascot/moling-happy.svg');
   assert.match(happy,/全墨炭灰至深墨藍漸變/);
   assert.match(happy,/純黑豆豆眼/);
@@ -81,7 +65,7 @@ test('happy production v3 keeps all-ink identity and restrained success cues',()
   assert.match(happy,/不設獨立手掌、手腕、手指、星點、勾號、勝利道具或狂躁訊號/);
 });
 
-test('encouraging P2 production art encodes supportive cues without blame cues',()=>{
+test('archived v1: encouraging P2 production art encodes supportive cues without blame cues',()=>{
   const encouraging=read('public/mascot/moling-encouraging.svg');
   assert.match(encouraging,/微歪小笑容/);
   assert.match(encouraging,/陪伴與支持/);
@@ -93,7 +77,7 @@ test('encouraging P2 production art encodes supportive cues without blame cues',
   assert.doesNotMatch(encouraging,/(眼淚|紅叉|搖頭|皺眉|shame|punish)/i);
 });
 
-test('thinking P3 production art encodes curious focus without confused cues',()=>{
+test('archived v1: thinking P3 production art encodes curious focus without confused cues',()=>{
   const thinking=read('public/mascot/moling-thinking.svg');
   assert.match(thinking,/thinking production artwork v2/);
   assert.match(thinking,/共同向上側望/);
@@ -110,7 +94,7 @@ test('thinking P3 production art encodes curious focus without confused cues',()
   assert.match(p3Gate,/real alpha channel/);
 });
 
-test('celebrate P5 QA covers happy comparison and completion layouts',()=>{
+test('archived v1: celebrate P5 QA covers happy comparison and completion layouts',()=>{
   const qa=read('public/mascot-celebrate-p5-qa.html');
   assert.match(qa,/Celebrate P5 Visual QA/);
   assert.match(qa,/P5 · production v4/);
@@ -127,16 +111,13 @@ test('celebrate P5 QA covers happy comparison and completion layouts',()=>{
   assert.match(qa,/prefers-reduced-motion:reduce/);
 });
 
-test('32px uses a dedicated compact head crop instead of shrinking the full body',()=>{
-  const compact='public/'+manifest.compactAsset.replace(/^\.\//,'');
-  assert.equal(exists(compact),true);
-  const svg=read(compact);
-  assert.match(svg,/viewBox="0 0 215 190"/);
-  assert.match(svg,/\.\.\/mascot-moling\.svg/);
-  assert.match(svg,/32px/);
+test('small artwork keeps the supplied compact crop without substituting a happy face for a wrong answer',()=>{
+ const svg=read('public/'+manifest.compactAsset.slice(2));assert.match(svg,/viewBox="0 0 1024 1024"/);assert.match(svg,/小尺寸開心上半身/);
+ assert.equal(runtime.asset('encouraging',{size:32}),'./mascot/v2/sad.svg');
+ assert.equal(runtime.asset('thinking',{size:32}),'./mascot/v2/thinking.svg');
 });
 
-test('visual QA character sheet retains happy production regression surfaces',()=>{
+test('archived v1: visual QA character sheet retains happy production regression surfaces',()=>{
   const sheet=read('public/mascot-sheet.html');
   assert.match(sheet,/script src="\.\/mascot-runtime\.js"/);
   assert.match(sheet,/runtime\.recommendedSizes/);
@@ -148,7 +129,7 @@ test('visual QA character sheet retains happy production regression surfaces',()
   assert.match(sheet,/prefers-reduced-motion:reduce/);
 });
 
-test('encouraging P2 QA page covers all-ink identity A/B and real wrong-answer sizes',()=>{
+test('archived v1: encouraging P2 QA page covers all-ink identity A/B and real wrong-answer sizes',()=>{
   const qa=read('public/mascot-encouraging-p2-qa.html');
   assert.match(qa,/Encouraging P2 Visual QA/);
   assert.match(qa,/const sizes=\[34,42,48,64,96,160\]/);
@@ -170,7 +151,7 @@ test('encouraging P2 QA page covers all-ink identity A/B and real wrong-answer s
   assert.doesNotMatch(neutral,/mascot-moling\.svg/);
 });
 
-test('thinking P3 QA covers all-ink identity A/B and hint layouts',()=>{
+test('archived v1: thinking P3 QA covers all-ink identity A/B and hint layouts',()=>{
   const qa=read('public/mascot-thinking-p3-qa.html');
   assert.match(qa,/Thinking P3 Visual QA/);
   assert.match(qa,/const sizes=\[34,42,48,64,96,160\]/);
@@ -187,8 +168,8 @@ test('production placements use canonical state assets instead of the legacy bas
   const css=read('public/app-ui.css');
   assert.match(css,/brand\/manyingo-logo-classic\.webp/);
   assert.match(css,/brand\/manyingo-logo-ink\.webp/);
-  assert.match(css,/mascot\/moling-determined\.svg/);
-  assert.match(css,/mascot\/moling-thinking\.svg/);
+  assert.match(css,/mascot\/v2\/complete\.svg/);
+  assert.match(css,/mascot\/v2\/thinking\.svg/);
   assert.doesNotMatch(css,/background:url\('\.\/mascot-moling\.svg'\)/);
 });
 

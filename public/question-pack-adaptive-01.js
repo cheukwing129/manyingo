@@ -25,7 +25,7 @@ const questions=[
  {id:'ad1q017',kpId:'kp_virtual_ze',textId:'CROSS',type:'choice',difficultyTier:'application',q:'「居廟堂之高則憂其民」中的「則」主要作用是？',o:['由前項情況引出後項結果','表示轉折','表示比較','表示被動'],a:'由前項情況引出後項結果',explanation:'處在朝廷高位這一情況下，便憂念百姓；「則」連接前項情況與後項反應。'},
  {id:'ad1q018',kpId:'kp_virtual_ze',textId:'CROSS',type:'choice',difficultyTier:'transfer',q:'比較「學而不思則罔」與「此則岳陽樓之大觀也」，兩個「則」的功能有何不同？',o:['前者引出結果，後者用於判定／強調「就是」','前者表轉折，後者表比較','兩者都只表示「如果」','兩者都表示被動'],a:'前者引出結果，後者用於判定／強調「就是」',explanation:'第一句的「則」相當於「就」，引出結果；第二句的「則」接近「就是」，強調眼前景象就是岳陽樓的雄偉景觀。'},
 
- {id:'ad1q019',kpId:'sx_001',textId:'CROSS',type:'choice',difficultyTier:'foundation',q:'「南陽劉子驥，高尚士也」屬於哪種句式？',o:['判斷句','被動句','省略句','賓語前置'],a:'判斷句',explanation:'句子是在判定劉子驥的身分和性質，即「劉子驥是高尚之士」，所以是判斷句。'},
+ {id:'ad1q019',kpId:'sx_001',textId:'CROSS',type:'choice',difficultyTier:'foundation',q:"【閱讀材料】輔助註釋：南陽是地名；劉子驥是人名；士＝讀書人。\n\n問題：「南陽劉子驥，高尚士也」屬於哪種句式？",o:['判斷句','被動句','省略句','賓語前置'],a:'判斷句',sourceSentenceId:"sentence:南陽劉子驥高尚士也",explanation:'句子是在判定劉子驥的身分和性質，即「劉子驥是高尚之士」，所以是判斷句。'},
  {id:'ad1q020',kpId:'sx_001',textId:'CROSS',type:'choice',difficultyTier:'application',q:'「此則岳陽樓之大觀也」的核心句式是？',o:['判斷句','被動句','疑問句','省略句'],a:'判斷句',explanation:'全句建立「此＝岳陽樓之大觀」的判定關係，句末「也」亦有助表明判斷語氣。'},
  {id:'ad1q021',kpId:'sx_001',textId:'CROSS',type:'choice',difficultyTier:'transfer',q:'下列哪一句同樣以判定主語身分或性質為核心，而不是靠固定「者……也」格式？',o:['此誠危急存亡之秋也','吾誰與歸','戰於長勺','徒見欺'],a:'此誠危急存亡之秋也',explanation:'「此誠危急存亡之秋也」判定當前正是危急存亡的時刻；判斷句的核心是語義上的判定，不只限於「者……也」。'},
 
@@ -35,7 +35,7 @@ const questions=[
 
  {id:'ad1q025',kpId:'sx_004',textId:'CROSS',type:'choice',difficultyTier:'foundation',q:'「而智勇多困於所溺」主要屬於哪種句式？',o:['被動句','判斷句','賓語前置','省略句'],a:'被動句',explanation:'「智勇」之人是承受「困」的對象，「於所溺」引出造成困厄的來源，整體可譯作「多被所溺愛的事物困住」。'},
  {id:'ad1q026',kpId:'sx_004',textId:'CROSS',type:'choice',difficultyTier:'application',q:'「受制於人」中的「於」在被動結構中主要作用是？',o:['引出施事者','引出比較對象','表示目的','表示所有'],a:'引出施事者',explanation:'「受制於人」即「被別人控制」，主語承受動作，而「於人」交代施加控制的一方。'},
- {id:'ad1q027',kpId:'sx_004',textId:'CROSS',type:'choice',difficultyTier:'transfer',q:'比較「戰於長勺」與「困於所溺」，兩句中的「於」依次較適合判作？',o:['處所狀語／被動標誌','被動標誌／處所狀語','比較／來源','兩者都表被動'],a:'處所狀語／被動標誌',explanation:'「戰於長勺」交代作戰地點；「困於所溺」則是主語被所溺愛之物困住。相同「於」字必須配合句意判斷。'},
+ {id:'ad1q027',kpId:'sx_004',textId:'CROSS',type:'choice',difficultyTier:'transfer',q:"【閱讀材料】輔助註釋：長勺是地名；所溺指所沉迷的事物。\n\n問題：比較「戰於長勺」與「困於所溺」，兩句中的「於」依次較適合判作？",o:['處所狀語／被動標誌','被動標誌／處所狀語','比較／來源','兩者都表被動'],a:'處所狀語／被動標誌',explanation:'「戰於長勺」交代作戰地點；「困於所溺」則是主語被所溺愛之物困住。相同「於」字必須配合句意判斷。'},
 
  {id:'ad1q028',kpId:'sx_005',textId:'CROSS',type:'choice',difficultyTier:'foundation',q:'「一鼓作氣，再而衰，三而竭」中，「再」「三」之後省略了甚麼？',o:['鼓','氣','戰','人'],a:'鼓',explanation:'「再而衰，三而竭」承接前文「一鼓作氣」，完整理解是第二次擊鼓士氣衰、第三次擊鼓士氣竭。'},
  {id:'ad1q029',sourceSentenceId:"sentence:問今是何世乃不知有漢",kpId:'sx_005',textId:'CROSS',type:'choice',difficultyTier:'application',q:'【閱讀材料】人物註：「此人」指來到桃花源的漁人。\n「村中聞有此人，咸來問訊。自云：先世避秦時亂，率妻子邑人來此絕境，不復出焉，遂與外人間隔。問今是何世，乃不知有漢，無論魏、晉。」\n\n問題：「問今是何世，乃不知有漢」主要省略了哪個主語？',o:['桃花源中人／村中人','漁人','秦人','太守'],a:'桃花源中人／村中人',explanation:'「村中……咸來問訊」先交代村人發問；「自云」述說村人的來歷，「與外人間隔」解釋他們不知道外界朝代。因此「問」「不知」都承接村中人，不是外來的漁人。'},
@@ -45,7 +45,7 @@ const questions=[
  {id:'ad1q032',kpId:'sx_006',textId:'CROSS',type:'choice',difficultyTier:'application',q:'「忌不自信」中的「自」為甚麼放在「信」之前？',o:['否定句中代詞作賓語前置','因為「自」是主語','因為這是被動句','因為省略了謂語'],a:'否定句中代詞作賓語前置',explanation:'「自」是「信」的賓語，在否定句中代詞賓語常前置；句意是「鄒忌不相信自己」。'},
  {id:'ad1q033',kpId:'sx_006',textId:'CROSS',type:'choice',difficultyTier:'transfer',q:'「何以戰？」若按正常語序理解，最接近哪一句？',o:['以何戰','何戰以','戰以何','以戰何'],a:'以何戰',explanation:'疑問代詞「何」作介詞「以」的賓語而前置，因此「何以戰」可還原為「以何戰」，即「憑甚麼作戰」。'},
 
- {id:'ad1q034',kpId:'sx_008',textId:'CROSS',type:'choice',difficultyTier:'foundation',q:'「戰於長勺」若把介詞結構移回現代漢語常見位置，應理解為？',o:['於長勺戰','長勺於戰','戰長勺於','於戰長勺'],a:'於長勺戰',explanation:'「於長勺」是交代地點的介詞結構，文言放在動詞「戰」後；理解時可移到動詞前。'},
+ {id:'ad1q034',kpId:'sx_008',textId:'CROSS',type:'choice',difficultyTier:'foundation',q:"【閱讀材料】輔助註釋：長勺是地名。\n\n問題：「戰於長勺」若把介詞結構移回現代漢語常見位置，應理解為？",o:['於長勺戰','長勺於戰','戰長勺於','於戰長勺'],a:'於長勺戰',sourceSentenceId:"sentence:戰於長勺",explanation:'「於長勺」是交代地點的介詞結構，文言放在動詞「戰」後；理解時可移到動詞前。'},
  {id:'ad1q035',kpId:'sx_008',textId:'CROSS',type:'choice',difficultyTier:'application',q:'「刻唐賢今人詩賦於其上」還原語序最接近？',o:['於其上刻唐賢今人詩賦','唐賢於其上刻今人詩賦','刻於唐賢今人其上詩賦','其上於刻唐賢今人詩賦'],a:'於其上刻唐賢今人詩賦',explanation:'「於其上」是地點狀語，修飾「刻」；文言把介詞結構置於動詞後，翻譯時通常移到前面。'},
  {id:'ad1q036',kpId:'sx_008',textId:'CROSS',type:'choice',difficultyTier:'transfer',q:'「咨臣以當世之事」若還原介詞結構的位置，最接近？',o:['以當世之事咨臣','咨以臣當世之事','臣以當世之事咨','以臣咨當世之事'],a:'以當世之事咨臣',explanation:'「以當世之事」交代詢問的內容，介詞結構後置於動詞「咨」之後；還原後即「以當世之事咨臣」。'}
 ];

@@ -569,8 +569,8 @@ function fromRoot(name){return root[name]||(root.window&&root.window[name])}
 function store(){return root.localStorage||(root.window&&root.window.localStorage)||null}
 function read(){const s=store();if(!s)return{};try{const raw=JSON.parse(s.getItem(KEY)||'{}');return raw&&typeof raw==='object'?raw:{}}catch(e){return{}}}
 function write(data){const s=store();if(!s)return false;try{s.setItem(KEY,JSON.stringify(data||{}));return true}catch(e){return false}}
-function idOf(question){return question&&question.id!=null?String(question.id):''}
-function kpOf(question){return question&&question.kpId!=null?String(question.kpId):''}
+function idOf(q){return String(q?.id??'')}
+function kpOf(q){return String(q?.kpId??'')}
 function hash32(value){let h=2166136261>>>0;for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
 function randomRank(seed,step){let x=(hash32(seed)+Math.imul((Number(step)||0)+1,0x9e3779b9))>>>0;x^=x>>>16;x=Math.imul(x,0x7feb352d)>>>0;x^=x>>>15;x=Math.imul(x,0x846ca68b)>>>0;x^=x>>>16;return x>>>0;}
 function stableShuffle(values,seed){const result=(Array.isArray(values)?values:[]).slice();for(let i=result.length-1;i>0;i--){const j=randomRank(seed,i)%(i+1),tmp=result[i];result[i]=result[j];result[j]=tmp;}return result;}
@@ -589,20 +589,22 @@ function balanceChoiceQuestions(items,seed){
 function catalog(){return root.ManjingoContent||(root.window&&root.window.ManjingoContent)||null}
 function balanceCatalogChoices(){const content=catalog();if(!content||content.__balancedCatalogChoices||!Array.isArray(content.questions))return false;content.questions=balanceChoiceQuestions(content.questions,'catalog');try{Object.defineProperty(content,'__balancedCatalogChoices',{value:true,enumerable:false,configurable:false})}catch(_){content.__balancedCatalogChoices=true}return true;}
 function metadata(){return root.ManjingoQuestionMetadataV1||(root.window&&root.window.ManjingoQuestionMetadataV1)||null}
-function sentenceOf(question){
- const explicit=String(question&&question.sourceSentenceId||'');
- if(explicit)return explicit;
+function sentenceOf(q){
+ const s=String(q&&q.sourceSentenceId||'');
+ if(s)return s;
  const api=metadata();
- if(api&&typeof api.classify==='function')return String(api.classify(question).sourceSentenceId||'');
+ if(api&&typeof api.classify==='function')return String(api.classify(q).sourceSentenceId||'');
  return'';
 }
 function recentIds(kpId){const data=read(),ids=data[String(kpId)];return Array.isArray(ids)?ids.map(String):[]}
 function recentSentenceIds(){const data=read(),ids=data[SENTENCE_HISTORY_KEY];return Array.isArray(ids)?ids.map(String):[]}
-function remember(question){
- const id=idOf(question),kpId=kpOf(question);if(!id||!kpId)return false;
+function seenIds(d){return [...new Set(Object.values(d||read()).flat())]}
+function remember(q){
+ const id=idOf(q),kpId=kpOf(q);if(!id||!kpId)return false;
  const data=read(),current=Array.isArray(data[kpId])?data[kpId].map(String):[];
+ data.__seenQuestionIds=Array.from(new Set([id,...seenIds(data)]));
  data[kpId]=[id,...current.filter(x=>x!==id)].slice(0,MAX_PER_KP);
- const sentence=sentenceOf(question);
+ const sentence=sentenceOf(q);
  if(sentence){const recent=Array.isArray(data[SENTENCE_HISTORY_KEY])?data[SENTENCE_HISTORY_KEY].map(String):[];data[SENTENCE_HISTORY_KEY]=[sentence,...recent.filter(x=>x!==sentence)].slice(0,MAX_SENTENCES)}
  return write(data);
 }
@@ -619,7 +621,7 @@ function clean(value){return String(value||'').replace(/\s+/g,' ').trim()}
 function rememberNode(node){if(!node||!node.matches)return false;const questionNode=node.matches('.question,.lesson-question')?node:node.querySelector&&node.querySelector('.question,.lesson-question');if(!questionNode)return false;const text=clean(questionNode.textContent),content=catalog();if(!text||!content||!Array.isArray(content.questions))return false;const question=content.questions.find(q=>clean(q&&q.q)===text);return question?remember(question):false}
 function install(){const doc=root.document||(root.window&&root.window.document);if(!doc)return false;rememberNode(doc);if(observer||typeof MutationObserver!=='function'&&!root.MutationObserver)return true;const Observer=root.MutationObserver||(root.window&&root.window.MutationObserver);if(typeof Observer!=='function'||!doc.body)return true;observer=new Observer(records=>records.forEach(record=>record.addedNodes&&record.addedNodes.forEach(rememberNode)));observer.observe(doc.body,{childList:true,subtree:true});return true}
 function clear(){const s=store();if(!s)return false;try{s.removeItem(KEY);return true}catch(e){return false}}
-const api={KEY,MAX_PER_KP,SENTENCE_HISTORY_KEY,MAX_SENTENCES,idOf,kpOf,hash32,stableShuffle,arrangeOptions,balanceChoiceQuestions,balanceCatalogChoices,sentenceOf,recentIds,recentSentenceIds,remember,rank,select,choose,rememberNode,install,clear};
+const api={KEY,MAX_PER_KP,SENTENCE_HISTORY_KEY,MAX_SENTENCES,idOf,kpOf,hash32,stableShuffle,arrangeOptions,balanceChoiceQuestions,balanceCatalogChoices,sentenceOf,recentIds,recentSentenceIds,seenIds,remember,rank,select,choose,rememberNode,install,clear};
 const doc=root.document||(root.window&&root.window.document);if(doc){if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',install);else install()}
 return api;
 });

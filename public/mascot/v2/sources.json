@@ -1,0 +1,138 @@
+{
+  "family": "logo-aligned-gpt-image-v2",
+  "items": [
+    {
+      "state": "neutral",
+      "library_file_id": "libfile_2c4bcd75aef081919a0eec557d18a24d",
+      "filename": "可愛藍綠水滴精靈吉祥物.png",
+      "source_sha256": "cf37d12c562e261061899a2e063dfc0ff442e513b5cf411a4099a7a391f3423f",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "visible_bbox": [
+        132,
+        82,
+        1126,
+        1174
+      ],
+      "display_baseline": 900,
+      "display_extent": 800,
+      "webp_bytes": 106886
+    },
+    {
+      "state": "happy",
+      "library_file_id": "libfile_ac7cce5aba7881919c35b3a89f834c07",
+      "filename": "開心水滴精靈鼓勵貼圖.png",
+      "source_sha256": "2b9d89cf155492310240adb058eb8f5d7f6485e96116c7110cd21c758eb18fb2",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "visible_bbox": [
+        128,
+        73,
+        1133,
+        1179
+      ],
+      "display_baseline": 900,
+      "display_extent": 800,
+      "webp_bytes": 95776
+    },
+    {
+      "state": "sad",
+      "library_file_id": "libfile_d0f029e2d3e48191b7a9260ada119ef5",
+      "filename": "憂鬱水滴精靈插畫.png",
+      "source_sha256": "0ba9fdbbd658bce09a415a11d65de15114204b9e22dbb63d72c3df1230dc325b",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "visible_bbox": [
+        124,
+        116,
+        1102,
+        1183
+      ],
+      "display_baseline": 900,
+      "display_extent": 800,
+      "webp_bytes": 101934
+    },
+    {
+      "state": "thinking",
+      "library_file_id": "libfile_fc431ca5ec68819187671312473b12b1",
+      "filename": "思考中的水滴精靈.png",
+      "source_sha256": "70c800b3876a4ceaaa5d6ec7e579486d4f0aa4c35702659a79e22571bdd60b3e",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "visible_bbox": [
+        135,
+        84,
+        1104,
+        1183
+      ],
+      "display_baseline": 900,
+      "display_extent": 800,
+      "webp_bytes": 98766
+    },
+    {
+      "state": "complete",
+      "library_file_id": "libfile_9244b7a24ac481919b262e82ef879f3f",
+      "filename": "可愛藍色水滴精靈貼圖.png",
+      "source_sha256": "40f047a1a5acf177b9c17e76b4eb67db761e188b61b274b87c6470d63f5895c8",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "visible_bbox": [
+        92,
+        91,
+        1172,
+        1187
+      ],
+      "display_baseline": 900,
+      "display_extent": 800,
+      "webp_bytes": 121138
+    },
+    {
+      "state": "celebrate",
+      "library_file_id": "libfile_65013805ccdc8191a7719ce60d13ee87",
+      "filename": "歡樂水滴精靈吉祥物.png",
+      "source_sha256": "d3002a790bed3b955c2c22b7cf013821ac684ea50a7e0162e8ff18e8d5cdd787",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "visible_bbox": [
+        98,
+        96,
+        1169,
+        1182
+      ],
+      "display_baseline": 900,
+      "display_extent": 800,
+      "webp_bytes": 107482
+    },
+    {
+      "state": "compact",
+      "library_file_id": "libfile_57883aefd214819198aeb216eac828fd",
+      "filename": "晶亮水滴精靈吉祥物.png",
+      "source_sha256": "ab5a3b294b18f44011f04f7aac169b6f70d70b840007c6ad235d1a60553f70c4",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "visible_bbox": [
+        86,
+        83,
+        1216,
+        1165
+      ],
+      "display_baseline": 900,
+      "display_extent": 800,
+      "webp_bytes": 112082
+    }
+  ]
+}

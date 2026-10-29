@@ -1,23 +1,29 @@
 {
-  "version": 1,
+  "version": 2,
   "name": "小墨靈 / Little Ink Spirit",
   "baseline": "./mascot-moling.svg",
-  "recommendedSizes": [32, 48, 64, 96, 160],
-  "compactAsset": "./mascot/moling-head.svg",
+  "recommendedSizes": [
+    32,
+    48,
+    64,
+    96,
+    160
+  ],
+  "compactAsset": "./mascot/v2/compact.svg",
   "states": [
     {
       "id": "neutral",
       "label": "一般",
-      "asset": "./mascot/moling-neutral.svg",
+      "asset": "./mascot/v2/neutral.svg",
       "intent": "首頁、一般歡迎、空狀態、品牌展示",
       "motion": "static",
-      "artStatus": "baseline-approved",
+      "artStatus": "production",
       "productionPriority": 0
     },
     {
       "id": "happy",
       "label": "開心",
-      "asset": "./mascot/moling-happy.svg",
+      "asset": "./mascot/v2/happy.svg",
       "intent": "答對、完成小步驟",
       "motion": "short-bounce",
       "artStatus": "production",
@@ -26,7 +32,7 @@
     {
       "id": "celebrate",
       "label": "慶祝",
-      "asset": "./mascot/moling-celebrate.svg",
+      "asset": "./mascot/v2/celebrate.svg",
       "intent": "全對、完成一課、解鎖重要內容",
       "motion": "single-celebration",
       "artStatus": "production",
@@ -34,9 +40,9 @@
     },
     {
       "id": "encouraging",
-      "label": "鼓勵",
-      "asset": "./mascot/moling-encouraging.svg",
-      "intent": "答錯、補救學習、弱點診斷",
+      "label": "難過",
+      "asset": "./mascot/v2/sad.svg",
+      "intent": "答錯時清楚表達失落，配合支持式文字與解說",
       "motion": "gentle-lift",
       "artStatus": "production",
       "productionPriority": 2
@@ -44,7 +50,7 @@
     {
       "id": "thinking",
       "label": "思考",
-      "asset": "./mascot/moling-thinking.svg",
+      "asset": "./mascot/v2/thinking.svg",
       "intent": "提示、概念理解、重新教學",
       "motion": "static-or-fade",
       "artStatus": "production",
@@ -53,11 +59,13 @@
     {
       "id": "determined",
       "label": "堅定",
-      "asset": "./mascot/moling-determined.svg",
+      "asset": "./mascot/v2/complete.svg",
       "intent": "連續學習、streak、每日目標",
       "motion": "static-or-short-lift",
       "artStatus": "production",
       "productionPriority": 4
     }
-  ]
+  ],
+  "completionAsset": "./mascot/v2/complete.svg",
+  "artFamily": "logo-aligned-gpt-image-v2"
 }
