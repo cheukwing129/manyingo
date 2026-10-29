@@ -135,9 +135,14 @@ body .feedback.feedback-ui,#lessonApp .feedback.feedback-ui{
 }
 body .feedback-ui.correct,#lessonApp .feedback-ui.correct{border-color:#b9df9d}
 body .feedback-ui.wrong,#lessonApp .feedback-ui.wrong{border-color:#ffc5c5}
-.feedback-result{display:grid;grid-template-columns:48px minmax(0,1fr) 26px;gap:12px;align-items:center;padding:12px 16px}
-.feedback-mascot{width:48px;height:48px;display:flex;align-items:center;justify-content:center}
-.feedback-mascot img{display:block;width:48px;height:48px;object-fit:contain}
+.feedback-result{--feedback-mascot-size:72px;display:grid;grid-template-columns:var(--feedback-mascot-size) minmax(0,1fr) 26px;gap:12px;align-items:center;padding:12px 16px}
+.feedback-mascot{width:var(--feedback-mascot-size);height:var(--feedback-mascot-size);display:flex;align-items:center;justify-content:center}
+.feedback-mascot img{display:block;width:100%;height:100%;object-fit:contain}
+/* Animate the wrapper so the image's brief answer reaction remains independent. */
+.feedback-mascot,.session-summary-icon.mascot-celebrate{animation:moling-float 3.6s ease-in-out infinite}
+.feedback-ui.wrong .feedback-mascot{animation-duration:4.4s}
+.session-summary-icon.mascot-celebrate{animation-duration:4.2s}
+@keyframes moling-float{0%,100%{transform:translateY(2px)}50%{transform:translateY(-4px)}}
 .feedback-mascot-message{display:block;margin-top:4px;font-size:12px;line-height:1.5;color:var(--ui-text)}
 .feedback-ui .feedback-answer-row{display:block;margin:0;padding:12px 16px;border-top:1px solid var(--ui-border);font-size:14px;line-height:1.6;color:var(--ui-ink)}
 .feedback-ui.correct .feedback-result{background:#f3fbeD}
@@ -243,7 +248,7 @@ body .question-actions>.action,#lessonApp .question-actions>.action{
   #lessonApp .lesson-step h3,#lessonApp .lesson-complete h3{font-size:20px}
   #lessonApp .lesson-step>.lesson-icon.mascot-thinking{width:56px;height:72px}
   #lessonApp .action,#lessonApp .option,body .action,body .option{min-height:50px}
-  .feedback-result{padding:12px}.feedback-teaching{padding:12px}.feedback-progress,.feedback-next{padding-left:12px;padding-right:12px}
+  .feedback-result{--feedback-mascot-size:64px;padding:12px}.feedback-teaching{padding:12px}.feedback-progress,.feedback-next{padding-left:12px;padding-right:12px}
   .session-summary h3{font-size:22px}.session-summary-metrics>div{padding:11px 4px}.session-summary-metrics strong{font-size:17px}
   .session-summary-header{grid-template-columns:minmax(0,1fr) 96px;gap:12px;margin-bottom:16px}.session-summary-icon.mascot-celebrate,.session-summary-icon.mascot-celebrate img{width:96px;height:96px}
 }
@@ -256,7 +261,7 @@ body .question-actions>.action,#lessonApp .question-actions>.action{
   #masteryDashboard .dashboard-groups{grid-template-columns:1fr!important}
   #weaknessPanel .weak-priority-top{align-items:flex-start}
   #lessonApp .lesson-head,#lessonApp .lesson-content{padding:14px}
-  .feedback-result{grid-template-columns:48px minmax(0,1fr) 24px;gap:8px;padding:12px 8px}
+  .feedback-result{grid-template-columns:var(--feedback-mascot-size) minmax(0,1fr) 24px;gap:8px;padding:12px 8px}
   .feedback-result-icon{width:24px;height:24px;font-size:15px}
   .session-summary-metrics{gap:5px}.session-summary-metrics strong{font-size:15px}.session-summary-metrics span{font-size:8px}
 }

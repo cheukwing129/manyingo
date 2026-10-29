@@ -307,17 +307,25 @@ async function acceptMascot(cdp){
   check(assets.length>=11&&assets.every(asset=>asset.visible>500),'mascot artwork failed to render: '+JSON.stringify(assets));
   const mapping=await evaluate(cdp,`Object.fromEntries(['qaCorrectFeedback','qaWrongFeedback','qaComplete','qaPerfect'].map(id=>[id,new URL(document.querySelector('#'+id+' img').src).pathname]))`);
   for(const [id,file] of Object.entries({qaCorrectFeedback:'happy',qaWrongFeedback:'sad',qaComplete:'complete',qaPerfect:'celebrate'}))check(mapping[id]==='/mascot/v2/'+file+'.svg','incorrect mascot state: '+id);
+  const floating=await evaluate(cdp,`Array.from(document.querySelectorAll('.feedback-mascot,.session-summary-icon.mascot-celebrate')).map(el=>{const animation=el.getAnimations().find(a=>a.animationName==='moling-float');if(!animation)return {floating:false};const copy=el.parentElement.querySelector('.feedback-result-copy,.session-summary-copy');animation.pause();animation.currentTime=0;const start=el.getBoundingClientRect().top,copyTop=copy.getBoundingClientRect().top;animation.currentTime=Number(animation.effect.getTiming().duration)/2;const travel=Math.abs(el.getBoundingClientRect().top-start),copyTravel=Math.abs(copy.getBoundingClientRect().top-copyTop);animation.play();return {floating:true,travel,copyTravel}})`);
+  check(floating.length===4&&floating.every(item=>item.floating&&item.travel>=5&&item.copyTravel<1),'floating motion moves layout or is missing: '+JSON.stringify(floating));
+  await cdp.call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+  check(await evaluate(cdp,"Array.from(document.querySelectorAll('.feedback-mascot,.feedback-mascot img,.session-summary-icon,.session-summary-icon img')).every(el=>getComputedStyle(el).animationName==='none')"),'reduced motion did not stop mascot movement');
+  await cdp.call('Emulation.setEmulatedMedia',{features:[]});
   for(const width of [320,768,1024,1440]){
     await cdp.call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:false});
     await evaluate(cdp,'new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
     await noHorizontalOverflow(cdp,'mascot at '+width+'px');
+    const feedbackGeometry=await evaluate(cdp,`Array.from(document.querySelectorAll('.feedback-result')).map(row=>{const mascot=row.querySelector('.feedback-mascot').getBoundingClientRect(),copy=row.querySelector('.feedback-result-copy').getBoundingClientRect(),icon=row.querySelector('.feedback-result-icon').getBoundingClientRect();return {size:mascot.width,separate:mascot.right<=copy.left+1&&copy.right<=icon.left+1,copyWidth:copy.width}})`);
+    check(feedbackGeometry.length===2&&feedbackGeometry.every(item=>Math.abs(item.size-(width<=430?64:72))<=1&&item.separate&&item.copyWidth>=90),'enlarged feedback at '+width+'px: '+JSON.stringify(feedbackGeometry));
     const geometry=await evaluate(cdp,`Array.from(document.querySelectorAll('.session-summary-header')).map(header=>{const h=header.getBoundingClientRect(),copy=header.querySelector('.session-summary-copy').getBoundingClientRect(),img=header.querySelector('img').getBoundingClientRect();return {separate:copy.right<=img.left+1,contained:img.right<=h.right+1&&copy.left>=h.left-1,size:img.width}})`);
     check(geometry.length===2&&geometry.every(item=>item.separate&&item.contained&&Math.abs(item.size-(width<=430?96:128))<=1),'completion layout at '+width+'px: '+JSON.stringify(geometry));
+    await evaluate(cdp,"window.scrollTo({top:0,behavior:'instant'});true");
     await screenshot(cdp,'mascot-feedback-'+width);
     await evaluate(cdp,"document.getElementById('qaComplete').scrollIntoView({block:'center',behavior:'instant'});true");
     await screenshot(cdp,'mascot-completion-'+width);
   }
-  acceptanceReport.mascot={assets,mapping,widths:[320,768,1024,1440],passed:true};
+  acceptanceReport.mascot={assets,mapping,floating,reducedMotion:true,widths:[320,768,1024,1440],passed:true};
 }
 
 const executable=chromePath();
