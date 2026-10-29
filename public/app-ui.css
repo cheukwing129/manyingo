@@ -101,6 +101,30 @@ body.app-nav-ready>.title::after{content:none}
 }
 
 /* Layered answer feedback */
+/* Text is preserved verbatim; layout separates evidence from the task. */
+.question-reading{display:block;padding:16px;margin-bottom:16px;border-left:3px solid var(--ui-border-strong);border-radius:0 12px 12px 0;background:var(--ui-surface-soft);color:var(--ui-text);font-size:17px;font-weight:500;line-height:1.85;white-space:pre-line;overflow-wrap:anywhere}
+.question-task{display:block;color:var(--ui-ink);font-size:20px;font-weight:800;line-height:1.6;overflow-wrap:anywhere}
+.question-target{color:var(--ui-green-dark);text-decoration:underline;text-decoration-color:var(--brand-warm-gold);text-underline-offset:4px;text-decoration-thickness:2px}
+/* Only the changing content moves; fixed action bars have no transformed ancestor. */
+#quiz>.question,#quiz>#answers,#lessonApp .lesson-question,#lessonOptions,#stage3VerifyOptions{animation:question-arrive .18s ease-out both}
+body .option,#lessonApp .option{position:relative;padding-right:44px;transition:transform .1s ease,border-color .16s ease,background-color .16s ease}
+body .option:disabled,#lessonApp .option:disabled{color:var(--ui-text);opacity:1}
+body .option:not(:disabled):active,#lessonApp .option:not(:disabled):active{transform:translateY(2px) scale(.995)}
+/* ::after belongs to desktop keyboard hints in ux-runtime; answer marks must
+   remain visible on touch screens where those hints are hidden. */
+.option.correct::before,.option.wrong::before,.stage3-option.correct::before,.stage3-option.wrong::before{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:20px;font-weight:900;line-height:1;animation:answer-mark .16s ease-out}
+.option.correct::before,.stage3-option.correct::before{content:'✓';color:var(--ui-green-dark)}
+.option.wrong::before,.stage3-option.wrong::before{content:'×';color:var(--ui-danger)}
+.stage3-option.correct,.stage3-option.wrong{position:relative;padding-right:44px}
+.feedback.feedback-ui{animation:question-arrive .16s ease-out both}
+.feedback-xp{display:block;width:fit-content;margin-top:4px;padding:2px 8px;border-radius:8px;background:var(--ui-green-soft);color:var(--ui-green-dark);font-size:12px;font-weight:900;animation:xp-arrive .2s ease-out both}
+.session-summary-metrics>div{animation:xp-arrive .2s ease-out both}
+.session-summary-metrics>div:nth-child(2){animation-delay:.04s}
+.session-summary-metrics>div:nth-child(3){animation-delay:.08s}
+@keyframes question-arrive{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes answer-mark{from{opacity:0;transform:translateY(-50%) scale(.8)}to{opacity:1;transform:translateY(-50%) scale(1)}}
+@keyframes xp-arrive{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:430px){.question-reading{padding:12px;font-size:16px;margin-bottom:12px}.question-task{font-size:19px}}
 body .feedback.feedback-ui,#lessonApp .feedback.feedback-ui{
   padding:0!important;
   overflow:hidden;

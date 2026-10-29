@@ -38,7 +38,7 @@ const questions=[
  {id:'ad1q027',kpId:'sx_004',textId:'CROSS',type:'choice',difficultyTier:'transfer',q:'比較「戰於長勺」與「困於所溺」，兩句中的「於」依次較適合判作？',o:['處所狀語／被動標誌','被動標誌／處所狀語','比較／來源','兩者都表被動'],a:'處所狀語／被動標誌',explanation:'「戰於長勺」交代作戰地點；「困於所溺」則是主語被所溺愛之物困住。相同「於」字必須配合句意判斷。'},
 
  {id:'ad1q028',kpId:'sx_005',textId:'CROSS',type:'choice',difficultyTier:'foundation',q:'「一鼓作氣，再而衰，三而竭」中，「再」「三」之後省略了甚麼？',o:['鼓','氣','戰','人'],a:'鼓',explanation:'「再而衰，三而竭」承接前文「一鼓作氣」，完整理解是第二次擊鼓士氣衰、第三次擊鼓士氣竭。'},
- {id:'ad1q029',kpId:'sx_005',textId:'CROSS',type:'choice',difficultyTier:'application',q:'「問今是何世，乃不知有漢」承接《桃花源記》語境，主要省略了哪個主語？',o:['桃花源中人／村中人','漁人','秦人','太守'],a:'桃花源中人／村中人',explanation:'前文是村中人向漁人問訊，後面連續的「問」「乃不知」沿用同一主語，因此省略了「桃花源中人／村中人」。'},
+ {id:'ad1q029',sourceSentenceId:"sentence:問今是何世乃不知有漢",kpId:'sx_005',textId:'CROSS',type:'choice',difficultyTier:'application',q:'【閱讀材料】人物註：「此人」指來到桃花源的漁人。\n「村中聞有此人，咸來問訊。自云：先世避秦時亂，率妻子邑人來此絕境，不復出焉，遂與外人間隔。問今是何世，乃不知有漢，無論魏、晉。」\n\n問題：「問今是何世，乃不知有漢」主要省略了哪個主語？',o:['桃花源中人／村中人','漁人','秦人','太守'],a:'桃花源中人／村中人',explanation:'「村中……咸來問訊」先交代村人發問；「自云」述說村人的來歷，「與外人間隔」解釋他們不知道外界朝代。因此「問」「不知」都承接村中人，不是外來的漁人。'},
  {id:'ad1q030',kpId:'sx_005',textId:'CROSS',type:'choice',difficultyTier:'transfer',q:'下列哪一句主要要靠補出省略的主語，才能完整理解語意？',o:['便舍船，從口入','何陋之有','戰於長勺','徒見欺'],a:'便舍船，從口入',explanation:'《桃花源記》承接前文可補出「漁人便舍船，從口入」；其餘三句主要分別涉及賓語前置、狀語後置和被動。'},
 
  {id:'ad1q031',kpId:'sx_006',textId:'CROSS',type:'choice',difficultyTier:'foundation',q:'「何陋之有」還原為較接近現代漢語的語序是？',o:['有何陋','何有陋','陋有何','有陋之何'],a:'有何陋',explanation:'疑問代詞「何」作「有」的賓語而前置，「之」是賓語前置的標誌，還原後是「有何陋」。'},

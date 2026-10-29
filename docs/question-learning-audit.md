@@ -1,5 +1,7 @@
 # Manyingo 語言學習題庫初審
 
+> 最新狀態：PR #178 已合併。本輪完成剩餘 13 題必要語境、2 題中度背景問題及 p2q043 誤標；下列「待處理」為原初審歷史，請以文末進度為準。
+
 日期：2026-10-29（香港時間）  
 基準：PR #178，`fe6b27e6bf86e2d6a0467e61934c3920918f35d7`。  
 目標：讓沒有預習指定課文的學生，依題內提供的材料及已學過的語言知識，逐步理解和運用文言。
@@ -97,3 +99,12 @@
 - `fq011` 同時完成本報告的缺語境修正：題幹補上「噲即帶劍擁盾入軍門。交戟之衛士欲止不內。」並註明噲是樊噲，讓學生可由題內文字補出賓語。原文及語譯參考：[國語文學科中心《鴻門宴》](https://cerclearning.tp.edu.tw/classical/datapage/140)。首批 14 題中，其餘 13 題的語境改寫仍待處理。
 - 前端及伺服器內建題庫同步更新；僅這 24 題在伺服器權威資料加上 `previousResponseType:'fill'`，相容快取舊頁和待同步文字答案。其他選擇題仍拒絕選項外的值；沒有批量更動學生紀錄或 XP。
 - 本機完整 707 項測試通過；新增測試逐一確認轉換名單、四選項僅一個正解、舊正確別名仍判對、舊錯誤文字判錯、未轉換題的選項限制不放寬，以及內建伺服器資料一致。Chrome 與部署結果見 PR checks。
+
+
+## 後續進度：補足題內證據（2026-10-29）
+
+- 首批尚未處理的 13 題全部補足：cap1q026、cap1q018、p2q031、lpq006、lpq043、tr1q010、tr2q024、tr5q015、tr8q003、tr9q003、stl2q009、stl2q016、ad1q029。連同先前 fq011，初審列出的 14 題均已處理。
+- tr5q016 補相如避匿及舍人勸諫的前文；stl2q024 補「秦王之威」「獨畏廉將軍」以交代比較尺度。p2q043 刪去錯誤的「魯莊公所說」。本輪共改 16 題。
+- 背景與人物註明示為教學補充；引文以「……」明示節錄。保留所有原正解、選項及識別，解說改為指出可見線索。沒有批量重置舊紀錄，亦不把舊錯答當成新能力不足。
+- 原文核對以教育局版本為主：[岳陽樓記](https://www.edb.gov.hk/attachment/tc/curriculum-development/kla/chi-edu/recommended-passages/ks4_14_text.pdf)、[出師表](https://www.edb.gov.hk/attachment/tc/curriculum-development/kla/chi-edu/recommended-passages/ks4_09_text.pdf)、[魚我所欲也](https://www.edb.gov.hk/attachment/tc/curriculum-development/kla/chi-edu/recommended-passages/ks4_04_text.pdf)、[勸學](https://www.edb.gov.hk/attachment/tc/curriculum-development/kla/chi-edu/recommended-passages/KS4_06_text.pdf)、[廉頗藺相如列傳](https://www.edb.gov.hk/attachment/tc/curriculum-development/kla/chi-edu/recommended-passages/ks4_08_text.pdf)、[桃花源記](https://www.edb.gov.hk/attachment/tc/curriculum-development/kla/chi-edu/recommended-passages/KS3_06.pdf)、[曹劌論戰](https://www.edb.gov.hk/attachment/tc/curriculum-development/kla/chi-edu/recommended-passages/KS4_02.pdf)。曹劌題沿用原題通行字形「間／遍」（教育局參考版為「閒／徧」）。[燭之武退秦師](https://cerclearning.tp.edu.tw/classical/datapage/134)另核對國語文學科中心原文。
+- 完整全庫教學重設（提示、新知教學、遷移題）尚不是本輪完成宣稱。參閱 update-handoff-2026-10-29.md 的範圍及驗收。

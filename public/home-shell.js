@@ -9,7 +9,7 @@ const VIEW_RUNTIME={
  weakness:[...VIEW_RUNTIME_COMMON,'./weakness-panel.js'],
  results:[...VIEW_RUNTIME_COMMON,'./mastery-dashboard.js']
 };
-const STUDY_RUNTIME=['./learning-path.js','./mascot-runtime.js','./feedback-ui.js','./session-summary.js'];
+const STUDY_RUNTIME=['./question-presentation.js','./learning-path.js','./mascot-runtime.js','./feedback-ui.js','./session-summary.js'];
 const STUDY_PLAN_RUNTIME_STAGES=[
  ['./curriculum-v1.js','./skill-mastery-v1.js','./question-pack-adaptive-01.js','./question-pack-adaptive-02.js','./question-pack-adaptive-03.js','./difficulty-calibration.js'],
  ['./skill-first-plan.js','./question-difficulty.js'],
