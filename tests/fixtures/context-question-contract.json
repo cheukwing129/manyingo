@@ -1,0 +1,325 @@
+[
+  {
+    "id": "p2q031",
+    "a": "重義羞惡之心",
+    "o": [
+      "重義羞惡之心",
+      "求生之心",
+      "求名之心",
+      "享樂之心"
+    ],
+    "type": "choice",
+    "kpId": "kp_fish_shame",
+    "skillIds": [
+      "read.referent-tracking"
+    ],
+    "difficultyTier": "foundation",
+    "sourceSentenceId": "sentence:非獨賢者有是心也人皆有之",
+    "sourceTextId": "yuwosuoyu",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "p2q043",
+    "a": "遍及",
+    "o": [
+      "遍及",
+      "重複",
+      "到處走",
+      "普遍知道"
+    ],
+    "type": "choice",
+    "kpId": "kp_caogui_trust",
+    "skillIds": [
+      "lex.context-inference"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:小惠未遍民弗從也",
+    "sourceTextId": "caogui",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "lpq006",
+    "a": "迎戰齊國這件事",
+    "o": [
+      "迎戰齊國這件事",
+      "肉食者本人",
+      "曹劌",
+      "魯莊公"
+    ],
+    "type": "choice",
+    "kpId": "kp_virtual_zhi",
+    "skillIds": [
+      "fw.zhi"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:肉食者謀之又何間焉",
+    "sourceTextId": "caogui",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "lpq043",
+    "a": "桃花源中的村人",
+    "o": [
+      "桃花源中的村人",
+      "漁人",
+      "太守",
+      "劉子驥"
+    ],
+    "type": "choice",
+    "kpId": "sx_005",
+    "skillIds": [
+      "syn.ellipsis-subject",
+      "syn.ellipsis-object"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:便要還家設酒殺雞作食",
+    "sourceTextId": "taohuayuan",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "cap1q018",
+    "a": "先帝三顧草廬、禮賢下士",
+    "o": [
+      "先帝三顧草廬、禮賢下士",
+      "後主頒布賞罰法令",
+      "諸葛亮戰勝敵軍",
+      "百姓修建岳陽樓"
+    ],
+    "type": "choice",
+    "kpId": "gj_005",
+    "skillIds": [
+      "read.referent-tracking"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": null,
+    "sourceTextId": "chushibiao",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "cap1q026",
+    "a": "岳陽樓",
+    "o": [
+      "岳陽樓",
+      "巴陵郡",
+      "洞庭湖",
+      "遠山"
+    ],
+    "type": "choice",
+    "kpId": "kp_yueyang_context",
+    "skillIds": [
+      "fw.qi",
+      "read.referent-tracking"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:刻唐賢今人詩賦於其上",
+    "sourceTextId": "yueyanglou",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "tr1q010",
+    "a": "被加工彎曲的木材",
+    "o": [
+      "被加工彎曲的木材",
+      "繩墨",
+      "車輪的規格",
+      "君子"
+    ],
+    "type": "choice",
+    "kpId": "kp_virtual_zhi",
+    "skillIds": [
+      "fw.zhi"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:xunzi-quanxue:rou-shizhi-ranye",
+    "sourceTextId": "quanxue",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "tr2q024",
+    "a": "藺相如",
+    "o": [
+      "藺相如",
+      "秦王",
+      "趙王",
+      "廉頗"
+    ],
+    "type": "choice",
+    "kpId": "kp_p3_ellipsis",
+    "skillIds": [
+      "read.referent-tracking"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:lianpo:nai-shi-qi-congzhe-yih",
+    "sourceTextId": "lianpo",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "tr5q015",
+    "a": "桃花源中人",
+    "o": [
+      "桃花源中人",
+      "漁人",
+      "太守",
+      "劉子驥"
+    ],
+    "type": "choice",
+    "kpId": "kp_trans_supplement",
+    "skillIds": [
+      "trans.supplement"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:taohuayuan:wen-suo-conglai-juda-zhi",
+    "sourceTextId": "taohuayuanji",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "tr5q016",
+    "a": "受勸諫的對象，如「藺相如」",
+    "o": [
+      "受勸諫的對象，如「藺相如」",
+      "時間「明日」",
+      "地點「趙國」",
+      "原因「因為廉頗」"
+    ],
+    "type": "choice",
+    "kpId": "kp_trans_supplement",
+    "skillIds": [
+      "trans.supplement"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:lianpo:yu-shi-bi-ting",
+    "sourceTextId": "lianpo",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "tr8q003",
+    "a": "和氏璧",
+    "o": [
+      "和氏璧",
+      "趙王",
+      "十五城",
+      "秦王"
+    ],
+    "type": "choice",
+    "kpId": "sx_005",
+    "skillIds": [
+      "syn.ellipsis-object"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:lianpo:yu-yu-qin-qincheng-kong-bukede",
+    "sourceTextId": "lianpo",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "tr9q003",
+    "a": "燭之武",
+    "o": [
+      "燭之武",
+      "秦伯",
+      "晉侯",
+      "佚之狐"
+    ],
+    "type": "choice",
+    "kpId": "kp_read_actor_tracking",
+    "skillIds": [
+      "read.actor-tracking"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:zhuzhiwu:ye-zhui-er-chu-jian-qinbo",
+    "sourceTextId": "zhuzhiwutuiqinshi",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "stl2q009",
+    "a": "臣／諸葛亮",
+    "o": [
+      "臣／諸葛亮",
+      "先帝",
+      "陛下",
+      "郭攸之"
+    ],
+    "type": "choice",
+    "kpId": "kp_p3_ellipsis",
+    "skillIds": [
+      "syn.ellipsis-subject"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:chushibiao:you-shi-ganji-sui-xu-xiandi-yiquchi",
+    "sourceTextId": "chushibiao",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "stl2q016",
+    "a": "「我／臣」作「受任、奉命」的主語",
+    "o": [
+      "「我／臣」作「受任、奉命」的主語",
+      "「先帝」作「敗軍」的主語",
+      "「敵軍」作「奉命」的賓語",
+      "「於是」作兩句的轉折詞"
+    ],
+    "type": "choice",
+    "kpId": "kp_trans_supplement",
+    "skillIds": [
+      "trans.supplement"
+    ],
+    "difficultyTier": "transfer",
+    "sourceSentenceId": "sentence:chushibiao:shouren-yu-baijun-fengming-yu-weinan",
+    "sourceTextId": "chushibiao",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "stl2q024",
+    "a": "把兩者相比，問「廉將軍與秦王相比，誰更可畏／強大？」",
+    "o": [
+      "把兩者相比，問「廉將軍與秦王相比，誰更可畏／強大？」",
+      "詢問廉將軍和誰一起去見秦王",
+      "追問誰把廉將軍交給秦王",
+      "表示如果廉將軍遇到秦王"
+    ],
+    "type": "choice",
+    "kpId": "kp_syn_fixed_patterns",
+    "skillIds": [
+      "syn.fixed-patterns"
+    ],
+    "difficultyTier": "transfer",
+    "sourceSentenceId": "sentence:lianpo:gong-zhi-shi-lianjiangjun-shuyu-qinwang",
+    "sourceTextId": "lianpo-linxiangru",
+    "curriculumMode": "core",
+    "normalCore": true
+  },
+  {
+    "id": "ad1q029",
+    "a": "桃花源中人／村中人",
+    "o": [
+      "桃花源中人／村中人",
+      "漁人",
+      "秦人",
+      "太守"
+    ],
+    "type": "choice",
+    "kpId": "sx_005",
+    "skillIds": [
+      "syn.ellipsis-subject",
+      "syn.ellipsis-object"
+    ],
+    "difficultyTier": "application",
+    "sourceSentenceId": "sentence:問今是何世乃不知有漢",
+    "sourceTextId": "taohuayuan",
+    "curriculumMode": "core",
+    "normalCore": true
+  }
+]

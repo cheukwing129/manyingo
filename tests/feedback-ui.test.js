@@ -87,17 +87,12 @@ test('deferred unlock remains a safe fallback after the answer handler marks the
   assert.equal(next.disabled,false);
 });
 
-test('answered study session keeps next CTA visible independently of cloud progress details',()=>{
-  const source=read('public/feedback-ui.js');
-  assert.match(source,/instantNextStyle/);
-  assert.match(source,/body\.study-focus #quiz\[data-answered="1"\]>#next,#lessonApp\[data-answered="1"\] #lessonNext\{position:fixed/);
-  assert.match(source,/bottom:max\(14px,env\(safe-area-inset-bottom,14px\)\)/);
-  assert.match(source,/#quiz\[data-answered="1"\]\{padding-bottom:90px!important\}/);
-  assert.match(source,/#lessonApp\[data-answered="1"\] #lessonNext\{position:fixed/);
-  assert.match(source,/#lessonApp\[data-answered="1"\] \.lesson-content\{padding-bottom:90px!important\}/);
-  const progressPos=source.indexOf("summary=build('summary','', '查看學習進度')");
-  const unlockPos=source.indexOf('unlockNextNow(scope)');
-  assert.ok(unlockPos>=0&&progressPos>=0,'both immediate next and optional progress UI should exist');
+test('feedback cannot reposition the shared fixed action bar after answering',()=>{
+  const ui=load();
+  assert.equal(ui.installFastNextStyle(),false);
+  assert.doesNotMatch(read('public/feedback-ui.js'),/instantNextStyle/);
+  assert.match(read('public/app-ui.css'),/\.question-actions\{[\s\S]*?position:fixed/);
+  assert.match(read('public/lesson.html'),/feedback-ui\.js/);
 });
 
 test('today task owns a synchronous next button and deferred cloud results do not repaint questions',()=>{

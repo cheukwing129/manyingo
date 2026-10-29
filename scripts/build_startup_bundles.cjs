@@ -17,6 +17,7 @@ const bundles = {
   ],
   'lesson-runtime.js': [
     'reorder-question.js',
+    'question-presentation.js',
     'curriculum-v1.js',
     'question-metadata-v1.js',
     'question-rotation.js',

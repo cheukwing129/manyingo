@@ -31,7 +31,7 @@ const rows=[
 ['p2q028','kp_fish_righteousness','yuwosuoyu','choice','魚與熊掌的比喻中，「熊掌」對應？',['義','生','利','名'],'義'],
 ['p2q029','kp_fish_shame','yuwosuoyu','choice','「所欲有甚於生者」中的「甚於」表示？',['比……更重要','在……裡面','被……所','因為……'],'比……更重要'],
 ['p2q030','kp_fish_shame','yuwosuoyu','choice','「所惡有甚於死者」說明人還有甚麼比死亡更厭惡？',['不義與失去人格尊嚴','貧窮','疾病','離鄉'],'不義與失去人格尊嚴'],
-['p2q031','kp_fish_shame','yuwosuoyu','choice','「非獨賢者有是心也，人皆有之」中的「是心」主要指？',['重義羞惡之心','求生之心','求名之心','享樂之心'],'重義羞惡之心'],
+['p2q031','kp_fish_shame','yuwosuoyu','choice','【閱讀材料】「生亦我所欲也，義亦我所欲也；二者不可得兼，舍生而取義者也。……是故所欲有甚於生者，所惡有甚於死者。非獨賢者有是心也，人皆有之。」\n\n問題：「是心」主要指甚麼？',['重義羞惡之心','求生之心','求名之心','享樂之心'],'重義羞惡之心',"「舍生而取義」顯示義比生命更重要，「所惡有甚於死」顯示有比死亡更應厭惡的事。「是心」回指這種重義羞惡之心，即重視義、以不義為恥，而非單純求生。","sentence:非獨賢者有是心也人皆有之"],
 ['p2q032','kp_fish_shame','yuwosuoyu','choice','賢者與一般人的差別，文中認為主要在於賢者？',['能不喪失本心','天生沒有欲望','不怕任何危險','擁有更多知識'],'能不喪失本心'],
 ['p2q033','kp_shengyou_adversity','shengyouhuan','choice','「故天將降大任於是人也」後列舉磨煉，中心意思是？',['逆境能磨煉人才','成功全靠運氣','貧窮必然成功','君主應懲罰人才'],'逆境能磨煉人才'],
 ['p2q034','kp_shengyou_adversity','shengyouhuan','choice','「苦其心志，勞其筋骨」中的「苦」「勞」主要是？',['使動用法','意動用法','通假字','名詞作狀語'],'使動用法'],
@@ -43,7 +43,7 @@ const rows=[
 ['p2q040','kp_shengyou_country','shengyouhuan','choice','「生於憂患，死於安樂」最適合概括為？',['憂患可促人成長，安逸可能使人衰敗','人生應追求痛苦','安樂必然導致死亡','只有戰爭才能成才'],'憂患可促人成長，安逸可能使人衰敗'],
 ['p2q041','kp_caogui_trust','caogui','choice','「小大之獄，雖不能察，必以情」中的「獄」指？',['案件','監獄','刑罰','牢房'],'案件'],
 ['p2q042','kp_caogui_trust','caogui','choice','曹劌認為可以「一戰」的根本條件是？',['取信於民','兵器精良','糧食充足','國土廣大'],'取信於民'],
-['p2q043','kp_caogui_trust','caogui','choice','魯莊公所說「小惠未遍，民弗從也」中的「遍」是？',['遍及','重複','到處走','普遍知道'],'遍及'],
+['p2q043','kp_caogui_trust','caogui','choice','「小惠未遍，民弗從也」中的「遍」是？',['遍及','重複','到處走','普遍知道'],'遍及'],
 ['p2q044','kp_caogui_trust','caogui','choice','曹劌否定「衣食所安」和祭祀之福，因為它們？',['未能真正惠及百姓並取得信任','完全沒有價值','會使軍隊變弱','違反禮制'],'未能真正惠及百姓並取得信任'],
 ['p2q045','kp_caogui_strategy','caogui','choice','曹劌在齊軍「三鼓」後才說「可矣」，原因是？',['彼竭我盈','敵眾我寡','等待援軍','天色已晚'],'彼竭我盈'],
 ['p2q046','kp_caogui_strategy','caogui','choice','追擊前「下視其轍，登軾而望之」反映曹劌？',['謹慎判斷敵情','膽小怯戰','不懂軍事','只重禮儀'],'謹慎判斷敵情'],
@@ -106,7 +106,7 @@ kp_caogui_trust:'本題聚焦戰前政治條件；曹劌真正肯定的是能取
 kp_taohua_discovery:'本題要依漁人發現桃花源的行進脈絡判斷古義，特別留意「緣、鮮美、窮」等古今義差異。',kp_taohua_society:'本題聚焦桃花源安定和樂、與世隔絕的社會圖景，以及作者寄託的和平理想。',kp_loushi_character:'本題要把陋室環境、交往人物與生活內容連到「惟吾德馨」，理解作者安貧樂道、不慕名利的品格。',kp_loushi_allusion:'本題聚焦《陋室銘》結尾的用典和「何陋之有」賓語前置；兩者都用來強化陋室不陋。',
 kp_ai_lotus_symbol:'本題要把蓮的外在特徵對應君子品格；「不染、不妖、中通外直」不是單純植物描寫。',kp_ai_lotus_contrast:'本題要分清菊＝隱逸、牡丹＝富貴、蓮＝君子，並理解三者並寫是為了襯托作者的價值選擇。',kp_maqianli_talent:'本題要讀懂托物寓意：千里馬＝人才，伯樂＝識才者，食馬者＝不識才、埋沒人才者。',kp_maqianli_ignorance:'本題聚焦食馬者「不識馬」的具體表現：不按其道驅策、不足量餵養、不能理解其意。',kp_xiaoshi_pool:'本題聚焦小石潭水清與游魚描寫；作者常以魚影、游魚狀態側面襯托潭水清澈。',kp_xiaoshi_mood:'本題要追蹤作者由觀魚之樂轉為淒清孤寂的情緒變化，理解環境與內心互相映照的情景交融。'
 };
-const questions=rows.map(([id,kpId,textId,type,q,o,a])=>({id,kpId,textId,type,q,o,a,explanation:`${teaching[kpId]} 本題正確答案是「${a}」。`}));
+const questions=rows.map(([id,kpId,textId,type,q,o,a,explanation,sourceSentenceId])=>({id,kpId,textId,type,q,o,a,sourceSentenceId,explanation:explanation||`${teaching[kpId]} 本題正確答案是「${a}」。`}));
 const knowledgePoints=[
 ['kp_yueyang_context','yueyanglou','實詞語境','岳陽樓記背景與詞義',2],['kp_yueyang_scene','yueyanglou','寫景手法','洞庭湖景象',2],['kp_yueyang_emotion','yueyanglou','篇章理解','遷客騷人與古仁人',3],
 ['kp_chushi_loyalty','chushibiao','篇章理解','廣開言路與親賢遠佞',2],['kp_chushi_reward','chushibiao','篇章理解','賞罰嚴明',2],['kp_chushi_experience','chushibiao','篇章理解','知遇之恩與臨危受命',3],

@@ -259,6 +259,40 @@ async function acceptDevice(cdp,metrics){
   report.fixedLessonAction=true;
   await noHorizontalOverflow(cdp,'lesson completion');
   await screenshot(cdp,'lesson-completed');
+  // All three questions of this lesson are real catalog questions; the long
+  // context repair is guaranteed to be included, independent of rotation.
+  await navigate(cdp,'/lesson.html?kpId=gj_005');
+  await waitFor(cdp,"!!document.querySelector('#startPractice')",'context lesson');
+  await press(cdp,'#startPractice');
+  let sawContext=false;
+  for(let i=0;i<3;i++){
+    check(await evaluate(cdp,"!!document.querySelector('.lesson-question .question-task')"),'lesson prompt lacks presentation layer');
+    const context=await evaluate(cdp,"document.querySelector('.lesson-question')?.textContent.startsWith('【閱讀材料】')");
+    if(context){
+      sawContext=true;
+      check(await evaluate(cdp,"document.querySelector('.question-reading').textContent.includes('三顧臣於草廬')"),'missing antecedent in rendered reading');
+      for(const width of [320,768,1024,1440]){
+        await cdp.call('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});
+        await noHorizontalOverflow(cdp,'long context '+width);
+      }
+      await cdp.call('Emulation.setDeviceMetricsOverride',currentDevice==='mobile'?{width:390,height:844,deviceScaleFactor:3,mobile:true}:{width:1280,height:900,deviceScaleFactor:1,mobile:false});
+      await screenshot(cdp,'question-context');
+    }
+    const geometry=await actionGeometry(cdp,'#lessonNext');
+    await answerVisible(cdp,'lesson',false);
+    await stableAction(cdp,'#lessonNext',geometry,'layered lesson');
+    check(await evaluate(cdp,"!!document.querySelector('#lessonFeedback .feedback-xp')&&!!document.querySelector('#lessonFeedback .feedback-mascot')"),'lesson lacks XP/mascot feedback');
+    await cdp.call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+    check(await evaluate(cdp,"Array.from(document.querySelectorAll('.lesson-question,#lessonOptions,.feedback-xp,.feedback-mascot img')).every(e=>getComputedStyle(e).animationName==='none')"),'reduced motion still animates');
+    await cdp.call('Emulation.setEmulatedMedia',{features:[]});
+    // Activate the fixed control with a real keyboard event.
+    await evaluate(cdp,"document.querySelector('#lessonNext').focus();true");
+    await cdp.call('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+    await cdp.call('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+  }
+  check(sawContext,'context repair was not exercised');
+  await waitFor(cdp,"!!document.querySelector('#lessonApp .session-summary.done')",'keyboard lesson completion');
+  report.questionContext=true;report.reducedMotion=true;report.keyboardNext=true;report.lessonXpFeedback=true;
   report.progressPersisted=true;report.views=['results','weakness','path'];report.offlineAccountRecovery=true;
   console.log('BROWSER_ACCEPTANCE='+JSON.stringify(report));
 }

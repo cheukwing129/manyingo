@@ -9,7 +9,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const bundles=require('../scripts/build_startup_bundles.cjs').bundles;
 
 const LESSON_RUNTIME=[
-  'reorder-question.js','curriculum-v1.js','question-metadata-v1.js','question-rotation.js',
+  'reorder-question.js','question-presentation.js','curriculum-v1.js','question-metadata-v1.js','question-rotation.js',
   'skill-evidence-v1.js','skill-mastery-v1.js','skill-results-v1.js','learning-path.js',
   'practice-effectiveness.js','mascot-runtime.js','session-summary.js'
 ];
