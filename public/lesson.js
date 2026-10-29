@@ -97,7 +97,7 @@ function renderPracticeQuestion(area) {
     return;
   }
   const options = Array.isArray(q.options) ? q.options : [];
-  area.innerHTML = `<div class="lesson-question-count">練習 ${state.index + 1} / ${state.questions.length}</div><h3 class="lesson-question">${esc(q.question || q.prompt || '請回答問題')}</h3><div id="lessonOptions"></div><div id="lessonFeedback"></div><button class="action" id="lessonNext" disabled>下一題</button>`;
+  area.innerHTML = `<div class="lesson-question-count">練習 ${state.index + 1} / ${state.questions.length}</div><h3 class="lesson-question">${esc(q.question || q.prompt || '請回答問題')}</h3><div id="lessonOptions"></div><div id="lessonFeedback"></div><div class="question-footer"><div class="question-actions"><button class="action" id="lessonNext" type="button" disabled>下一題</button></div></div>`;
   const opts = area.querySelector('#lessonOptions');
   if (q.type === 'fill') {
     opts.innerHTML = `<input class="fill-input" id="lessonInput" placeholder="輸入答案"><button class="action" id="lessonCheck">提交答案</button>`;

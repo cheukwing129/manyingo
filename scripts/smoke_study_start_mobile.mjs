@@ -110,9 +110,10 @@ async function noHorizontalOverflow(cdp,label){
   const size=await evaluate(cdp,'({width:innerWidth,scroll:document.documentElement.scrollWidth})');
   check(size.scroll<=size.width+1,`${label}: horizontal overflow ${JSON.stringify(size)}`);
 }
-async function answerVisible(cdp,lesson,wrong){
-  const host=lesson?'#lessonOptions':'#answers',questionSelector=lesson?'.lesson-question':'#quiz .question';
-  const q=await evaluate(cdp,`(()=>{const text=document.querySelector(${JSON.stringify(questionSelector)})?.textContent;return window.ManjingoContent.questions.find(q=>q.q===text)})()`);
+async function answerVisible(cdp,mode,wrong){
+  const lesson=mode==='lesson',stage3=mode==='stage3';
+  const host=lesson?'#lessonOptions':stage3?'#stage3Options':'#answers',questionSelector=lesson?'.lesson-question':stage3?'#stage3Reading .stage3-prompt':'#quiz .question';
+  const q=await evaluate(cdp,`(()=>{const text=document.querySelector(${JSON.stringify(questionSelector)})?.textContent;return window.ManjingoContent.questions.find(q=>q.q===text||q.prompt===text)})()`);
   check(q,'visible question could not be matched to catalog');
   if(q.type==='reorder'){
     const fragments=q.fragments.map((part,i)=>typeof part==='object'?part:{id:'p'+(i+1),text:part});
@@ -135,9 +136,39 @@ async function answerVisible(cdp,lesson,wrong){
     check(index>=0,'answer option missing');
     await press(cdp,host+' .option:nth-child('+(index+1)+')');
   }
-  const feedback=lesson?'#lessonFeedback':'#feedback',next=lesson?'#lessonNext':'#next';
+  const feedback=lesson?'#lessonFeedback':stage3?'#stage3Feedback .stage3-feedback':'#feedback',next=lesson?'#lessonNext':stage3?'#stage3Next':'#next';
   await waitFor(cdp,`document.querySelector(${JSON.stringify(feedback)})?.classList.contains(${JSON.stringify(wrong?'wrong':'correct')})&&document.querySelector(${JSON.stringify(next)})?.disabled===false`,'answer feedback and enabled Next');
   return q;
+}
+// Measure the control without scrolling it into view: feedback must not move it.
+async function actionGeometry(cdp,selector){
+  return evaluate(cdp,`(()=>{const button=document.querySelector(${JSON.stringify(selector)}),bar=button?.closest('.question-actions');if(!button||!bar)return null;const b=button.getBoundingClientRect(),a=bar.getBoundingClientRect(),hit=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2);return {top:b.top,bottom:b.bottom,left:b.left,width:b.width,height:b.height,barTop:a.top,barBottom:a.bottom,fixed:getComputedStyle(bar).position==='fixed',visible:b.top>=0&&b.bottom<=innerHeight&&b.left>=0&&b.right<=innerWidth&&hit===button,disabled:button.disabled}})()`);
+}
+async function stableAction(cdp,selector,before,label){
+  const after=await actionGeometry(cdp,selector);
+  check(before?.fixed&&before.visible&&after?.fixed&&after.visible,label+': action is not fixed and visible');
+  for(const key of ['top','bottom','left','width','height'])check(Math.abs(before[key]-after[key])<=1,label+': action moved after feedback: '+JSON.stringify({before,after}));
+  check(before.disabled&&!after.disabled,label+': action must enable only after answering');
+}
+async function expandedFeedback(cdp,host,next){
+  const details=await evaluate(cdp,`Array.from(document.querySelectorAll(${JSON.stringify(host+' details')})).map((e,index)=>({index,open:e.open}))`);
+  for(const item of details)if(!item.open)await press(cdp,host+' details:nth-of-type('+(item.index+1)+') > summary');
+  await evaluate(cdp,"window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'});new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))");
+  const geometry=await actionGeometry(cdp,next);
+  const bottom=await evaluate(cdp,`document.querySelector(${JSON.stringify(host)}).getBoundingClientRect().bottom`);
+  check(bottom<=geometry.barTop+1,'feedback is obscured by the fixed action: '+JSON.stringify({bottom,geometry}));
+  return geometry;
+}
+async function responsiveAction(cdp){
+  for(const [width,height] of [[320,740],[768,1024],[1024,768],[1440,900]]){
+    await cdp.call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+    await evaluate(cdp,'new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
+    const action=await expandedFeedback(cdp,'#feedback','#next');
+    check(action.visible&&action.width>=280&&action.height>=48,'action inaccessible at '+width+'px');
+    await noHorizontalOverflow(cdp,'feedback at '+width+'px');
+    await screenshot(cdp,'fixed-action-'+width);
+  }
+  await cdp.call('Emulation.setDeviceMetricsOverride',currentDevice==='mobile'?{width:390,height:844,deviceScaleFactor:3,mobile:true,screenWidth:390,screenHeight:844}:{width:1280,height:900,deviceScaleFactor:1,mobile:false});
 }
 async function acceptDevice(cdp,metrics){
   const report={device:currentDevice,metrics,homeAnswers:0,lessonAnswers:0};
@@ -147,17 +178,21 @@ async function acceptDevice(cdp,metrics){
   await noHorizontalOverflow(cdp,'home quiz');
   for(let i=0;i<24;i++){
     if(await evaluate(cdp,"!!document.querySelector('#quiz .done')"))break;
-    await answerVisible(cdp,false,i%3===0);
+    const actionBefore=await actionGeometry(cdp,'#next');
+    await answerVisible(cdp,'home',i%3===0);
+    await stableAction(cdp,'#next',actionBefore,'home question '+i);
     report.homeAnswers++;
-    if(i===0)await screenshot(cdp,'answer-feedback');
+    if(i===0){await expandedFeedback(cdp,'#feedback','#next');await screenshot(cdp,'answer-feedback');await responsiveAction(cdp);}
     await press(cdp,'#next');
   }
   await waitFor(cdp,"!!document.querySelector('#quiz .done')&&!document.body.classList.contains('study-focus')",'home completion');
   check(report.homeAnswers>0,'home session contained no answers');
+  check(await evaluate(cdp,"!document.querySelector('#quiz .question-footer')"),'completed home retained fixed action');
+  report.fixedHomeAction=true;report.responsiveActionWidths=[320,768,1024,1440];
   const homeSources=await evaluate(cdp,'window.__acceptanceLearning.sources');
   check(homeSources.length===report.homeAnswers&&homeSources.every(source=>source==='submit'),'home must notify once per answer: '+JSON.stringify(homeSources));
   report.homeNotifications=homeSources.length;
-  const xp=await evaluate(cdp,'window.ManjingoLocalLearning.getProgress().totalXp');
+  let xp=await evaluate(cdp,'window.ManjingoLocalLearning.getProgress().totalXp');
   check(xp>0,'home answers did not persist XP');
   await screenshot(cdp,'completed');
   for(const view of ['results','weakness','path','results','weakness']){
@@ -170,7 +205,25 @@ async function acceptDevice(cdp,metrics){
   }
   check(await evaluate(cdp,'Object.entries(window.__acceptanceLearning.methods).every(([name,method])=>window.ManjingoLocalLearning[name]===method)'),'opening path UI replaced an engine mutation method');
   report.engineMethodsStable=true;
+  await press(cdp,'[data-home-tab="path"]');
+  await waitFor(cdp,"!!document.querySelector('#passageSetStart')",'reading challenge');
+  await press(cdp,'#passageSetStart');
+  report.stage3Answers=0;
+  while(report.stage3Answers<3){
+    const actionBefore=await actionGeometry(cdp,'#stage3Next');
+    await answerVisible(cdp,'stage3',report.stage3Answers===0);
+    await stableAction(cdp,'#stage3Next',actionBefore,'reading challenge');
+    await expandedFeedback(cdp,'#stage3Feedback','#stage3Next');
+    const clearNav=await evaluate(cdp,"document.querySelector('#stage3Next').closest('.question-actions').getBoundingClientRect().bottom<=document.querySelector('.home-tabs').getBoundingClientRect().top");
+    check(clearNav,'reading action overlaps primary navigation');
+    if(report.stage3Answers===0)await screenshot(cdp,'reading-feedback');
+    await press(cdp,'#stage3Next');report.stage3Answers++;
+  }
+  await waitFor(cdp,"!!document.querySelector('.stage3-summary-score')",'reading completion');
+  check(await evaluate(cdp,"!document.querySelector('#stage3Reading .question-footer')"),'completed reading retained fixed action');
+  report.fixedReadingAction=true;
   // A real reload must retain progress; no engine or DOM is replaced by a stub.
+  xp=await evaluate(cdp,'window.ManjingoLocalLearning.getProgress().totalXp');
   await navigate(cdp,'/');
   await waitFor(cdp,'!!window.ManjingoLocalLearning','reloaded engine');
   check(await evaluate(cdp,'window.ManjingoLocalLearning.getProgress().totalXp')===xp,'reload lost local progress');
@@ -188,9 +241,11 @@ async function acceptDevice(cdp,metrics){
   await press(cdp,'#startPractice');
   for(let i=0;i<6;i++){
     if(await evaluate(cdp,"!!document.querySelector('#lessonApp .lesson-complete, #lessonApp .session-summary.done')"))break;
-    await answerVisible(cdp,true,i===0);
+    const actionBefore=await actionGeometry(cdp,'#lessonNext');
+    await answerVisible(cdp,'lesson',i===0);
+    await stableAction(cdp,'#lessonNext',actionBefore,'lesson question '+i);
     report.lessonAnswers++;
-    if(i===0)await screenshot(cdp,'lesson-feedback');
+    if(i===0){await expandedFeedback(cdp,'#lessonFeedback','#lessonNext');await screenshot(cdp,'lesson-feedback');}
     await press(cdp,'#lessonNext');
   }
   await waitFor(cdp,"!!document.querySelector('#lessonApp .lesson-complete, #lessonApp .session-summary.done')",'lesson completion');
@@ -198,6 +253,8 @@ async function acceptDevice(cdp,metrics){
   const lessonSources=await evaluate(cdp,'window.__lessonLearningSources');
   check(lessonSources.length===report.lessonAnswers&&lessonSources.every(source=>source==='submit'),'lesson must notify once per answer without path UI: '+JSON.stringify(lessonSources));
   report.lessonNotifications=lessonSources.length;
+  check(await evaluate(cdp,"!document.querySelector('#lessonApp .question-footer')"),'completed lesson retained fixed action');
+  report.fixedLessonAction=true;
   await noHorizontalOverflow(cdp,'lesson completion');
   await screenshot(cdp,'lesson-completed');
   report.progressPersisted=true;report.views=['results','weakness','path'];report.offlineAccountRecovery=true;
