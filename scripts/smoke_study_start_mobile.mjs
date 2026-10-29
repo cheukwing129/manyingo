@@ -164,7 +164,8 @@ async function responsiveAction(cdp){
     await cdp.call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
     await evaluate(cdp,'new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
     const action=await expandedFeedback(cdp,'#feedback','#next');
-    check(action.visible&&action.width>=280&&action.height>=48,'action inaccessible at '+width+'px');
+    const available=await evaluate(cdp,'Math.min(600,document.documentElement.clientWidth-32)');
+    check(action.visible&&action.width>=available-1&&action.height>=48,'action inaccessible at '+width+'px: '+JSON.stringify(action));
     await noHorizontalOverflow(cdp,'feedback at '+width+'px');
     await screenshot(cdp,'fixed-action-'+width);
   }
@@ -287,7 +288,7 @@ try{
   await cdp.call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:3,mobile:true,screenWidth:390,screenHeight:844});
   await cdp.call('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
   const loaded=cdp.once('Page.loadEventFired',15000);
-  await cdp.call('Page.navigate',{url:baseUrl+'/?perf=1&ci-mobile-smoke=1'});
+  await cdp.call('Page.navigate',{url:baseUrl+(localAcceptance?'/?ci-mobile-smoke=1':'/?perf=1&ci-mobile-smoke=1')});
   await loaded;
   const button=await waitFor(cdp,`(()=>{const b=document.getElementById('start');if(!b||b.disabled)return null;b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2,label:b.textContent}})()`,'enabled Start button');
   check(Number.isFinite(button.x)&&Number.isFinite(button.y),'Start button coordinates unavailable');
