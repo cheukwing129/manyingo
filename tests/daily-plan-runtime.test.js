@@ -97,3 +97,38 @@ test('homepage replans remaining queue on learning-state changes without resetti
  assert.doesNotMatch(html,/id="queueSummary"/);
  assert.match(html,/showPlan\(merged\.remaining,currentPlanSource,true\);schedulePreparedQuestion\(index\+1\)/);
 });
+
+test('review and weak retries together occupy at most half, including concepts and mislabeled repeats',()=>{
+ const runtime=load({ManjingoQuestionRotation:{seenIds:()=>['seen-new'],recentIds:()=>[],rank:q=>q}});
+ const selected=[q('r','review'),q('w','weak'),{...q('c'),conceptReview:true},{...q('m'),misconceptionReview:true},q('seen-new'),q('r2','review')];
+ const source=[...selected,...Array.from({length:10},(_,i)=>q('fresh'+i))],result=runtime.limitReviews(selected,source,10);
+ assert.equal(result.length,10);assert.equal(result.filter(runtime.isReview).length,5);
+ assert.equal(new Set(Array.from(result,x=>x.id)).size,10);
+ assert.equal(result.find(q=>q.id==='seen-new').category,'review');
+});
+
+test('odd and one-question plans round the half limit down and do not inflate review when fresh material runs out',()=>{
+ const runtime=load(),review=Array.from({length:8},(_,i)=>q('r'+i,'review')),fresh=[q('n1'),q('n2')];
+ const odd=runtime.limitReviews([...review,...fresh],[],5);assert.equal(odd.length,4);assert.equal(odd.filter(runtime.isReview).length,2);
+ assert.deepEqual(Array.from(runtime.limitReviews(review,[],10)),[]);
+ assert.deepEqual(Array.from(runtime.limitReviews(review,fresh,1),x=>x.id),['n1']);
+ assert.deepEqual(Array.from(runtime.limitReviews(review,fresh,0)),[]);
+});
+
+test('a replan counts reviews already answered or currently on screen against the whole session budget',()=>{
+ const runtime=load(),prefix=Array.from({length:5},(_,i)=>q('done'+i,'review'));
+ const tail=runtime.limitReviews(Array.from({length:5},(_,i)=>q('retry'+i,'weak')),Array.from({length:5},(_,i)=>q('n'+i)),5,{prefix});
+ assert.equal(tail.length,5);assert.equal(tail.filter(runtime.isReview).length,0);
+ const merged=[...prefix,...tail];assert.equal(merged.filter(runtime.isReview).length,merged.length/2);
+});
+
+test('unseen material on a learned skill is labeled new application, while set-text content and seen questions stay out of new slots',()=>{
+ const runtime=load({ManjingoLocalLearning:{getKnowledge:()=>({attempts:8})},ManjingoSkillFirstPlan:{skillState:()=> 'review'},ManjingoQuestionRotation:{seenIds:()=>['old'],recentIds:()=>[],rank:q=>q}});
+ const selected=[q('r','review')],source=[{...q('old'),skillIds:['fw.zhi']},{...q('set'),normalCore:false},{...q('unseen'),skillIds:['fw.zhi']}];
+ const result=runtime.limitReviews(selected,source,2);
+ assert.equal(result.length,2);assert.equal(result[1].id,'unseen');assert.equal(result[1].newMaterial,true);assert.equal(result[1].category,'new');
+});
+
+test('both local and cloud selection pass through the common review limit',()=>{
+ for(const cloud of [false,true]){const selected=[q('r1','review'),q('r2','weak'),q('r3','review')];const window={ManjingoContent:{selectQuestionsForPlan:()=>selected}};if(cloud)window.ManjingoPracticeEffectiveness={selectQuestionsForPlan:(_plan,_source,_limit,select)=>select()};const runtime=load(window),result=runtime.selectQuestionsForPlan({},[q('n1'),q('n2'),q('n3')],4);assert.equal(result.length,4);assert.equal(result.filter(runtime.isReview).length,2);}
+});

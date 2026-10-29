@@ -38,7 +38,36 @@ function selectQuestionsForPlan(plan,sourceQuestions,limit){
  const content=root.ManjingoContent,policy=root.ManjingoPracticeEffectiveness,learning=root.ManjingoLocalLearning;
  if(!content||typeof content.selectQuestionsForPlan!=='function')return[];
  const select=(adjusted,questions,count)=>content.selectQuestionsForPlan(adjusted,questions,count);
- return policy&&typeof policy.selectQuestionsForPlan==='function'?policy.selectQuestionsForPlan(plan,sourceQuestions,limit,select,learning):select(plan,sourceQuestions,limit);
+ const selected=policy&&typeof policy.selectQuestionsForPlan==='function'?policy.selectQuestionsForPlan(plan,sourceQuestions,limit,select,learning):select(plan,sourceQuestions,limit);
+ return limitReviews(selected,sourceQuestions,limit);
+}
+// Review, weak-point work and exact/concept retries share the same 50% budget.
+function isReview(question){return !!question&&(question.category==='review'||question.category==='weak'||question.conceptReview===true||question.misconceptionReview===true)}
+function limitReviews(selected,sourceQuestions,limit,options){
+ const max=Math.max(0,Math.floor(Number(limit)||0));if(!max)return[];
+ const prefix=options&&Array.isArray(options.prefix)?options.prefix:[],priorReviews=prefix.filter(isReview).length,priorFresh=prefix.length-priorReviews;
+ const learning=root.ManjingoLocalLearning,skills=root.ManjingoSkillFirstPlan,metadata=root.ManjingoQuestionMetadataV1,rotation=root.ManjingoQuestionRotation;
+ const recent=new Map(),seenIds=new Set(rotation&&typeof rotation.seenIds==='function'?rotation.seenIds():[]),seenSentences=new Set(rotation&&typeof rotation.recentSentenceIds==='function'?rotation.recentSentenceIds():[]);
+ function seen(q){if(seenIds.has(questionId(q))||rotation&&typeof rotation.sentenceOf==='function'&&seenSentences.has(rotation.sentenceOf(q)))return true;const kp=String(q.kpId||'');if(!recent.has(kp))recent.set(kp,new Set(rotation&&typeof rotation.recentIds==='function'?rotation.recentIds(kp):[]));return recent.get(kp).has(questionId(q))}
+ const items=[],ids=new Set();
+ for(const q of Array.isArray(selected)?selected:[]){const id=questionId(q);if(!id||ids.has(id))continue;ids.add(id);items.push(seen(q)?{...q,category:'review'}:q)}
+ const fresh=items.filter(q=>!isReview(q)),reviews=items.filter(isReview);
+ const source=metadata&&typeof metadata.annotateAll==='function'?metadata.annotateAll(sourceQuestions||[]):sourceQuestions||[];
+ const skillStates=new Map();
+ function freshSkill(q){
+  for(const id of q.skillIds||[]){if(!skillStates.has(id))skillStates.set(id,skills&&typeof skills.skillState==='function'?skills.skillState([],learning,id):'new');if(skillStates.get(id)==='new')return id}
+  return null;
+ }
+ const candidates=[],records=new Map();
+ for(const q of source){if(!questionId(q)||ids.has(questionId(q))||seen(q)||q.normalCore===false)continue;const skillId=freshSkill(q);if(!records.has(q.kpId))records.set(q.kpId,learning&&typeof learning.getKnowledge==='function'?learning.getKnowledge(q.kpId):null);const record=records.get(q.kpId),newMaterial=!skillId&&!!(record&&(Number(record.attempts)>0||record.lastAnsweredAt)||(q.skillIds||[]).length);ids.add(questionId(q));candidates.push({...q,skillId:skillId||q.skillId||(q.skillIds||[])[0],category:'new',newMaterial,conceptReview:false,misconceptionReview:false})}
+ candidates.sort((a,b)=>Number(a.newMaterial)-Number(b.newMaterial));
+ const ranked=rotation&&typeof rotation.rank==='function'?rotation.rank(candidates):candidates;
+ // Keep genuinely new material in reserve even when an upstream plan contains only reviews.
+ for(const q of ranked){if(fresh.length>=max)break;fresh.push(q);ids.add(questionId(q))}
+ const reviewCount=Math.max(0,Math.min(reviews.length,Math.floor((prefix.length+max)/2)-priorReviews,priorFresh+fresh.length-priorReviews)),newCount=Math.min(fresh.length,max-reviewCount);
+ const allowedReviews=new Set(reviews.slice(0,reviewCount).map(questionId)),allowedFresh=new Set(fresh.slice(0,newCount).map(questionId));
+ const ordered=[...items,...fresh.filter(q=>!items.some(item=>questionId(item)===questionId(q)))];
+ return balanceChoiceQuestions(ordered.filter(q=>isReview(q)?allowedReviews.has(questionId(q)):allowedFresh.has(questionId(q))).slice(0,max),'daily-half');
 }
 function sessionReservation(queue,index,completedQuestionIds,targetCount){
  const list=Array.isArray(queue)?queue:[],completed=toSet(completedQuestionIds),safeIndex=Math.max(0,Number(index)||0),current=list[safeIndex]||null,currentId=questionId(current),currentPending=!!currentId&&!completed.has(currentId),excludedIds=new Set(completed);
@@ -54,7 +83,7 @@ function mergeReservation(reservation,candidates){
 }
 function counts(items){const list=Array.isArray(items)?items:[];return{review:list.filter(x=>x&&x.category==='review').length,weak:list.filter(x=>x&&x.category==='weak').length,newKnowledge:list.filter(x=>x&&x.category==='new').length,total:list.length}}
 function summary(items){const c=counts(items);return c.total?'剩餘安排：複習 '+c.review+' · 弱項 '+c.weak+' · 新知識 '+c.newKnowledge:'本輪已沒有剩餘題目。'}
-const api={questionId,hash32,stableShuffle,arrangeOptions,balanceChoiceQuestions,balanceCatalogChoices,selectQuestionsForPlan,sessionReservation,mergeReservation,counts,summary};
+const api={questionId,hash32,stableShuffle,arrangeOptions,balanceChoiceQuestions,balanceCatalogChoices,isReview,limitReviews,selectQuestionsForPlan,sessionReservation,mergeReservation,counts,summary};
 root.ManjingoDailyPlanRuntime=api;
 balanceCatalogChoices();
 })(window);

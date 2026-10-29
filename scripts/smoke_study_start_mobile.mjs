@@ -300,6 +300,26 @@ async function acceptDevice(cdp,metrics){
   console.log('BROWSER_ACCEPTANCE='+JSON.stringify(report));
 }
 
+async function acceptMascot(cdp){
+  await navigate(cdp,'/mascot-v2-qa.html');
+  await waitFor(cdp,"!!document.querySelector('#qaWrongFeedback .feedback-mascot img')",'mascot feedback');
+  const assets=await evaluate(cdp,`(async()=>{const images=Array.from(document.images);await Promise.all(images.map(img=>img.decode()));return images.filter(img=>img.src.includes('/mascot/v2/')).map(img=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,128,128);const rgba=ctx.getImageData(0,0,128,128).data;let visible=0;for(let i=3;i<rgba.length;i+=4)if(rgba[i]>32)visible++;return {src:new URL(img.src).pathname,visible}})})()`);
+  check(assets.length>=11&&assets.every(asset=>asset.visible>500),'mascot artwork failed to render: '+JSON.stringify(assets));
+  const mapping=await evaluate(cdp,`Object.fromEntries(['qaCorrectFeedback','qaWrongFeedback','qaComplete','qaPerfect'].map(id=>[id,new URL(document.querySelector('#'+id+' img').src).pathname]))`);
+  for(const [id,file] of Object.entries({qaCorrectFeedback:'happy',qaWrongFeedback:'sad',qaComplete:'complete',qaPerfect:'celebrate'}))check(mapping[id]==='/mascot/v2/'+file+'.svg','incorrect mascot state: '+id);
+  for(const width of [320,768,1024,1440]){
+    await cdp.call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:false});
+    await evaluate(cdp,'new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
+    await noHorizontalOverflow(cdp,'mascot at '+width+'px');
+    const geometry=await evaluate(cdp,`Array.from(document.querySelectorAll('.session-summary-header')).map(header=>{const h=header.getBoundingClientRect(),copy=header.querySelector('.session-summary-copy').getBoundingClientRect(),img=header.querySelector('img').getBoundingClientRect();return {separate:copy.right<=img.left+1,contained:img.right<=h.right+1&&copy.left>=h.left-1,size:img.width}})`);
+    check(geometry.length===2&&geometry.every(item=>item.separate&&item.contained&&Math.abs(item.size-(width<=430?96:128))<=1),'completion layout at '+width+'px: '+JSON.stringify(geometry));
+    await screenshot(cdp,'mascot-feedback-'+width);
+    await evaluate(cdp,"document.getElementById('qaComplete').scrollIntoView({block:'center',behavior:'instant'});true");
+    await screenshot(cdp,'mascot-completion-'+width);
+  }
+  acceptanceReport.mascot={assets,mapping,widths:[320,768,1024,1440],passed:true};
+}
+
 const executable=chromePath();
 const local=localAcceptance?await localServer():null;
 const profile=await mkdtemp(join(tmpdir(),'manyingo-mobile-smoke-'));
@@ -352,6 +372,7 @@ try{
     await press(cdp,'#start');
     const desktopMetrics=await waitFor(cdp,'window.ManjingoStudyStartMetrics||null','desktop study start');
     await acceptDevice(cdp,desktopMetrics);
+    await acceptMascot(cdp);
     const errors=cdp.events.filter(e=>e.method==='Runtime.exceptionThrown').map(e=>e.params.exceptionDetails.exception?.description||e.params.exceptionDetails.text);
     const failedAssets=cdp.events.filter(e=>e.method==='Network.responseReceived'&&e.params.response.url.startsWith(baseUrl)&&e.params.response.status>=400).map(e=>e.params.response.url);
     check(!errors.length,'uncaught browser exceptions: '+JSON.stringify(errors));

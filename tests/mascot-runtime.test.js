@@ -19,10 +19,10 @@ test('mascot runtime stays in parity with the machine-readable manifest',()=>{
 test('mascot runtime normalizes unknown states and owns compact-size selection',()=>{
   assert.equal(runtime.normalizeState('happy'),'happy');
   assert.equal(runtime.normalizeState('unknown'),'neutral');
-  assert.equal(runtime.asset('happy'),'./mascot/moling-happy.svg');
-  assert.equal(runtime.asset('unknown'),'./mascot/moling-neutral.svg');
-  assert.equal(runtime.asset('celebrate',{size:32}),'./mascot/moling-head.svg');
-  assert.equal(runtime.asset('thinking',{compact:true}),'./mascot/moling-head.svg');
+  assert.equal(runtime.asset('happy'),'./mascot/v2/happy.svg');
+  assert.equal(runtime.asset('unknown'),'./mascot/v2/neutral.svg');
+  assert.equal(runtime.asset('celebrate',{size:32}),'./mascot/v2/compact.svg');
+  assert.equal(runtime.asset('thinking',{compact:true}),'./mascot/v2/thinking.svg');
   assert.equal(runtime.stateClass('determined'),'mascot-state-determined');
   assert.equal(runtime.stateClass('nonsense'),'mascot-state-neutral');
 });

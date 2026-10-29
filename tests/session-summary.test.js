@@ -125,24 +125,13 @@ test('session summary is loaded after answer feedback and preserves homepage com
  assert.match(css,/\.session-summary-impact/);
 });
 
-test('lesson completion mascot has a static compact layout when feedback UI is not loaded',()=>{
- const lesson=read('public/lesson.html'),runtime=read('public/lesson-runtime.js'),css=read('public/app-ui.css');
- assert.match(lesson,/href="\.\/app-ui\.css"/);
- assert.match(runtime,/session-summary-icon mascot-celebrate/);
- const mascot=css.match(/\.session-summary-icon\.mascot-celebrate\{([^}]*)\}/);
- const image=css.match(/\.session-summary-icon\.mascot-celebrate img\{([^}]*)\}/);
- const caption=css.match(/\.session-summary-icon\.mascot-celebrate span\{([^}]*)\}/);
- assert.ok(mascot,'the shared stylesheet must lay out the mascot without feedback-ui.js');
- assert.ok(image,'the mascot image must have a bounded size');
- assert.ok(caption,'the greeting must have a readable caption style');
- assert.match(mascot[1],/flex-direction:column/);
- assert.match(mascot[1],/width:fit-content/);
- assert.match(image[1],/width:76px;height:104px/);
- assert.match(caption[1],/font-size:11px/);
- assert.match(caption[1],/overflow-wrap:anywhere/);
- assert.match(css,/\.session-summary-icon\.mascot-celebrate img\{width:68px;height:94px\}/);
+test('completion shares a responsive side-by-side header without depending on feedback runtime styles',()=>{
+ const css=read('public/app-ui.css'),html=summary.markup({answered:10,correct:7,unlockedStages:[]});
+ assert.match(html,/session-summary-header/);assert.match(html,/session-summary-copy/);assert.ok(html.indexOf('<h3>')<html.indexOf('session-summary-icon'));
+ assert.match(css,/grid-template-columns:minmax\(0,1fr\) 128px/);assert.match(css,/grid-template-columns:minmax\(0,1fr\) 96px/);
+ assert.match(css,/width:128px;height:128px/);assert.match(css,/width:96px;height:96px/);
+ assert.doesNotMatch(html,/<img[^>]*>\s*<span>/);assert.match(html,/完成 10 題/);
 });
-
 
 test('summary can initialize after DOM ready before its global API is published',()=>{
  const vm=require('node:vm');
@@ -155,4 +144,12 @@ test('summary can initialize after DOM ready before its global API is published'
  assert.ok(context.ManjingoSessionSummary.observer instanceof Observer);
  assert.equal(observed,1);
  assert.equal(typeof context.ManjingoSessionSummary.reset,'function');
+});
+
+test('a rounded 100 percent with an actual wrong answer never uses the perfect-session celebration',()=>{
+ const data=summary.model({answered:200,correct:199,unlockedStages:[]});
+ assert.equal(summary.mascotState(data,100),'happy');
+ assert.notEqual(summary.celebrationCopy(data,100),'全對！太棒了！');
+ const html=summary.markup({answered:200,correct:199,unlockedStages:[]});
+ assert.match(html,/v2\/complete\.svg/);assert.doesNotMatch(html,/全對！太棒了！/);
 });

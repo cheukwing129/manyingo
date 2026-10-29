@@ -33,3 +33,12 @@ test('catalog and lesson rotation rebalance authoring-order answer bias',()=>{
 });
 
 test('homepage plan and lesson practice share rotation while daily selection adds source diversity',()=>{const catalog=read('public/content-catalog.js'),lesson=read('public/local-lesson.js'),rotation=read('public/question-rotation.js');const bundles=require('../scripts/build_startup_bundles.cjs').bundles;for(const name of ['home-runtime.js','lesson-runtime.js'])assert.ok(bundles[name].includes('question-rotation.js'));assert.match(catalog,/rotation\.rank\(pool\)/);assert.match(catalog,/diversity\.choose\(ranked,queue/);assert.match(catalog,/recentSentenceIds/);assert.match(lesson,/rot\.select\(list,count\)/);assert.match(lesson,/rot\.rank\(list\)/);assert.match(lesson,/rot\.remember\(q\)/);assert.match(rotation,/\.question,\.lesson-question/);assert.match(rotation,/balanceCatalogChoices/);});
+
+test('seen question identity survives the eight-question recency window and migrates existing history',()=>{
+ const fs=require('node:fs'),vm=require('node:vm'),values=new Map([['manjingo_question_rotation_v1',JSON.stringify({old:['legacy']})]]),storage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)},context={window:{localStorage:storage},localStorage:storage,Map,Set};
+ vm.createContext(context);vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../public/question-rotation.js'),'utf8'),context);
+ const rotation=context.window.ManjingoQuestionRotation;
+ for(let i=0;i<15;i++)rotation.remember({id:'q'+i,kpId:'kp'});
+ assert.equal(rotation.recentIds('kp').length,8);assert.ok(rotation.seenIds().includes('q0'));assert.ok(rotation.seenIds().includes('legacy'));
+ rotation.clear();assert.equal(rotation.seenIds().length,0);
+});

@@ -26,7 +26,7 @@ test('wrong answers prefer per-question feedback and fall back to KP lesson',()=
 test('core particle pack carries question-level teaching metadata',()=>{const context={window:{}};vm.createContext(context);vm.runInContext(read('public/question-pack-03.js'),context);const qs=context.window.ManjingoQuestionPack03.questions;const rich=qs.filter(q=>q.explanation);assert.ok(rich.length>=20);const yi=qs.find(q=>q.q.includes('不以物喜'));assert.ok(yi.explanation);assert.ok(yi.misconception);assert.ok(yi.example);});
 test('study question chrome keeps adaptive queue internal and uses neutral learner-facing focus language',()=>{
   const home=read('public/index.html');
-  assert.match(home,/q\.category==='weak'\?'重點練習':'新知識'/);
+  assert.match(home,/q\.category==='weak'\?'重點練習':q\.newMaterial\?'新題應用':'新知識'/);
   assert.doesNotMatch(home,/id="queueSummary"/);
   assert.doesNotMatch(home,/function updateQueueSummary\(/);
 });
