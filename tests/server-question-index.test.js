@@ -16,6 +16,9 @@ test('generated server question index matches every reviewed question',()=>{
   const bundled=index.get(question.id);
   assert.ok(bundled,`missing ${question.id}`);
   assert.equal(bundled.data.kpId,question.kpId);
+  assert.equal(bundled.data.type,question.type);
+  assert.equal(bundled.data.previousResponseType,question.previousResponseType||null);
+  assert.deepEqual(Array.from(bundled.data.options),Array.from(question.o||[],String));
   assert.equal(bundled.data.answer,String(question.a==null?'':question.a));
   assert.deepEqual(Array.from(bundled.data.skillIds),Array.from(question.skillIds||[],String));
   assert.equal(bundled.data.sourceScope,question.sourceScope);

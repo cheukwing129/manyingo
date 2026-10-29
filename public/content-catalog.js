@@ -35,7 +35,7 @@ const baseQuestions=[
  {id:'q004',kpId:'kp_virtual_zhi',textId:'CROSS',type:'choice',q:'「輟耕之壟上」中「之」字的用法是？',o:['代詞','結構助詞（的）','動詞（到／往）','語氣助詞'],a:'動詞（到／往）',explanation:'「之」後接地點「壟上」，整句表示到田壟上去，所以「之」作動詞，意思是「往／到」。'},
  {id:'q005',kpId:'sx_001',textId:'CROSS',type:'choice',q:'「廉頗者，趙之良將也」屬於哪種句式？',o:['判斷句','被動句','省略句','倒裝句'],a:'判斷句',explanation:'「者……也」在此判定廉頗的身分是趙國良將，屬於典型判斷句。'},
  {id:'q010',kpId:'kp_translation_001',textId:'yueyanglou',type:'choice',q:'「微斯人，吾誰與歸」的正確白話翻譯是？',o:['如果沒有這樣的人，我要跟從誰呢？','如果沒有這樣的人，誰會跟從我呢？','沒有這樣的人，我不知道去哪裡。','這個人不存在，我們一起回去。'],a:'如果沒有這樣的人，我要跟從誰呢？',explanation:'「微」是「如果沒有」；「吾誰與歸」是賓語前置，還原為「吾與誰歸」，即「我跟從／歸依誰呢」。'},
- {id:'q008',kpId:'kp_yueyang_004',textId:'yueyanglou',type:'fill',q:'先天下之憂而憂，____________。',a:'後天下之樂而樂',explanation:'《岳陽樓記》原句是「先天下之憂而憂，後天下之樂而樂」。'},
+ {id:'q008',kpId:'kp_yueyang_004',textId:'yueyanglou',type:'choice',previousResponseType:'fill',q:'「先天下之憂而憂」的下句是？',o:['後天下之樂而樂','後天下之憂而憂','先天下之樂而樂','與天下同樂'],a:'後天下之樂而樂',explanation:'《岳陽樓記》原句是「先天下之憂而憂，後天下之樂而樂」。'},
  {id:'q006',kpId:'kp_translation_001',textId:'yueyanglou',type:'choice',q:'「吾誰與歸」中「歸」最接近哪個意思？',o:['歸還','歸依／一道','回家','歸來'],a:'歸依／一道',explanation:'這裡「歸」不是回家的「歸」，而是「歸依、一道」的意思；整句問「我同誰一道呢」。'}
 ];
 
