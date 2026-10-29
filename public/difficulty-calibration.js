@@ -61,12 +61,12 @@ function questionTier(kpId,questionId,explicitTier){
  return validTier(question&&question.difficultyTier);
 }
 function emit(detail){const target=root.window||root,EventCtor=root.CustomEvent||(root.window&&root.window.CustomEvent);if(target&&typeof target.dispatchEvent==='function'&&typeof EventCtor==='function')target.dispatchEvent(new EventCtor('manjingo:learning-state-changed',{detail:{source:'difficulty-calibration',...(detail||{})}}));}
-function recordAnswer(answer){
+function recordAnswer(answer,options){
  if(!answer||!answer.kpId||typeof answer.isCorrect!=='boolean')return null;
  const state=readState();if(!state)return null;if(!state.knowledge||typeof state.knowledge!=='object')state.knowledge={};
  const kpId=String(answer.kpId),record=state.knowledge[kpId]&&typeof state.knowledge[kpId]==='object'?{...state.knowledge[kpId]}:{};
  const tier=questionTier(kpId,answer.questionId,answer.difficultyTier),tierStats=recordTierOutcome(record.tierStats,tier,answer.isCorrect,new Date());
- record.tierStats=tierStats;record.lastDifficultyTier=tier;state.knowledge[kpId]=record;if(!writeState(state))return null;emit({kpId,tier,isCorrect:answer.isCorrect});return{tier,tierStats};
+ record.tierStats=tierStats;record.lastDifficultyTier=tier;state.knowledge[kpId]=record;if(!writeState(state))return null;if(!options||!options.silent)emit({kpId,tier,isCorrect:answer.isCorrect});return{tier,tierStats};
 }
 return{TIERS,STATE_KEY,RECENT_LIMIT,PROMOTE_ACCURACY,APPLICATION_DEMOTE_ACCURACY,TRANSFER_DEMOTE_ACCURACY,tierIndex,validTier,emptyTier,emptyTierStats,normalizeTierStats,recordTierOutcome,tierProfile,baseTierForMastery,calibrationDecision,tierForMastery,questionTier,recordAnswer};
 });

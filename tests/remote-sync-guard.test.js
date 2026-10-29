@@ -7,10 +7,11 @@ const vm=require('node:vm');
 const read=file=>fs.readFileSync(path.join(__dirname,'..','public',file),'utf8');
 
 function load(state={}){
-  const initial={totalXp:24,todayXp:16,streak:2,lastGoalDate:'2026-09-11',todayDate:'2026-09-11',knowledge:{},skillMastery:{},practiceHistory:[],conceptMastery:{},...(state.progress||{}),knowledge:state.knowledge||{}};
-  const store=new Map([['manjingo_progress_cache',JSON.stringify(initial)]]);
   const RealDate=Date,fixed=Date.parse('2026-09-11T02:00:00.000Z');
   class FakeDate extends RealDate{constructor(...args){super(...(args.length?args:[fixed]))}static now(){return fixed}}
+  const now=new FakeDate(),today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const initial={totalXp:24,todayXp:16,streak:2,lastGoalDate:'2026-09-11',todayDate:today,knowledge:{},skillMastery:{},practiceHistory:[],conceptMastery:{},...(state.progress||{}),knowledge:state.knowledge||{}};
+  const store=new Map([['manjingo_progress_cache',JSON.stringify(initial)]]);
   const context={Date:FakeDate,console,localStorage:{getItem:key=>store.get(key)||null,setItem:(key,value)=>store.set(key,String(value))},setTimeout(){throw new Error('Local reconciliation must not schedule installation retries')}};
   context.window=context;
   vm.createContext(context);

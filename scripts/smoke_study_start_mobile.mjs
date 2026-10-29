@@ -142,6 +142,7 @@ async function answerVisible(cdp,lesson,wrong){
 async function acceptDevice(cdp,metrics){
   const report={device:currentDevice,metrics,homeAnswers:0,lessonAnswers:0};
   acceptanceReport.devices.push(report);
+  await evaluate(cdp,`window.__acceptanceLearning={sources:[],methods:Object.fromEntries(['submit','syncRemoteResult','syncGamification','syncRemoteSkillState','syncRemoteConceptState','resolveQuestionMisconceptions'].map(name=>[name,window.ManjingoLocalLearning[name]]))};window.addEventListener('manjingo:learning-state-changed',event=>window.__acceptanceLearning.sources.push(event.detail.source));true`);
   await screenshot(cdp,'first-question');
   await noHorizontalOverflow(cdp,'home quiz');
   for(let i=0;i<24;i++){
@@ -153,6 +154,9 @@ async function acceptDevice(cdp,metrics){
   }
   await waitFor(cdp,"!!document.querySelector('#quiz .done')&&!document.body.classList.contains('study-focus')",'home completion');
   check(report.homeAnswers>0,'home session contained no answers');
+  const homeSources=await evaluate(cdp,'window.__acceptanceLearning.sources');
+  check(homeSources.length===report.homeAnswers&&homeSources.every(source=>source==='submit'),'home must notify once per answer: '+JSON.stringify(homeSources));
+  report.homeNotifications=homeSources.length;
   const xp=await evaluate(cdp,'window.ManjingoLocalLearning.getProgress().totalXp');
   check(xp>0,'home answers did not persist XP');
   await screenshot(cdp,'completed');
@@ -164,6 +168,8 @@ async function acceptDevice(cdp,metrics){
     await noHorizontalOverflow(cdp,view);
     await screenshot(cdp,view);
   }
+  check(await evaluate(cdp,'Object.entries(window.__acceptanceLearning.methods).every(([name,method])=>window.ManjingoLocalLearning[name]===method)'),'opening path UI replaced an engine mutation method');
+  report.engineMethodsStable=true;
   // A real reload must retain progress; no engine or DOM is replaced by a stub.
   await navigate(cdp,'/');
   await waitFor(cdp,'!!window.ManjingoLocalLearning','reloaded engine');
@@ -176,6 +182,8 @@ async function acceptDevice(cdp,metrics){
   await navigate(cdp,'/lesson.html?kpId=kp_p3_yi');
   await waitFor(cdp,"!!document.querySelector('#startPractice')",'lesson intro');
   await screenshot(cdp,'lesson-intro');
+  check(await evaluate(cdp,'!window.ManjingoLearningEvents&&!window.ManjingoDifficultyCalibration'),'ordinary lesson unexpectedly loaded home notification helpers');
+  await evaluate(cdp,`window.__lessonLearningSources=[];window.addEventListener('manjingo:learning-state-changed',event=>window.__lessonLearningSources.push(event.detail.source));true`);
   const before=await evaluate(cdp,"window.ManjingoLocalLearning.getKnowledge('kp_p3_yi').attempts");
   await press(cdp,'#startPractice');
   for(let i=0;i<6;i++){
@@ -187,6 +195,9 @@ async function acceptDevice(cdp,metrics){
   }
   await waitFor(cdp,"!!document.querySelector('#lessonApp .lesson-complete, #lessonApp .session-summary.done')",'lesson completion');
   check(await evaluate(cdp,"window.ManjingoLocalLearning.getKnowledge('kp_p3_yi').attempts")===before+report.lessonAnswers,'lesson answer persistence mismatch');
+  const lessonSources=await evaluate(cdp,'window.__lessonLearningSources');
+  check(lessonSources.length===report.lessonAnswers&&lessonSources.every(source=>source==='submit'),'lesson must notify once per answer without path UI: '+JSON.stringify(lessonSources));
+  report.lessonNotifications=lessonSources.length;
   await noHorizontalOverflow(cdp,'lesson completion');
   await screenshot(cdp,'lesson-completed');
   report.progressPersisted=true;report.views=['results','weakness','path'];report.offlineAccountRecovery=true;
