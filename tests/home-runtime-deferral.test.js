@@ -268,7 +268,7 @@ test('start plan rebuild refreshes adaptive local questions without downgrading 
   assert.ok(rebuild,'start-plan rebuild helper missing');
   assert.match(rebuild[0],/refreshLocalQuestionPool\(\)/);
   assert.match(rebuild[0],/currentPlanSource==='cloud'&&latestRemotePlan&&cloudQuestionPool\.length/);
-  assert.match(rebuild[0],/content\.selectQuestionsForPlan\(latestRemotePlan,cloudQuestionPool,SESSION_TARGET\)/);
+  assert.match(rebuild[0],/planRuntime\.selectQuestionsForPlan\(latestRemotePlan,cloudQuestionPool,SESSION_TARGET\)/);
   assert.match(rebuild[0],/if\(selected\.length\)questions=selected;return'cloud'/,'an existing cloud plan must return before local fallback even if reselection is empty');
   assert.ok(rebuild[0].indexOf("return'cloud'")<rebuild[0].indexOf('buildLocalPlan(SESSION_TARGET)'),'cloud preservation must precede local fallback');
   assert.doesNotMatch(rebuild[0],/cloudModule|getDailyLearningPlan|fetchAllQuestions|ensureLogin/,'Start rebuild must never issue a cloud request');

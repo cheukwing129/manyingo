@@ -43,7 +43,8 @@ test('skill-first plan promotes one skill intervention without changing its rout
 });
 
 test('practice session metadata preserves skill and concrete route',()=>{
- const meta=policy.sessionMetadata({skillId:'read.context-clues',routeKpId:'kp_read_context_clues',strategy:'reteach'});
+ const store=new Map(),context={window:{},localStorage:{getItem:key=>store.get(key)||null,setItem:(key,value)=>store.set(key,String(value))}};vm.createContext(context);vm.runInContext(read('public/local-learning.js'),context);
+ const meta=context.window.ManjingoLocalLearning.recordPracticeSession({kpId:'kp_read_context_clues',skillId:'read.context-clues',routeKpId:'kp_read_context_clues',strategy:'reteach'});
  assert.equal(meta.skillId,'read.context-clues');assert.equal(meta.routeKpId,'kp_read_context_clues');assert.equal(meta.strategy,'reteach');
 });
 

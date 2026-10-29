@@ -36,3 +36,15 @@ test('same-tab external storage writes invalidate the parsed cache',()=>{
   assert.equal(h.engine.getKnowledge('kp_a').mastery,77);
   assert.equal(h.engine.getProgress().totalXp,99);
 });
+
+test('practice outcomes persist strategy skill and concept metadata in a single write',()=>{
+  const h=harness();h.engine.getProgress();const before=h.counts();
+  const session={kpId:'kp_a',skillId:'fw.zhi',routeKpId:'kp_a',strategy:'remedial',beforeMastery:40,afterMastery:52,correctCount:2,questionCount:2,conceptKey:'zhi_usage',conceptBeforeMastery:30,conceptAfterMastery:50,conceptDelta:20};
+  const entry=h.engine.recordPracticeSession(session),after=h.counts();
+  assert.equal(after.sets-before.sets,1);
+  assert.equal(after.stringifies-before.stringifies,1);
+  const saved=JSON.parse(h.store.get('manjingo_progress_cache')).practiceHistory[0];
+  assert.deepEqual(saved,JSON.parse(JSON.stringify(entry)));
+  for(const key of ['skillId','routeKpId','strategy','conceptKey','conceptBeforeMastery','conceptAfterMastery','conceptDelta'])assert.equal(saved[key],session[key]);
+  assert.equal(saved.delta,12);assert.equal(saved.accuracy,100);
+});

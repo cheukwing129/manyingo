@@ -68,7 +68,7 @@ test('cold homepage loads real study and results modules once and retains local 
   assert.ok(app.ManjingoFeedbackUI);
   const learning = app.ManjingoLocalLearning, catalog = app.ManjingoContent;
   const plan = learning.buildDailyPlan(catalog.getKnowledgePointIds({ teachableOnly: true }), 10);
-  const questions = catalog.selectQuestionsForPlan(plan, catalog.questions, 10);
+  const questions = app.ManjingoDailyPlanRuntime.selectQuestionsForPlan(plan, catalog.questions, 10);
   assert.equal(questions.length, 10);
   const question = questions[0];
   assert.equal(learning.submit(question.kpId, true, { questionId: question.id, baseXp: 8 }).xpEarned, 8);
