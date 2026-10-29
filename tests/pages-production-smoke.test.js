@@ -215,3 +215,16 @@ test('asset-only smoke validates actual public files without contacting backend 
     server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
   }
 });
+
+// Exercise every deployed readiness predicate against the candidate assets.
+// Loader refactors must not leave this gate waiting forever for removed markers.
+test('production readiness markers exist in the assets that the workflow fetches',()=>{
+  const workflow=read('.github/workflows/pages-production-smoke.yml');
+  const predicates=[...workflow.matchAll(/curl -fsS "\$MANJINGO_BASE_URL([^"\n]+)" \| grep (-Fq|-q) '([^']+)'/g)];
+  assert.ok(predicates.length>=15,'readiness predicates were not found');
+  for(const [,url,flag,pattern] of predicates){
+    const pathname=new URL(url,'http://localhost').pathname;
+    const source=read('public'+(pathname==='/'?'/index.html':pathname));
+    assert.ok(flag==='-Fq'?source.includes(pattern):new RegExp(pattern).test(source),`${url} is missing readiness marker ${pattern}`);
+  }
+});

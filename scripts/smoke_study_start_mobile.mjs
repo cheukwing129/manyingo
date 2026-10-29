@@ -175,13 +175,13 @@ async function acceptDevice(cdp,metrics){
   const before=await evaluate(cdp,"window.ManjingoLocalLearning.getKnowledge('kp_p3_yi').attempts");
   await press(cdp,'#startPractice');
   for(let i=0;i<6;i++){
-    if(await evaluate(cdp,"!!document.querySelector('.lesson-complete')"))break;
+    if(await evaluate(cdp,"!!document.querySelector('#lessonApp .lesson-complete, #lessonApp .session-summary.done')"))break;
     await answerVisible(cdp,true,i===0);
     report.lessonAnswers++;
     if(i===0)await screenshot(cdp,'lesson-feedback');
     await press(cdp,'#lessonNext');
   }
-  await waitFor(cdp,"!!document.querySelector('.lesson-complete')",'lesson completion');
+  await waitFor(cdp,"!!document.querySelector('#lessonApp .lesson-complete, #lessonApp .session-summary.done')",'lesson completion');
   check(await evaluate(cdp,"window.ManjingoLocalLearning.getKnowledge('kp_p3_yi').attempts")===before+report.lessonAnswers,'lesson answer persistence mismatch');
   await noHorizontalOverflow(cdp,'lesson completion');
   await screenshot(cdp,'lesson-completed');
