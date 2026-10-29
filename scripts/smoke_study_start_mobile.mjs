@@ -282,13 +282,16 @@ async function acceptDevice(cdp,metrics){
     await answerVisible(cdp,'lesson',false);
     await stableAction(cdp,'#lessonNext',geometry,'layered lesson');
     check(await evaluate(cdp,"!!document.querySelector('#lessonFeedback .feedback-xp')&&!!document.querySelector('#lessonFeedback .feedback-mascot')"),'lesson lacks XP/mascot feedback');
+    check(await evaluate(cdp,"getComputedStyle(document.querySelector('#lessonOptions .option.correct'),'::before').content.includes('✓')"),'touch answer mark is hidden by keyboard hints');
     await cdp.call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
     check(await evaluate(cdp,"Array.from(document.querySelectorAll('.lesson-question,#lessonOptions,.feedback-xp,.feedback-mascot img')).every(e=>getComputedStyle(e).animationName==='none')"),'reduced motion still animates');
     await cdp.call('Emulation.setEmulatedMedia',{features:[]});
     // Activate the fixed control with a real keyboard event.
+    const previousQuestion=await evaluate(cdp,"document.querySelector('.lesson-question').textContent");
     await evaluate(cdp,"document.querySelector('#lessonNext').focus();true");
-    await cdp.call('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+    await cdp.call('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r',unmodifiedText:'\r'});
     await cdp.call('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+    await waitFor(cdp,`document.querySelector('.lesson-question')?.textContent!==${JSON.stringify(previousQuestion)}`,'Enter advances to the next question');
   }
   check(sawContext,'context repair was not exercised');
   await waitFor(cdp,"!!document.querySelector('#lessonApp .session-summary.done')",'keyboard lesson completion');
