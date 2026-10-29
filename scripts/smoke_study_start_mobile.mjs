@@ -132,9 +132,10 @@ async function answerVisible(cdp,mode,wrong){
     await evaluate(cdp,`document.querySelector(${JSON.stringify(lesson?'#lessonInput':'#input')}).value=${JSON.stringify(wrong?'__wrong__':q.a)}`);
     await press(cdp,lesson?'#lessonCheck':'#check');
   }else{
-    const index=await evaluate(cdp,`Array.from(document.querySelectorAll(${JSON.stringify(host+' .option')})).findIndex(b=>${wrong?'b.textContent!==':'b.textContent==='}${JSON.stringify(String(q.a))})`);
-    check(index>=0,'answer option missing');
-    await press(cdp,host+' .option:nth-child('+(index+1)+')');
+    const option=stage3?' [data-stage3-option]':' .option';
+    const index=await evaluate(cdp,`Array.from(document.querySelectorAll(${JSON.stringify(host+option)})).findIndex(b=>${wrong?'b.textContent!==':'b.textContent==='}${JSON.stringify(String(q.a))})`);
+    check(index>=0,'answer option missing for '+mode);
+    await press(cdp,host+option+':nth-child('+(index+1)+')');
   }
   const feedback=lesson?'#lessonFeedback':stage3?'#stage3Feedback .stage3-feedback':'#feedback',next=lesson?'#lessonNext':stage3?'#stage3Next':'#next';
   await waitFor(cdp,`document.querySelector(${JSON.stringify(feedback)})?.classList.contains(${JSON.stringify(wrong?'wrong':'correct')})&&document.querySelector(${JSON.stringify(next)})?.disabled===false`,'answer feedback and enabled Next');
