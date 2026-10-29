@@ -36,7 +36,7 @@ test('lesson parser-blocking shared runtime stays within its startup byte budget
 
 test('lesson defers account synchronization until idle and yields to recent input',()=>{
   const source=read('public/lesson-shell.js');
-  assert.match(source,/const DEFERRED_RUNTIME=\['\.\/remote-sync-guard\.js','\.\/account-sync\.js'\]/);
+  assert.match(source,/const DEFERRED_RUNTIME=\['\.\/account-sync\.js'\]/);
   assert.doesNotMatch(source,/account-ui\.js/);
   assert.match(source,/Date\.now\(\)-lastInteractionAt<900/);
   assert.match(source,/requestIdleCallback\(run,\{timeout:3500\}\)/);

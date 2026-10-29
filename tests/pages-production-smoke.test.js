@@ -46,11 +46,11 @@ test('Pages smoke verifies deployed learner difficulty guidance instant feedback
 
 test('production smoke verifies stale background responses cannot roll learning state backwards',()=>{
   const source=read('scripts/smoke_sync_guard.mjs');
-  assert.match(source,/read\('\/remote-sync-guard\.js'/);
-  assert.match(source,/read\('\/question-rotation\.js'/);
-  assert.match(source,/remote-sync-guard\.js/);
+  assert.match(source,/read\('\/local-learning\.js'/);
+  assert.match(source,/read\('\/lesson\.html'/);
+  assert.match(source,/learning\.syncRemoteResult/);
   assert.match(source,/attempts:2,mastery:30/);
-  assert.match(source,/stale\.mastery===undefined/);
+  assert.match(source,/stale\.mastery===64/);
   assert.match(source,/stale\.totalXp===24/);
   assert.match(source,/attempts:4,mastery:55/);
   assert.match(source,/newer\.mastery===55/);

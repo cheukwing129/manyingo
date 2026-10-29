@@ -3,6 +3,7 @@
 const KEY='manjingo_progress_cache';
 const LEGACY_KEY='manjingo_learning_state_v1';
 const DAILY_GOAL_XP=20;
+const KNOWLEDGE_FIELDS=['mastery','repetition','easeFactor','interval','nextReviewAt','attempts','correctCount','wrongCount','hintCount','lastCorrect','lastAnsweredAt','misconceptions'];
 const POLICY=window.ManjingoLearningPolicy||null;
 let cachedRaw=null,cachedState=null;
 function localDate(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -56,7 +57,27 @@ function getMisconceptionConcepts(kpId){const record=getKnowledge(kpId),groups=n
 function recordPracticeSession(session){if(!session||!session.kpId)return null;const data=load(),entry={kpId:String(session.kpId),beforeMastery:Number(session.beforeMastery)||0,afterMastery:Number(session.afterMastery)||0,delta:(Number(session.afterMastery)||0)-(Number(session.beforeMastery)||0),correctCount:Number(session.correctCount)||0,questionCount:Number(session.questionCount)||0,accuracy:Number(session.questionCount)?Math.round((Number(session.correctCount)||0)/Number(session.questionCount)*100):0,completedAt:new Date().toISOString(),...(session.finalAnswer?{finalAnswer:{...session.finalAnswer}}:{})};data.practiceHistory=[{...entry},...data.practiceHistory].slice(0,200);persist(data);return{...entry}}
 function getPracticeHistory(options){const data=load(),opts=options||{};let list=data.practiceHistory.slice();if(opts.kpId)list=list.filter(x=>x.kpId===String(opts.kpId));if(opts.days){const cutoff=Date.now()-Number(opts.days)*86400000;list=list.filter(x=>new Date(x.completedAt).getTime()>=cutoff)}return list.slice(0,Number(opts.limit)||list.length).map(x=>({...x,finalAnswer:x&&x.finalAnswer?{...x.finalAnswer}:x&&x.finalAnswer}));}
 function getRemediationStatus(kpId){const recent=getPracticeHistory({kpId,days:7,limit:3}),totalDelta=recent.reduce((n,x)=>n+(Number(x.delta)||0),0),averageAccuracy=recent.length?Math.round(recent.reduce((n,x)=>n+(Number(x.accuracy)||0),0)/recent.length):0;return{kpId:String(kpId),sessions:recent.length,totalDelta,averageAccuracy,needsRemediation:recent.length>=2&&totalDelta<8};}
-function syncRemoteResult(kpId,result){if(!result||typeof result!=='object')return getProgress();const data=load();if(kpId){const previous=data.knowledge[kpId]||emptyKnowledge(),next={...previous};['mastery','repetition','easeFactor','interval','nextReviewAt','attempts','correctCount','wrongCount','hintCount','lastCorrect','lastAnsweredAt','misconceptions'].forEach(key=>{if(result[key]!==undefined&&result[key]!==null)next[key]=result[key]});if(!next.misconceptions)next.misconceptions={};data.knowledge[kpId]=next}const skillMastery=result.skillMastery&&result.skillMastery.skillId?mergeRemoteSkill(data,result.skillMastery.skillId,result.skillMastery):null;const conceptMastery=result.conceptMastery&&result.conceptMastery.conceptKey?mergeRemoteConcept(data,result.conceptMastery.conceptKey,result.conceptMastery):null;if(result.totalXp!==undefined)data.totalXp=Number(result.totalXp)||0;if(result.todayXp!==undefined)data.todayXp=Number(result.todayXp)||0;if(result.streak!==undefined)data.streak=Number(result.streak)||0;data.todayDate=localDate();if(result.lastGoalDate)data.lastGoalDate=result.lastGoalDate;persist(data);const progress={totalXp:data.totalXp,todayXp:data.todayXp,streak:data.streak,todayDate:data.todayDate,lastGoalDate:data.lastGoalDate};return{...progress,...(kpId?{kpId,...data.knowledge[kpId],status:status(data.knowledge[kpId].mastery)}:{}),...(skillMastery?{skillMastery}:{}),...(conceptMastery?{conceptMastery}:{})};}
+// Reconcile remote writes at the persistence boundary. No later-loaded module
+// needs to replace these methods before account synchronization can be safe.
+function finiteNumber(value,fallback){const n=Number(value);return Number.isFinite(n)?n:fallback}
+function remoteKnowledgeIsNewer(local,remote){
+ const la=finiteNumber(local.attempts,0),ra=finiteNumber(remote.attempts,0);
+ if(ra!==la)return ra>la;
+ const lt=timeValue(local.lastAnsweredAt),rt=timeValue(remote.lastAnsweredAt);
+ return rt||lt?rt>=lt:true;
+}
+function guardRemoteResult(kpId,result,data){
+ const safe={...result};
+ if(safe.totalXp!==undefined&&safe.totalXp!==null&&finiteNumber(safe.totalXp,0)<finiteNumber(data.totalXp,0)){
+  safe.totalXp=finiteNumber(data.totalXp,0);
+  safe.todayXp=finiteNumber(data.todayXp,0);
+  safe.streak=finiteNumber(data.streak,0);
+  safe.lastGoalDate=data.lastGoalDate;
+ }
+ if(kpId&&!remoteKnowledgeIsNewer(data.knowledge[kpId]||emptyKnowledge(),result))for(const key of KNOWLEDGE_FIELDS)delete safe[key];
+ return safe;
+}
+function syncRemoteResult(kpId,result){if(!result||typeof result!=='object')return getProgress();const data=load();result=guardRemoteResult(kpId,result,data);if(kpId){const previous=data.knowledge[kpId]||emptyKnowledge(),next={...previous};KNOWLEDGE_FIELDS.forEach(key=>{if(result[key]!==undefined&&result[key]!==null)next[key]=result[key]});if(!next.misconceptions)next.misconceptions={};data.knowledge[kpId]=next}const skillMastery=result.skillMastery&&result.skillMastery.skillId?mergeRemoteSkill(data,result.skillMastery.skillId,result.skillMastery):null;const conceptMastery=result.conceptMastery&&result.conceptMastery.conceptKey?mergeRemoteConcept(data,result.conceptMastery.conceptKey,result.conceptMastery):null;if(result.totalXp!==undefined)data.totalXp=Number(result.totalXp)||0;if(result.todayXp!==undefined)data.todayXp=Number(result.todayXp)||0;if(result.streak!==undefined)data.streak=Number(result.streak)||0;data.todayDate=localDate();if(result.lastGoalDate)data.lastGoalDate=result.lastGoalDate;persist(data);const progress={totalXp:data.totalXp,todayXp:data.todayXp,streak:data.streak,todayDate:data.todayDate,lastGoalDate:data.lastGoalDate};return{...progress,...(kpId?{kpId,...data.knowledge[kpId],status:status(data.knowledge[kpId].mastery)}:{}),...(skillMastery?{skillMastery}:{}),...(conceptMastery?{conceptMastery}:{})};}
 function syncGamification(game){return syncRemoteResult(null,game)}
 function records(){const data=load();return Object.keys(data.knowledge).map(kpId=>({kpId,...data.knowledge[kpId],misconceptions:{...(data.knowledge[kpId].misconceptions||{})},status:status(data.knowledge[kpId].mastery)}))}
 function getDueKnowledgePoints(limit){return records().filter(isDue).sort((a,b)=>(a.mastery||0)-(b.mastery||0)).slice(0,limit||10)}

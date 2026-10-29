@@ -8,7 +8,7 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 test('homepage keeps the blocking boot until the final shell can be prepared',()=>{
   const html=read('public/index.html'),theme=read('public/theme-runtime.js');
   const themeTag='<script src="./theme-runtime.js"></script>';
-  const homeShellTag='<script src="./home-shell.js?v=entry-v1"></script>';
+  const homeShellTag='<script src="./home-shell.js?v=sync-v1"></script>';
   const catalogTag='<script src="./catalog-runtime.js?v=entry-v1" data-includes="./content-catalog.js"></script>';
   assert.ok(html.indexOf(themeTag)>=0&&html.indexOf(themeTag)<html.indexOf('<body>'));
   assert.ok(html.indexOf(homeShellTag)>html.indexOf('<body>'),'home shell runs after homepage markup exists');

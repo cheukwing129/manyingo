@@ -135,7 +135,7 @@ test('adaptive study-plan dependencies stay out of automatic background runtime'
   const deferred=source.match(/const DEFERRED_APP_RUNTIME=\[(.*?)\];/s);
   assert.ok(deferred,'deferred runtime list missing');
   for(const file of ['curriculum-v1.js','skill-mastery-v1.js','skill-first-plan.js','question-pack-adaptive-01.js','question-pack-adaptive-02.js','question-pack-adaptive-03.js','difficulty-calibration.js','question-difficulty.js','difficulty-observability.js','practice-effectiveness.js'])assert.doesNotMatch(deferred[1],new RegExp(file.replaceAll('.','\\.')));
-  for(const file of ['remote-sync-guard.js','account-sync.js','account-ui.js'])assert.match(deferred[1],new RegExp(file.replaceAll('.','\\.')));
+  for(const file of ['account-sync.js','account-ui.js'])assert.match(deferred[1],new RegExp(file.replaceAll('.','\\.')));
   const stages=source.slice(source.indexOf('const STUDY_PLAN_RUNTIME_STAGES='),source.indexOf('const DEFERRED_APP_RUNTIME='));
   assert.doesNotMatch(stages,/skill-evidence-v1\.js/,'skill evidence must stay view-only and outside study-plan runtime');
   assert.match(source,/function loadRuntimeStage\(files\)\{return Promise\.all\(\(files\|\|\[\]\)\.map\(src=>loadDeferredScript\(src\)\)\)\}/);
