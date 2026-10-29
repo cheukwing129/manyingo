@@ -18,7 +18,7 @@
   --brand-ink-teal:#0f5a5a;
   --brand-warm-gold:#d4a85b;
 }
-html{background:var(--ui-bg);scroll-behavior:smooth}
+html{background:var(--ui-bg);scroll-behavior:smooth;scrollbar-gutter:stable}
 body{background:var(--ui-bg);line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 button,a,input,summary{-webkit-tap-highlight-color:transparent}
 button,a,summary{touch-action:manipulation}
