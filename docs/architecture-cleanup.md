@@ -124,3 +124,9 @@
 - Worker 的 configured 僅檢查 `FIREBASE_CLIENT_EMAIL`、`FIREBASE_PRIVATE_KEY` 是否都有非空值。此結果表示至少一個預期 binding 未載入；不能據此判定私鑰格式或 IAM 權限有錯。
 - Cloudflare 控制台在目前瀏覽器顯示登入頁，未取得控制台設定內容，也沒有讀取或修改任何憑證。待使用者核對 **manyingo 專案 → Preview 環境**下兩個 Secret 的完整名稱、非空值及儲存狀態，再重新部署並檢查 health。
 - 未完成 Google 帳戶登入，未提交測試答案或驗證真實雲端寫入，PR 保持未合併。中斷恢復驗收依使用者指示略過，不重做。
+
+## 憑證注入診斷（第九步）
+
+- 使用者已再次核實設定；現有預覽 health 仍為 configured:false，因此新增 `missingBindings`，逐項列出未注入或空值的固定 binding 名稱。
+- configured 的判定與原本一致，health 只讀取 binding 是否有值，不執行私鑰解析、OAuth 或 Firestore 連線，也不回傳任何憑證內容。HTTP 200 與 no-store 保留。
+- 回歸測試覆蓋兩項全缺、只缺私鑰、只缺電郵、兩項齊備四種組合，同時驗證不會外連、不會洩漏測試憑證值。實際缺少哪一項以新版預覽的部署回應為準。
