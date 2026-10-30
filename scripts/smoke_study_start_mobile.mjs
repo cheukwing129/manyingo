@@ -307,8 +307,20 @@ async function acceptMascot(cdp){
   check(assets.length>=11&&assets.every(asset=>asset.visible>500),'mascot artwork failed to render: '+JSON.stringify(assets));
   const mapping=await evaluate(cdp,`Object.fromEntries(['qaCorrectFeedback','qaWrongFeedback','qaComplete','qaPerfect'].map(id=>[id,new URL(document.querySelector('#'+id+' img').src).pathname]))`);
   for(const [id,file] of Object.entries({qaCorrectFeedback:'happy',qaWrongFeedback:'sad',qaComplete:'complete',qaPerfect:'celebrate'}))check(mapping[id]==='/mascot/v2/'+file+'.svg','incorrect mascot state: '+id);
-  const floating=await evaluate(cdp,`Array.from(document.querySelectorAll('.feedback-mascot,.session-summary-icon.mascot-celebrate')).map(el=>{const animation=el.getAnimations().find(a=>a.animationName==='moling-float');if(!animation)return {floating:false};const copy=el.parentElement.querySelector('.feedback-result-copy,.session-summary-copy');animation.pause();animation.currentTime=0;const start=el.getBoundingClientRect(),copyTop=copy.getBoundingClientRect().top;animation.currentTime=Number(animation.effect.getTiming().duration)/2;const end=el.getBoundingClientRect(),travel=Math.abs(end.top-start.top),sideTravel=Math.abs(end.left-start.left),copyTravel=Math.abs(copy.getBoundingClientRect().top-copyTop);animation.play();return {floating:true,travel,sideTravel,copyTravel}})`);
-  check(floating.length===4&&floating.every(item=>item.floating&&item.travel>=5&&item.sideTravel>=3.9&&item.sideTravel<=4.1&&item.copyTravel<1),'floating motion moves layout or is missing: '+JSON.stringify(floating));
+  const floating=await evaluate(cdp,`Array.from(document.querySelectorAll('.feedback-mascot,.session-summary-icon.mascot-celebrate')).map(el=>{
+    const img=el.querySelector('img'),lift=el.getAnimations().find(a=>a.animationName==='moling-float'),swing=img.getAnimations().find(a=>a.animationName==='moling-sway');
+    if(!lift||!swing)return {floating:false};
+    for(const a of img.getAnimations())if(a.effect.getTiming().iterations!==Infinity)a.finish();
+    const copy=el.parentElement.querySelector('.feedback-result-copy,.session-summary-copy'),copyTop=copy.getBoundingClientRect().top;
+    lift.pause();swing.pause();lift.currentTime=0;swing.currentTime=0;
+    const start=el.getBoundingClientRect(),imageStart=img.getBoundingClientRect(),angleStart=parseFloat(getComputedStyle(img).rotate),liftPeriod=Number(lift.effect.getTiming().duration),swingPeriod=Number(swing.effect.getTiming().duration);
+    swing.currentTime=swingPeriod/2;
+    const angleEnd=parseFloat(getComputedStyle(img).rotate),swingTravel=Math.abs(img.getBoundingClientRect().left-imageStart.left),anchorTravel=Math.abs(el.getBoundingClientRect().top-start.top);
+    lift.currentTime=liftPeriod/2;
+    const end=el.getBoundingClientRect(),travel=Math.abs(end.top-start.top),sideTravel=Math.abs(end.left-start.left),copyTravel=Math.abs(copy.getBoundingClientRect().top-copyTop),angleAfterLift=parseFloat(getComputedStyle(img).rotate),origin=getComputedStyle(img).transformOrigin.split(' ').slice(0,2).map(parseFloat);
+    lift.play();swing.play();return {floating:true,travel,sideTravel,swingTravel,anchorTravel,copyTravel,angleStart,angleEnd,angleAfterLift,liftPeriod,swingPeriod,originX:origin[0]/img.offsetWidth,originY:origin[1]/img.offsetHeight};
+  })`);
+  check(floating.length===4&&floating.every(item=>item.floating&&item.travel>=5&&item.sideTravel<0.1&&item.swingTravel>2&&item.anchorTravel<0.1&&item.copyTravel<1&&Math.abs(item.angleStart+3)<0.1&&Math.abs(item.angleEnd-3)<0.1&&item.angleAfterLift===item.angleEnd&&item.swingPeriod>item.liftPeriod&&Math.abs(item.originX-.72)<.01&&Math.abs(item.originY-.2)<.01),'independent tip-pivot swing or vertical floating failed: '+JSON.stringify(floating));
   await cdp.call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
   check(await evaluate(cdp,"Array.from(document.querySelectorAll('.feedback-mascot,.feedback-mascot img,.session-summary-icon,.session-summary-icon img')).every(el=>getComputedStyle(el).animationName==='none')"),'reduced motion did not stop mascot movement');
   await cdp.call('Emulation.setEmulatedMedia',{features:[]});
@@ -318,7 +330,7 @@ async function acceptMascot(cdp){
     await noHorizontalOverflow(cdp,'mascot at '+width+'px');
     const feedbackGeometry=await evaluate(cdp,`Array.from(document.querySelectorAll('.feedback-result')).map(row=>{const mascot=row.querySelector('.feedback-mascot').getBoundingClientRect(),copy=row.querySelector('.feedback-result-copy').getBoundingClientRect(),icon=row.querySelector('.feedback-result-icon').getBoundingClientRect();return {size:mascot.width,separate:mascot.right<=copy.left+1&&copy.right<=icon.left+1,copyWidth:copy.width}})`);
     check(feedbackGeometry.length===2&&feedbackGeometry.every(item=>Math.abs(item.size-(width<=430?64:72))<=1&&item.separate&&item.copyWidth>=90),'enlarged feedback at '+width+'px: '+JSON.stringify(feedbackGeometry));
-    const geometry=await evaluate(cdp,`Array.from(document.querySelectorAll('.session-summary-header')).map(header=>{const h=header.getBoundingClientRect(),copy=header.querySelector('.session-summary-copy').getBoundingClientRect(),img=header.querySelector('img').getBoundingClientRect();return {separate:copy.right<=img.left+1,contained:img.right<=h.right+3&&copy.left>=h.left-1,size:img.width}})`);
+    const geometry=await evaluate(cdp,`Array.from(document.querySelectorAll('.session-summary-header')).map(header=>{const h=header.getBoundingClientRect(),copy=header.querySelector('.session-summary-copy').getBoundingClientRect(),image=header.querySelector('img'),img=image.getBoundingClientRect();return {separate:copy.right<=img.left+1,contained:img.right<=h.right+10&&copy.left>=h.left-1,size:image.offsetWidth}})`);
     check(geometry.length===2&&geometry.every(item=>item.separate&&item.contained&&Math.abs(item.size-(width<=430?96:128))<=1),'completion layout at '+width+'px: '+JSON.stringify(geometry));
     await evaluate(cdp,"window.scrollTo({top:0,behavior:'instant'});true");
     await screenshot(cdp,'mascot-feedback-'+width);
