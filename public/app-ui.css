@@ -101,6 +101,11 @@ body.app-nav-ready>.title::after{content:none}
 }
 
 /* Layered answer feedback */
+/* Keep question borders inset even when the focus shell removes card padding. */
+body.study-focus #homeToday #quiz{padding:12px clamp(8px,2vw,16px) 28px}
+body .translation-order-source{padding:16px 18px}
+body .reorder-answer{padding:14px 16px;min-height:68px}
+body .reorder-reset{padding:12px}
 /* Text is preserved verbatim; layout separates evidence from the task. */
 .question-reading{display:block;padding:16px;margin-bottom:16px;border-left:3px solid var(--ui-border-strong);border-radius:0 12px 12px 0;background:var(--ui-surface-soft);color:var(--ui-text);font-size:17px;font-weight:500;line-height:1.85;white-space:pre-line;overflow-wrap:anywhere}
 .question-task{display:block;color:var(--ui-ink);font-size:20px;font-weight:800;line-height:1.6;overflow-wrap:anywhere}
