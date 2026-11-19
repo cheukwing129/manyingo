@@ -82,8 +82,24 @@ test('source sentence cooldown keeps up to 24 entries across devices',()=>{
 });
 
 test('gamification merge never moves total XP or streak backwards',()=>{
- const merged=sync.mergeGame({totalXp:120,todayXp:12,todayDate:'2026-09-10',streak:6},{totalXp:100,todayXp:20,todayXpDate:'2026-09-10',streak:5});
+ const today=new Date(Date.now()+8*3600000).toISOString().slice(0,10);
+ const merged=sync.mergeGame({totalXp:120,todayXp:12,todayDate:today,streak:6},{totalXp:100,todayXp:20,todayXpDate:today,streak:5});
  assert.equal(merged.totalXp,120);
  assert.equal(merged.todayXp,20);
  assert.equal(merged.streak,6);
+});
+
+
+test('streak sync preserves collections while accepting a newer restarted streak',()=>{
+ const merged=sync.mergeLearningState({streak:15,longestStreak:20,lastGoalDate:'2026-09-01',streakCelebratedThrough:15},{streak:2,longestStreak:5,lastGoalDate:'2026-09-10',streakCelebratedThrough:5});
+ assert.equal(merged.streak,2);assert.equal(merged.longestStreak,20);assert.equal(merged.streakCelebratedThrough,15);
+ assert.equal(sync.mergeLearningState({streak:2,lastGoalDate:'2026-09-10'},{streak:15,lastGoalDate:'2026-09-01'}).streak,2);
+});
+test('remote game uses lastActiveDate to avoid reviving an obsolete longer streak',()=>{
+ const merged=sync.mergeGame({streak:20,lastGoalDate:'2026-09-01'},{streak:1,lastActiveDate:'2026-09-10'});
+ assert.equal(merged.streak,1);assert.equal(merged.longestStreak,20);assert.equal(merged.lastGoalDate,'2026-09-10');
+});
+test('old daily XP does not count toward today after account sync',()=>{
+ const merged=sync.mergeGame({todayXp:18,todayDate:'2000-01-01'},{todayXp:20,todayXpDate:'2000-01-02'});
+ assert.equal(merged.todayXp,0);
 });

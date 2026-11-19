@@ -297,6 +297,36 @@ async function acceptDevice(cdp,metrics){
   await waitFor(cdp,"!!document.querySelector('#lessonApp .session-summary.done')",'keyboard lesson completion');
   report.questionContext=true;report.reducedMotion=true;report.keyboardNext=true;report.lessonXpFeedback=true;
   report.progressPersisted=true;report.views=['results','weakness','path'];report.offlineAccountRecovery=true;
+  // Exercise the real milestone card, persistence, collection and study-mode deferral.
+  await navigate(cdp,'/');
+  await waitFor(cdp,"!!document.querySelector('#streakMilestones')",'streak card');
+  await evaluate(cdp,`(()=>{const today=window.ManjingoStreakMilestones.dateKey(),state=JSON.parse(localStorage.getItem('manjingo_progress_cache'));Object.assign(state,{todayDate:today,todayXp:20,streak:5,longestStreak:5,lastGoalDate:today,streakCelebratedThrough:0});localStorage.setItem('manjingo_progress_cache',JSON.stringify(state));dispatchEvent(new Event('storage'));return true})()`);
+  await waitFor(cdp,"document.querySelector('#streakDays').textContent==='5'&&!document.querySelector('#streakCelebration').hidden",'five day reward');
+  await press(cdp,'.streak-collection summary');
+  check(await evaluate(cdp,"document.querySelectorAll('.streak-badge.earned').length===1"),'five day badge missing');
+  await noHorizontalOverflow(cdp,'streak collection');
+  await screenshot(cdp,'streak-five-day-reward');
+  await press(cdp,'#streakCelebration button');
+  await navigate(cdp,'/');
+  await waitFor(cdp,"!!document.querySelector('#streakMilestones')",'restored streak card');
+  check(await evaluate(cdp,"document.querySelector('#streakCelebration').hidden&&document.querySelector('#streakDays').textContent==='5'"),'reward replayed after reload');
+  await evaluate(cdp,`(()=>{window.ManjingoHomeShell.enterStudy();const state=JSON.parse(localStorage.getItem('manjingo_progress_cache'));Object.assign(state,{streak:10,longestStreak:10});localStorage.setItem('manjingo_progress_cache',JSON.stringify(state));dispatchEvent(new Event('storage'));return true})()`);
+  check(await evaluate(cdp,"getComputedStyle(document.querySelector('#streakMilestones')).display==='none'&&window.ManjingoLocalLearning.getProgress().streakCelebratedThrough===5"),'study must defer rewards');
+  await evaluate(cdp,'window.ManjingoHomeShell.exitStudy();true');
+  await waitFor(cdp,"!document.querySelector('#streakCelebration').hidden&&document.querySelector('#streakDays').textContent==='10'",'deferred ten day reward');
+  await press(cdp,'#streakCelebration button');
+  await evaluate(cdp,`(()=>{const state=JSON.parse(localStorage.getItem('manjingo_progress_cache'));Object.assign(state,{lastGoalDate:window.ManjingoStreakMilestones.dateKey(Date.now(),-2),streak:10});localStorage.setItem('manjingo_progress_cache',JSON.stringify(state));dispatchEvent(new Event('storage'));return true})()`);
+  await waitFor(cdp,"document.querySelector('#streakDays').textContent==='0'",'expired streak');
+  await press(cdp,'.streak-collection summary');
+  check(await evaluate(cdp,"document.querySelectorAll('.streak-badge.earned').length===2&&document.querySelector('#streakBest').textContent.includes('10')"),'expiry lost badges or best streak');
+  for(const width of [320,390,768,1440]){
+    await cdp.call('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});
+    await noHorizontalOverflow(cdp,'streak at '+width);
+  }
+  await cdp.call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+  check(await evaluate(cdp,"getComputedStyle(document.querySelector('#streakCelebration')).animationName==='none'"),'streak ignores reduced motion');
+  await cdp.call('Emulation.setEmulatedMedia',{features:[]});
+  report.streakMilestones={rewardDays:[5,10],reloadDeduplication:true,studyDeferral:true,badgesSurviveExpiry:true,widths:[320,390,768,1440]};
   console.log('BROWSER_ACCEPTANCE='+JSON.stringify(report));
 }
 

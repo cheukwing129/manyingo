@@ -125,7 +125,7 @@ async function answerQuestion(q, area, answer) {
   const correct = clean(answer) === clean(expected);
   area.querySelectorAll('button.option').forEach(b => { b.disabled = true; if (b.textContent === String(answer)) b.classList.add(correct ? 'correct' : 'wrong'); });
   try {
-    const result = await submitAnswer({ questionId: q.id || null, kpId: state.kp.id, isCorrect: correct, attemptCount: 1, responseTimeMs: Date.now() - state.startedAt, usedHint: false, localDate: new Date().toLocaleDateString('en-CA') });
+    const result = await submitAnswer({ questionId: q.id || null, kpId: state.kp.id, isCorrect: correct, attemptCount: 1, responseTimeMs: Date.now() - state.startedAt, usedHint: false, localDate: new Date(Date.now()+8*3600000).toISOString().slice(0,10) });
     const feedback = area.querySelector('#lessonFeedback');
     feedback.className = `feedback ${correct ? 'correct' : 'wrong'}`;
     feedback.textContent = correct ? `答對了！+${result.xpEarned || 0} XP · 掌握度 ${result.mastery}%` : `再想一想。正確答案：${expected}`;

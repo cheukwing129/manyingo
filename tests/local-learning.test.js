@@ -27,3 +27,40 @@ test('daily plan schedules weak concept even when overall KP mastery is strong',
 test('daily goal increments streak once, not on every answer after goal',()=>{const{engine}=createEngine();engine.submit('a',true);engine.submit('b',true);assert.equal(engine.submit('c',true).streak,1);assert.equal(engine.submit('d',true).streak,1)});
 test('legacy knowledge state migrates without losing mastery',()=>{const legacy={kp_old:{mastery:72,repetition:3,easeFactor:2.4,interval:12,nextReviewAt:'2026-09-15T12:00:00.000Z',attempts:7,correctCount:5,lastCorrect:true,lastAnsweredAt:'2026-09-09T12:00:00.000Z'}};const{engine,store}=createEngine({initial:{manjingo_learning_state_v1:JSON.stringify(legacy)}});assert.equal(engine.getKnowledge('kp_old').mastery,72);assert.equal(progressState(store).knowledge.kp_old.mastery,72)});
 test('remote gamification sync becomes the rendered local progress source',()=>{const{engine}=createEngine();engine.syncGamification({totalXp:120,todayXp:16,streak:5});const p=engine.getProgress();assert.equal(p.totalXp,120);assert.equal(p.todayXp,16);assert.equal(p.streak,5)});
+
+
+test('Hong Kong midnight resets daily XP and continues the preceding local day',()=>{
+ const initial={totalXp:100,todayXp:20,todayDate:'2026-09-10',streak:4,lastGoalDate:'2026-09-10'};
+ const {engine}=createEngine({now:'2026-09-10T16:01:00Z',initial:{manjingo_progress_cache:JSON.stringify(initial)}});
+ assert.equal(engine.getProgress().todayDate,'2026-09-11');assert.equal(engine.getProgress().todayXp,0);assert.equal(engine.getProgress().streak,4);
+ engine.submit('a',true);engine.submit('b',true);engine.submit('c',true);
+ assert.equal(engine.getProgress().streak,5);assert.equal(engine.getProgress().longestStreak,5);assert.equal(engine.getProgress().lastGoalDate,'2026-09-11');
+ engine.submit('d',true);assert.equal(engine.getProgress().streak,5);
+});
+test('a missed day clears current streak but retains the record and earned badges',()=>{
+ const initial={todayDate:'2026-09-08',streak:15,lastGoalDate:'2026-09-08',streakCelebratedThrough:10};
+ const {engine,store}=createEngine({initial:{manjingo_progress_cache:JSON.stringify(initial)}});
+ assert.equal(engine.getProgress().streak,0);assert.equal(engine.getProgress().longestStreak,15);assert.equal(engine.getProgress().streakCelebratedThrough,10);
+ engine.submit('a',true);engine.submit('b',true);engine.submit('c',true);
+ assert.equal(engine.getProgress().streak,1);assert.equal(progressState(store).longestStreak,15);
+});
+test('milestone acknowledgement persists and cannot unlock unearned milestones',()=>{
+ const initial={todayDate:'2026-09-10',streak:10,lastGoalDate:'2026-09-10'};
+ const {engine,store}=createEngine({initial:{manjingo_progress_cache:JSON.stringify(initial)}});
+ engine.acknowledgeStreakMilestone(10);engine.acknowledgeStreakMilestone(5);
+ assert.equal(progressState(store).streakCelebratedThrough,10);
+ engine.acknowledgeStreakMilestone(100);assert.equal(engine.getProgress().streakCelebratedThrough,10);
+ const restored=createEngine({initial:Object.fromEntries(store)}).engine;assert.equal(restored.getProgress().streakCelebratedThrough,10);
+});
+test('backend lastActiveDate and daily goal migrate into streak milestone progress',()=>{
+ const {engine}=createEngine();engine.syncGamification({totalXp:200,todayXp:20,streak:10,lastActiveDate:'2026-09-10'});
+ assert.equal(engine.getProgress().lastGoalDate,'2026-09-10');assert.equal(engine.getProgress().longestStreak,10);
+ engine.syncRemoteResult('a',{totalXp:208,todayXp:28,streak:10});assert.equal(engine.getProgress().lastGoalDate,'2026-09-10');
+});
+
+
+test('yesterday cloud XP cannot complete the new Hong Kong day',()=>{
+ const {engine}=createEngine();engine.syncGamification({totalXp:200,todayXp:20,todayXpDate:'2026-09-09',streak:5,lastActiveDate:'2026-09-09'});
+ assert.equal(engine.getProgress().todayXp,0);assert.equal(engine.getProgress().lastGoalDate,'2026-09-09');
+ engine.submit('a',true);assert.equal(engine.getProgress().todayXp,8);assert.equal(engine.getProgress().streak,5);
+});
