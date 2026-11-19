@@ -74,7 +74,7 @@ function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,ch=>(
 function reviewAnswer(value){const text=String(value||'').trim();return text?'參考答案：'+text+(/[。！？!?]$/.test(text)?' ':'。 '):'';}
 function highlightedPassage(value,target){const text=String(value||''),needle=String(target||'');if(!needle||!text.includes(needle))return esc(text);const index=text.indexOf(needle);return esc(text.slice(0,index))+'<mark class="stage3-target">'+esc(needle)+'</mark>'+esc(text.slice(index+needle.length));}
 function skillMeta(id){return SKILLS.find(x=>x.id===String(id))||SKILLS[0];}
-function localDate(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function localDate(){return new Date(Date.now()+8*3600000).toISOString().slice(0,10);}
 function createAnswerId(){try{if(root.crypto&&typeof root.crypto.randomUUID==='function')return root.crypto.randomUUID().replace(/-/g,'');}catch(e){}return 'stage3_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,12);}
 function refreshPlayerStatus(){
  const learning=root.ManjingoLocalLearning;if(!learning||typeof learning.getProgress!=='function'||!root.document)return;

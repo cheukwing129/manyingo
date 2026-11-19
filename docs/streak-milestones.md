@@ -1,0 +1,9 @@
+# Homepage continuous-learning milestones
+
+Implemented on 2026-11-19. Existing 20 XP daily goal remains the qualifying rule, counted once per Hong Kong calendar day. Homepage card replaces the small duplicate streak readout, shows the current run, next multiple of five, five-segment progress and today's completion status. Collection expands on demand, renders 20 badges at a time, and can reveal more for longer records.
+
+Every five days unlocks a numbered collectible. The first four names are 初露墨光, 積墨成章, 筆耕不輟 and 文言同行; subsequent numbered badges use 持之以恆. Rewards are commemorative and add no XP. Celebrations wait until study mode ends, are dismissible, and persist acknowledgement to avoid replay after reload. Reduced-motion preference disables celebration animation.
+
+Progress cache gains `longestStreak` and `streakCelebratedThrough`. Existing streaks seed the longest record; previously lost historical records cannot be reconstructed. Badges are derived from the longest record, so a missed day retains all earned collectibles. Both fields travel through the existing client account snapshot sync and are cleared with local progress at logout. Date-aware merge selects newer restarted streaks instead of reviving an obsolete longer streak, while longest and acknowledgement values merge monotonically. Existing server gamification mechanisms, including streak freeze allowance, remain unchanged.
+
+Validation: full npm test; browser acceptance extended for five/ten-day rewards, study-mode deferral, collection after expiry, reload deduplication, reduced motion and 320/390/768/1440px widths. Browser acceptance runs in GitHub Actions because local Chromium cannot create its required socket in this environment. Authenticated cross-device synchronization is covered by merge unit tests, not a live signed-in browser test.
