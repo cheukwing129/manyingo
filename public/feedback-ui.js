@@ -78,6 +78,7 @@ function enhance(feedback){
  if(why||notes.length){const teaching=isCorrect?build('details','feedback-teaching feedback-teaching-collapsed'):build('div','feedback-teaching');if(isCorrect)teaching.appendChild(build('summary','', '查看解說'));if(why){teaching.appendChild(build('strong','feedback-section-title','為甚麼？'));teaching.appendChild(build('p','feedback-explanation',why))}notes.forEach(line=>teaching.appendChild(build('p','feedback-note',line)));feedback.appendChild(teaching)}
  if(metrics.length){const details=build('details','feedback-progress'),summary=build('summary','', '查看學習進度');details.appendChild(summary);const rows=build('div','feedback-progress-rows');metrics.forEach(line=>rows.appendChild(build('span','',line)));details.appendChild(rows);feedback.appendChild(details)}
  const nextText=isCorrect?'下一步：繼續下一題':raw.includes('優先安排複習')?'下一步：這項技能會優先安排複習':'下一步：系統會提高這項技能的複習優先度';feedback.appendChild(build('div','feedback-next',nextText));
+ if(isCorrect&&xp&&window.ManjingoXpGrowth)window.ManjingoXpGrowth.decorateAnswer(feedback,Number((xp.match(/\+(\d+)/)||[])[1])||0);
  feedback.dataset.feedbackRendered=clean(feedback.textContent);
  return true;
 }
