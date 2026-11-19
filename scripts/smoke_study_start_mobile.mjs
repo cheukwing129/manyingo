@@ -183,6 +183,7 @@ async function acceptDevice(cdp,metrics){
     const actionBefore=await actionGeometry(cdp,'#next');
     await answerVisible(cdp,'home',i%3===0);
     await stableAction(cdp,'#next',actionBefore,'home question '+i);
+    if(i===1)await waitFor(cdp,"!!document.querySelector('#feedback .xp-answer-growth')",'answer XP progress');
     report.homeAnswers++;
     if(i===0){await expandedFeedback(cdp,'#feedback','#next');await screenshot(cdp,'answer-feedback');await responsiveAction(cdp);}
     await press(cdp,'#next');
@@ -196,6 +197,12 @@ async function acceptDevice(cdp,metrics){
   report.homeNotifications=homeSources.length;
   let xp=await evaluate(cdp,'window.ManjingoLocalLearning.getProgress().totalXp');
   check(xp>0,'home answers did not persist XP');
+  await waitFor(cdp,"!!document.querySelector('#quiz .xp-settlement[data-xp-animated]')",'home XP settlement');
+  check(await evaluate(cdp,"Number(document.querySelector('#quiz .xp-settlement').dataset.xpEarned)===window.ManjingoSessionSummary.snapshot().xp"),'session XP settlement does not match earned XP');
+  const xpBeforeReplay=await evaluate(cdp,'window.ManjingoLocalLearning.getProgress().totalXp');
+  await evaluate(cdp,"window.ManjingoXpGrowth.animateSummary(document.querySelector('#quiz'));true");
+  check(await evaluate(cdp,'window.ManjingoLocalLearning.getProgress().totalXp')===xpBeforeReplay,'XP animation awarded XP twice');
+  report.xpGrowth={answerProgress:true,settlement:true,noDuplicateAwards:true};
   await screenshot(cdp,'completed');
   for(const view of ['results','weakness','path','results','weakness']){
     await press(cdp,'[data-home-tab="'+view+'"]');
@@ -258,6 +265,7 @@ async function acceptDevice(cdp,metrics){
   check(await evaluate(cdp,"!document.querySelector('#lessonApp .question-footer')"),'completed lesson retained fixed action');
   report.fixedLessonAction=true;
   await noHorizontalOverflow(cdp,'lesson completion');
+  check(await evaluate(cdp,"!!document.querySelector('#lessonApp .xp-settlement')"),'lesson XP settlement missing');
   await screenshot(cdp,'lesson-completed');
   // All three questions of this lesson are real catalog questions; the long
   // context repair is guaranteed to be included, independent of rotation.
@@ -327,6 +335,19 @@ async function acceptDevice(cdp,metrics){
   check(await evaluate(cdp,"getComputedStyle(document.querySelector('#streakCelebration')).animationName==='none'"),'streak ignores reduced motion');
   await cdp.call('Emulation.setEmulatedMedia',{features:[]});
   report.streakMilestones={rewardDays:[5,10],reloadDeduplication:true,studyDeferral:true,badgesSurviveExpiry:true,widths:[320,390,768,1440]};
+  await cdp.call('Emulation.setDeviceMetricsOverride',currentDevice==='mobile'?{width:390,height:844,deviceScaleFactor:3,mobile:true}:{width:1280,height:900,deviceScaleFactor:1,mobile:false});
+  await navigate(cdp,'/');
+  await waitFor(cdp,"!!document.querySelector('#xpRank')",'homepage XP rank');
+  await press(cdp,'.xp-titles summary');
+  await noHorizontalOverflow(cdp,'XP title collection');
+  await screenshot(cdp,'xp-title-collection');
+  await evaluate(cdp,`(()=>{const host=document.createElement('div');host.id='xpAcceptance';document.querySelector('#homeToday').prepend(host);host.innerHTML=window.ManjingoXpGrowth.summaryMarkup(375,16);window.ManjingoXpGrowth.animateSummary(host);host.scrollIntoView({block:'center',behavior:'instant'});return true})()`);
+  await waitFor(cdp,"document.querySelector('#xpAcceptance .xp-level-label').textContent==='Lv. 5'",'animated level five');
+  check(await evaluate(cdp,"document.querySelector('#xpAcceptance .xp-title-unlocked').textContent.includes('積墨學徒')"),'level-five title reward missing');
+  await noHorizontalOverflow(cdp,'XP level up');
+  await screenshot(cdp,'xp-level-five-unlock');
+  report.xpGrowth.titleCollection=true;report.xpGrowth.levelFiveUnlock=true;
+
   console.log('BROWSER_ACCEPTANCE='+JSON.stringify(report));
 }
 

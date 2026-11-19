@@ -16,6 +16,7 @@ const bundles = {
     'answer-outbox.js'
   ],
   'lesson-runtime.js': [
+    'xp-growth.js',
     'reorder-question.js',
     'question-presentation.js',
     'curriculum-v1.js',
