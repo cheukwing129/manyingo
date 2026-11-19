@@ -398,7 +398,7 @@ try{
   const loaded=cdp.once('Page.loadEventFired',15000);
   await cdp.call('Page.navigate',{url:baseUrl+(localAcceptance?'/?ci-mobile-smoke=1':'/?perf=1&ci-mobile-smoke=1')});
   await loaded;
-  const button=await waitFor(cdp,`(()=>{const b=document.getElementById('start');if(!b||b.disabled)return null;b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2,label:b.textContent}})()`,'enabled Start button');
+  const button=await waitFor(cdp,`(()=>{const b=document.getElementById('start');if(!b||b.disabled)return null;b.scrollIntoView({block:'center',behavior:'instant'});const r=b.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2,label:b.textContent}})()`,'enabled Start button');
   check(Number.isFinite(button.x)&&Number.isFinite(button.y),'Start button coordinates unavailable');
   await cdp.call('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:button.x,y:button.y,radiusX:1,radiusY:1,force:1,id:1}]});
   await new Promise(resolve=>setTimeout(resolve,45));
